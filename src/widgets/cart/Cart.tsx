@@ -59,7 +59,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-40" />
-      <div ref={cartRef} className="absolute top-12 right-0 w-screen max-w-md border border-gray-200 bg-white px-4 py-6 sm:px-6 lg:px-8 z-50"
+      <div ref={cartRef} className="absolute top-12 sm:right-0 -right-18 w-screen max-w-md border border-gray-200 bg-white px-4 py-6 sm:px-6 lg:px-8 z-50"
         aria-modal="true"
         role="dialog">
         {/* Close button */}
@@ -93,7 +93,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
               <ul className="space-y-6">
                 {items.map((item) => (
                   <li key={item.id} className="flex items-start gap-4">
-                    <div className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
+                    <Link href={`/products/${item.id}`} className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
                       <Image
                         width={88}
                         height={88}
@@ -101,7 +101,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                         alt={item.title}
                         className="object-cover h-full w-full"
                       />
-                    </div>
+                    </Link>
 
                     <div className="flex-1">
                       <h3 className="text-sm font-medium text-gray-900">
@@ -124,7 +124,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                       <div className="mt-3 flex items-center gap-1">
                         <button
                           className="h-5 w-5 border border-gray-300 rounded-sm text-sm font-medium transition hover:bg-gray-50"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.sku, item.quantity - 1)}
                         >
                           -
                         </button>
@@ -133,7 +133,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                         </span>
                         <button
                           className="h-5 w-5 border border-gray-300 rounded-sm text-sm font-medium transition hover:bg-gray-50"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.sku, item.quantity + 1)}
                         >
                           +
                         </button>
@@ -146,7 +146,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                       </p>
                       <button
                         className="mt-2 text-gray-600 transition hover:text-red-600"
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.sku)}
                       >
                         <span className="sr-only">Remove item</span>
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-4">

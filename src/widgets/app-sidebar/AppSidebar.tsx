@@ -40,13 +40,15 @@ const data = {
           url: "/dashboard/products/products-analytics",
         },
         {
-          title: "Add Products",
-          url: "/dashboard/products/add-products",
+          title: "Categories",
+          url: "/dashboard/products/categories",
         },
+      
         {
           title: "Products",
           url: "/dashboard/products",
         },
+       
       ],
     },
     {

@@ -14,7 +14,7 @@ import securityAxios from "@/axios-instances/SecurityAxios";
 
 
 export const fetchUsers = async () => {
-  const response = await securityAxios.get(endpoints.users.listUsers_Dashboard);
+  const response = await securityAxios.get(endpoints.users.listUsers);
   return response.data; // Return the actual data
 };
 
@@ -27,7 +27,7 @@ function ListUsers() {
     error,
     isFetching,
   } = useQuery({
-    queryKey: [endpoints.users.listUsers_Dashboard], // Unique cache key
+    queryKey: [endpoints.users.listUsers], // Unique cache key
     queryFn: fetchUsers, // Your Axios fetch function
     // staleTime: 60 * 1000, // Data stays fresh for 1 minute
   });
@@ -82,12 +82,12 @@ function ListUsers() {
 
 
     <div>
-      <DataTable data={data.data} hiddenColumns={["id"]} actionsDropdown={ActionsDropdown} badgesConfig={{
+      <DataTable data={data.data.users} hiddenColumns={["id"]} actionsDropdown={ActionsDropdown} badgesConfig={{
     is_active: {
       values: ["Yes", "No"],
       variants: ["success", "destructive"], 
     },
-    is_email_verified: {
+    email_verified: {
       values: ["Yes", "No"],
       variants: ["success", "destructive"], 
     },
@@ -100,6 +100,10 @@ function ListUsers() {
       variants: ["info", "pink"], 
     },
    
+    role: {
+      values: ["customer", "staff","admin"],
+      variants: ["info", "pink","orange"], 
+    },
   }} />
     </div>
   );

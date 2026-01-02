@@ -1,39 +1,35 @@
 export const endpoints = {
     auth: {
-      login: "/user/auth/login",
-      signup: "/user/self-register/",
-      resetPassword: "/user/password/reset/",
-      forgotPassword: "/user/password/forget/",
-      verifyOtp: "/user/auth/otp/verify/",
-      verifyEmail: "/user/auth/email/verify/",
-      resendEmailVerificationLink: "/user/auth/email/resend/",
-      resendOTPVerificationCode: "/user/auth/otp/resend/",
-      logout: "/user/auth/logout",
-      refreshToken: "/user/auth/token/refresh/"
+      login: "/auth/login/",
+      signup: "/auth/register/customer/",
+      registerUser :"/auth/register/user/",
+      resetPassword: "/auth/password-reset/confirm/",
+      forgotPassword: "auth/password-reset/request/",
+      verifyOtp: "/auth/otp/verify/",
+      verifyEmail: "/auth/verify-email/",
+      resendEmailVerificationLink: "/auth/resend-verification/",
+      resendOTPVerificationCode: "/auth/otp/resend/",
+      logout: "/auth/logout/",
+      refreshToken: "/auth/token/refresh/"
     },
-    scholarships: {
-      listScholarshipsCardAnalytics: "/analytics/overall/?module=scholarship_management",
-      addScholarship: "/scholarship/add/",
-      listScholarships_Dashboard: "/scholarship/filter/",
-      listScholarshipsSuggessions_Dashboard: "/scholarship/suggestion/list/",
-      getScholarship: "/scholarship/public/details/:id/",
-      listscholarships: "/scholarship/public/filter/",
-      listRecommendedScholarships : "/scholarship/recommend/",
-      verifyScholarship: "/scholarship/verify/",
-      reactivateScholarship: "/scholarship/reactivate/",
-      deactivateScholarship: "/scholarship/deactivate/",
-      suggestScholarship: "/scholarship/suggest/",
-      rejectScholarshipSuggession: "/scholarship/suggestion/reject/",
-      listSavedScholarships: "/scholarship/saved/list/",
-      saveScholarship: "/scholarship/save/:id/",   
-      deleteSavedScholarship: "/scholarship/saved/delete/:id/",
-  
-  
+ 
+    products : {
+      listcategories:"/products/admin/categories/",
+      addCategory :"/products/admin/categories/create/",
+      deleteCategory :"/products/admin/categories/:id/",
+      updateCategory :"/products/admin/categories/:id/",
+      listProducts: "/products/admin/products/",
+      listProductsWeb: "/products/",
+      addProduct : "/products/admin/products/create/",
+      createVariant : "/products/admin/products/:id/variants/" ,
+      getProductDetails :"/products/admin/products/:id/",
+      getProductDetailsWeb :"/products/:slug/"
+
     },
     users: {
       listUsersCardAnalytics: "/analytics/overall/?module=user_management",
       addUsers: "/user/staff/register/",
-      listUsers_Dashboard: "/user/list/",
+      listUsers: "/auth/admin/users/",
       activateOrDeactivate: "/user/update/is-active/:id/"
     },
     logs: {

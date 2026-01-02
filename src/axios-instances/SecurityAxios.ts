@@ -1,7 +1,36 @@
-// axiosInstances/securityaxios.ts
+// axios-instances/SecurityAxios.ts
 import { endpoints } from "@/constants/endpoints/endpoints";
-import { getUserCookie, setUserCookie } from "@/lib/providers/auth-provider";
-import axios, { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig, AxiosError } from "axios";
+import { getAuthCookie, setAuthCookie } from "@/lib/providers/auth-provider";
+import axios, { 
+  AxiosInstance, 
+  InternalAxiosRequestConfig, 
+  AxiosError, 
+  AxiosResponse 
+} from "axios";
+
+// ==================== TYPE DEFINITIONS ====================
+
+// CHANGED: Added proper type for refresh subscribers
+type RefreshSubscriber = (token: string) => void;
+
+// CHANGED: Added type for API response structure
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+  errors?: Record<string, string[]>;
+}
+
+// CHANGED: Added type for refresh token response
+interface RefreshTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type?: string;
+  expires_in?: number;
+}
+
+// ==================== AXIOS INSTANCE CONFIGURATION ====================
 
 const securityAxios: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -11,160 +40,300 @@ const securityAxios: AxiosInstance = axios.create({
   },
 });
 
-// Type for queued subscribers during token refresh
-type RefreshSubscriber = (token: string) => void;
+// ==================== GLOBAL VARIABLES ====================
 
+// CHANGED: Added proper typing for refresh state management
 let isRefreshing = false;
 let refreshSubscribers: RefreshSubscriber[] = [];
 
-// Helper function with proper typing
+// ==================== HELPER FUNCTIONS ====================
+
+/**
+ * CHANGED: Updated to normalize endpoints for Django REST Framework
+ * Django REST Framework requires trailing slashes for consistency
+ */
 const normalizeEndpoint = (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+  if (!config.url) return config;
+
+  // List of endpoints that should NOT have trailing slashes
+  const noTrailingSlashEndpoints = [
+    endpoints.auth.verifyEmail, // This will have token appended: /verify-email/{token}/
+    endpoints.auth.verifyOtp,
+    endpoints.logs.djangoAdminLogs,
+    endpoints.logs.userLogs,
+    endpoints.users.listUsersCardAnalytics,
+  ];
+
+  // Check if URL already has a token parameter (e.g., /verify-email/{token}/)
+  const hasTokenParam = config.url.match(/\/[a-zA-Z0-9_-]+\/?$/);
+
+  // Add trailing slash if:
+  // 1. Doesn't already end with slash
+  // 2. Not in noTrailingSlashEndpoints list
+  // 3. Doesn't have a token parameter already
   if (
-    config.url &&
     !config.url.endsWith("/") &&
-    !(
-      config.url.includes(endpoints.auth.verifyEmail) ||
-      config.url.includes(endpoints.auth.verifyOtp) ||
-      config.url.endsWith(endpoints.logs.djangoAdminLogs) ||
-      config.url.includes(endpoints.logs.userLogs) ||
-      config.url.endsWith(endpoints.users.listUsersCardAnalytics) ||
-      config.url.endsWith(endpoints.scholarships.listScholarshipsCardAnalytics) 
-    )
+    !noTrailingSlashEndpoints.some(ep => config.url?.startsWith(ep)) &&
+    !hasTokenParam
   ) {
     config.url += "/";
   }
+
   return config;
 };
 
-// Request interceptor with proper type casting
+/**
+ * CHANGED: Added helper to check if endpoint is public
+ * Public endpoints don't require authentication
+ */
+const isPublicEndpoint = (url: string | undefined): boolean => {
+  if (!url) return false;
+
+  const publicEndpoints = [
+    endpoints.auth.login,
+    endpoints.auth.signup,
+    endpoints.auth.verifyEmail,
+    endpoints.auth.resendEmailVerificationLink, // CHANGED: Updated endpoint name
+    endpoints.auth.resetPassword,
+    endpoints.auth.forgotPassword,
+    endpoints.auth.refreshToken,
+  ];
+
+  // Check if URL starts with any public endpoint
+  // Using startsWith to handle endpoints with parameters
+  return publicEndpoints.some(ep => 
+    url.startsWith(ep) || 
+    url.includes(ep) // Also check includes for flexibility
+  );
+};
+
+// ==================== REQUEST INTERCEPTOR ====================
+
 securityAxios.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // CHANGED: Normalize endpoint first
     const normalizedConfig = normalizeEndpoint(config);
 
-    const publicEndpoints = [
-      endpoints.auth.login,
-      endpoints.auth.signup,
-      endpoints.auth.verifyEmail,
-      endpoints.auth.resendEmailVerificationLink,
-      endpoints.auth.resendOTPVerificationCode,
-      endpoints.auth.resetPassword,
-      endpoints.auth.forgotPassword,
-      endpoints.auth.verifyOtp,
-      endpoints.scholarships.suggestScholarship
-    ];
-
-    if (publicEndpoints.some((ep) => normalizedConfig.url?.endsWith(ep))) {
+    // CHANGED: Check if endpoint is public
+    if (isPublicEndpoint(normalizedConfig.url)) {
       return normalizedConfig;
     }
 
-    const token = getUserCookie()?.access_token;
-    if (token) {
+    // Get auth data from cookie
+    const authData = getAuthCookie();
+    const accessToken = authData?.tokens?.access_token;
+
+    if (accessToken) {
+      // CHANGED: Ensure headers object exists
       normalizedConfig.headers = normalizedConfig.headers || {};
-      normalizedConfig.headers.Authorization = `Bearer ${token}`;
+      normalizedConfig.headers.Authorization = `Bearer ${accessToken}`;
+    } else {
+      // CHANGED: Redirect to login if no token found for protected endpoint
+      console.warn("No access token found for protected endpoint:", normalizedConfig.url);
+      
+      // Only redirect on client side
+      if (typeof window !== "undefined" && !normalizedConfig.url?.includes("auth")) {
+        // Don't redirect if already on login page
+        if (!window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
+        }
+      }
     }
 
     return normalizedConfig;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error("Request interceptor error:", error);
+    return Promise.reject(error);
+  }
 );
 
-// Response interceptor with proper error typing
+// ==================== RESPONSE INTERCEPTOR ====================
+
 securityAxios.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError | any) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+  (response: AxiosResponse<ApiResponse>) => {
+    // CHANGED: Optionally handle successful responses here
+    // You could normalize the response data structure
+    
+    return response;
+  },
+  async (error: AxiosError<ApiResponse>) => {
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
     const status = error.response?.status;
-    const errorMessage = error.response?.data;
+    const errorData = error.response?.data;
+    const errorMessage = errorData?.error || errorData?.message;
 
-    console.log(errorMessage)
-
+    // CHANGED: Handle token expiration
     if (
       status === 401 &&
-      errorMessage?.error == "Access token has expired. Please login."
-       &&
+      (errorMessage?.includes("expired") || 
+       errorMessage?.includes("invalid token") ||
+       errorData?.error === "Token has expired") && // CHANGED: Match Django error message
       !originalRequest._retry &&
-      !originalRequest.url?.includes(endpoints.auth.refreshToken)
+      !originalRequest.url?.includes(endpoints.auth.refreshToken) &&
+      !isPublicEndpoint(originalRequest.url)
     ) {
-      console.log( errorMessage?.error)
-      console.log("Before Refreshing")
+      console.log("Access token expired, attempting refresh...");
 
       if (isRefreshing) {
-        return new Promise((resolve) => {
+        // CHANGED: Queue the request until token is refreshed
+        return new Promise((resolve, reject) => {
           refreshSubscribers.push((token: string) => {
             originalRequest.headers = originalRequest.headers || {};
             originalRequest.headers.Authorization = `Bearer ${token}`;
-            resolve(securityAxios(originalRequest));
+            
+            // Retry the original request
+            securityAxios(originalRequest)
+              .then(response => resolve(response))
+              .catch(err => reject(err));
           });
         });
       }
-
-      console.log("Refreshing")
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        const userCookie = getUserCookie();
-        const refreshToken = userCookie?.refresh_token;
+        const authData = getAuthCookie();
+        const refreshToken = authData?.tokens?.refresh_token;
 
         if (!refreshToken) {
           throw new Error("No refresh token available");
         }
 
-        const refreshResponse = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoints.auth.refreshToken.slice(1)}`,
+        // CHANGED: Use securityAxios to call refresh token endpoint
+        const refreshResponse = await securityAxios.post<RefreshTokenResponse>(
+          endpoints.auth.refreshToken,
           { refresh_token: refreshToken }
         );
 
-        if (refreshResponse.status === 200) {
-          const { access_token, refresh_token } = refreshResponse.data as {
-            access_token: string;
-            refresh_token: string;
-          };
+        const { access_token, refresh_token } = refreshResponse.data;
 
-          if (!access_token || !refresh_token) {
-            throw new Error("Invalid tokens received from refresh");
-          }
+        if (!access_token || !refresh_token) {
+          throw new Error("Invalid tokens received from refresh");
+        }
 
-          setUserCookie({
-            ...userCookie,
+        // CHANGED: Update auth data with new tokens
+        const updatedAuthData = {
+          ...authData,
+          tokens: {
+            ...authData?.tokens,
             access_token,
             refresh_token,
-          });
+          },
+        };
 
-          originalRequest.headers = originalRequest.headers || {};
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        // Update cookie with new tokens
+        setAuthCookie(updatedAuthData);
 
-          refreshSubscribers.forEach((cb) => cb(access_token));
-          refreshSubscribers = [];
+        // Update default Authorization header
+        securityAxios.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
 
-          return securityAxios(originalRequest);
-        }
+        // Update the original request header
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+
+        // Process all queued requests
+        refreshSubscribers.forEach(callback => callback(access_token));
+        refreshSubscribers = [];
+
+        // Retry the original request
+        return securityAxios(originalRequest);
+
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
-        // setUserCookie({});
-        if (typeof window !== "undefined") {
-          window.location.href = "/";
+        
+        // Clear auth data on refresh failure
+        const authData = getAuthCookie();
+        if (authData) {
+          // CHANGED: Clear the cookie properly
+          document.cookie = "auth_data=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         }
+        
+        // Redirect to login
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+        
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
-
-      return Promise.reject(error);
     }
 
-    // if (status === 401 || status === 403) {
-    //   setUserCookie({});
-    //   if (typeof window !== "undefined") {
-    //     window.location.href = "/";
-    //   }
+    // CHANGED: Handle other authentication errors
+    if (status === 401 || status === 403) {
+      console.error("Authentication error:", errorMessage);
+      
+      // Clear auth data
+      const authData = getAuthCookie();
+      if (authData) {
+        document.cookie = "auth_data=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      }
+      
+      // Redirect to login if not already there
+      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
+    }
 
-    //   return Promise.reject(error);
-    // }
+    // CHANGED: Handle validation errors
+    if (status === 400 && errorData?.errors) {
+      console.error("Validation errors:", errorData.errors);
+      // You could transform validation errors here if needed
+    }
 
-    return Promise.reject(error);
+    // CHANGED: Extract error message properly
+    const displayMessage = errorData?.error || 
+                          errorData?.message || 
+                          error.message || 
+                          "An error occurred";
+
+    // CHANGED: Create a new error with proper message
+    const enhancedError = new Error(displayMessage);
+    (enhancedError as any).response = error.response;
+    (enhancedError as any).status = status;
+
+    return Promise.reject(enhancedError);
   }
 );
+
+// ==================== ADDITIONAL UTILITIES ====================
+
+/**
+ * CHANGED: Added helper to check authentication status
+ */
+export const isAuthenticated = (): boolean => {
+  const authData = getAuthCookie();
+  return !!authData?.tokens?.access_token;
+};
+
+/**
+ * CHANGED: Added helper to get current access token
+ */
+export const getCurrentAccessToken = (): string | undefined => {
+  const authData = getAuthCookie();
+  return authData?.tokens?.access_token;
+};
+
+/**
+ * CHANGED: Added helper to clear authentication
+ */
+export const clearAuthentication = (): void => {
+  document.cookie = "auth_data=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  delete securityAxios.defaults.headers.common["Authorization"];
+};
+
+/**
+ * CHANGED: Added helper to set authentication headers
+ */
+export const setAuthentication = (accessToken: string): void => {
+  securityAxios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+};
 
 export default securityAxios;

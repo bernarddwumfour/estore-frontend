@@ -17,13 +17,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 // import { useToast } from "@/hooks/use-toast";
-// import { useAuth } from "@/lib/use-auth";
 import Logo from "@/widgets/logo/Logo";
 // import { endpoints } from "@/endpoints/endpoints";
 // import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import Spinner from "@/widgets/loaders/Spinner";
 import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/lib/use-auth";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -33,7 +34,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   // const { toast } = useToast();
   const router = useRouter();
-  // const { login } = useAuth();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -48,14 +49,15 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
-      // await login(values.email, values.password);
+      console.log('here')
+      await login(values.email, values.password);
     } catch (error) {
       console.error("Login error form submit:", error);
-      // if (error instanceof Error) {
-      //   toast.error(error.message);
-      // } else {
-      //   toast("An unexpected error occurred during login");
-      // }
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast("An unexpected error occurred during login");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +100,7 @@ export default function LoginPage() {
                   <FormLabel>Email address</FormLabel>
                   <FormControl>
                     <Input
-                      type="email"
+                      // type="email"
                       placeholder="name@example.com"
                       {...field}
                     />

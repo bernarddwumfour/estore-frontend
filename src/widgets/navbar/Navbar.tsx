@@ -2,17 +2,21 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Heart, LayoutDashboard, Mail, Menu, Phone, ShoppingCart, User, X } from "lucide-react"
+import { Heart, LayoutDashboard, LogOut, Mail, Menu, Phone, ShoppingCart, User, User2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Cart from "../cart/Cart"
 import { useCartStore } from "@/app/lib/store/cart-store"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/lib/use-auth"
 
 export default function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [cartopen, setcartopen] = useState(false)
     const totalItems = useCartStore((state) => state.getTotalItems())
+    const { user, logout } = useAuth();
+
 
     return (
         <header className="fixed top-0 lef-0 z-100 w-full">
@@ -73,18 +77,90 @@ export default function Navbar() {
 
                         {/* Right Actions */}
                         <div className="flex items-center gap-2">
-                            <Button size="sm" asChild className="hidden lg:flex p-4">
-                                <Link href="/login">
-                                    <User className="h-4 w-4 mr-1" />
-                                    Login
-                                </Link>
-                            </Button>
-                            <Button variant="ghost" asChild className="hidden px-8 lg:flex">
-                                <Link href="/dashboard">
-                                    <LayoutDashboard className="h-4 w-4 mr-1" />
-                                    Dashboard
-                                </Link>
-                            </Button>
+                            {user?.id ? (
+                                <>
+                                    <Button
+                                        className="hidden md:block"
+                                        variant="ghost"
+                                        size="sm"
+                                        asChild
+                                    >
+                                        <Link className="py-2" href="/dashboard">Dashboard</Link>
+                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="outline" className="rounded-full" size="icon">
+                                                <User />
+                                                <span className="sr-only">My Account</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent
+                                            align="end"
+                                            className="z-[1002] min-w-[200px]"
+                                        >
+
+                                            {/* <DropdownMenuItem asChild className="cursor-pointer"> */}
+                                            {/* <Link href={"/profile/recommended-scholarships"}>
+                        <div className="flex w-full justify-between gap-6 items-center py-2">
+                          <p>Recommended Scholarships</p>
+                          <Award size={16} />
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+
+
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href={"/profile/saved-scholarships"}>
+                        <div className="flex w-full justify-between gap-6 items-center py-2">
+                          <p>Saved Scholarships</p>
+                          <Bookmark size={16} />
+                        </div>
+                      </Link>
+                    </DropdownMenuItem> */}
+
+                                            <DropdownMenuItem asChild className="cursor-pointer">
+                                                <Link href={"/profile"}>
+                                                    <div className="flex w-full justify-between gap-6 items-center py-2">
+                                                        <p>Profile</p>
+                                                        <User2 size={16} />
+                                                    </div>
+                                                </Link>
+                                            </DropdownMenuItem>
+
+                                            {/* <DropdownMenuItem>
+                      <div>
+                        <p>{`${user?.firstname} ${user?.lastname}`}</p>
+                        <span className="text-xs text-gray-500">{`${user?.role}`}</span>
+                      </div>
+                    </DropdownMenuItem> */}
+
+                                            <DropdownMenuItem>
+                                                <div>
+                                                    <p>{`${user?.first_name} ${user?.last_name}`}</p>
+                                                    <span className="text-xs text-gray-500">{`${user?.role}`}</span>
+                                                </div>
+                                            </DropdownMenuItem>
+
+
+                                            <DropdownMenuItem onClick={() => logout()}>
+                                                <LogOut />
+                                                Logout
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </>
+                            ) : (
+                                <>
+                                    <Button size="sm" asChild className="hidden lg:flex p-4">
+                                        <Link href="/login">
+                                            <User className="h-4 w-4 mr-1" />
+                                            Login
+                                        </Link>
+                                    </Button>
+                                </>
+                            )}
+
+
 
                             <div className="relative">
                                 <Button className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white relative" onClick={() => setcartopen((prev) => !prev)}>

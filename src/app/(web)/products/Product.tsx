@@ -2,163 +2,313 @@
 
 import { useCartStore } from '@/app/lib/store/cart-store'
 import { Button } from '@/components/ui/button'
-import { Bookmark, ShoppingCart, Plus, Minus } from 'lucide-react'
-import Image from 'next/image'
+import { ShoppingCart, Plus, Minus, Star, Tag, BadgePercent, Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from "next/navigation"
 import React from 'react'
+import Image from 'next/image'
 
-const Product = ({ product }: { product: any }) => {
+interface ProductProps {
+  product: {
+    id: string
+    title: string
+    slug: string
+    description: string
+    category: {
+      id: string
+      name: string
+      slug: string
+    }
+    features: string[]
+    options: Record<string, string[]>
+    min_price: number
+    max_price: number
+    average_rating: number
+    total_reviews: number
+    total_stock: number
+    has_stock: boolean
+    is_featured: boolean
+    is_bestseller: boolean
+    is_new: boolean
+    default_variant: {
+      sku: string
+      price: number
+      discounted_price: number
+      stock: number
+      attributes: Record<string, string>
+      images: Array<{
+        url: string
+        alt_text: string
+        image_type: string
+      }>
+    } | null
+    created_at: string
+  }
+}
+
+const Product = ({ product }: ProductProps) => {
+  const router = useRouter()
   const addItem = useCartStore((state) => state.addItem)
   const updateQuantity = useCartStore((state) => state.updateQuantity)
   const removeItem = useCartStore((state) => state.removeItem)
   const isInCart = useCartStore((state) => state.isInCart)
   const getItemQuantity = useCartStore((state) => state.getItemQuantity)
 
-  const inCart = isInCart(product.id)
-  const quantity = getItemQuantity(product.id)
+  const defaultVariant = product.default_variant
+  const hasDefaultVariant = defaultVariant !== null
+  const hasDiscount = hasDefaultVariant && defaultVariant.discounted_price < defaultVariant.price
+  const discountPercentage = hasDefaultVariant && hasDiscount
+    ? Math.round(((defaultVariant.price - defaultVariant.discounted_price) / defaultVariant.price) * 100)
+    : 0
+
+  // Get the first/main image from default variant
+  const mainImage = hasDefaultVariant && defaultVariant.images?.length > 0
+    ? defaultVariant.images.find(img => img.image_type === 'main') || defaultVariant.images[0]
+    : null
+
+  const inCart = isInCart(product.default_variant?.sku!)
+  const quantity = getItemQuantity(product.default_variant?.sku!)
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+
+    if (!hasDefaultVariant || defaultVariant.stock <= 0) return
+
     addItem({
       id: product.id,
+      sku: defaultVariant.sku,
       title: product.title,
-      price: product.price,
-      imageUrl: product.images[0],
+      price: defaultVariant.discounted_price || defaultVariant.price,
+      imageUrl: mainImage?.url || '', // Use the image URL
       quantity: 1,
-      originalPrice: product.originalPrice,
+      originalPrice: defaultVariant.price,
+      attributes: defaultVariant.attributes,
     })
+  }
+
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    handleAddToCart(e)
+    router.push("/checkout")
   }
 
   const handleIncrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    updateQuantity(product.id, quantity + 1)
+    updateQuantity(product.default_variant?.sku!, quantity + 1)
   }
 
   const handleDecrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     if (quantity <= 1) {
-      removeItem(product.id)
+      removeItem(product.default_variant?.sku!)
     } else {
-      updateQuantity(product.id, quantity - 1)
+      updateQuantity(product.default_variant?.sku!, quantity - 1)
     }
   }
 
-  const handleBookmark = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    // Bookmark logic here
-    console.log('Bookmarked:', product.id)
-  }
-
   return (
-    <li className="group relative block overflow-hidden">
-      <Link href={`/products/${product.id}`} className="block">
-        {/* Wishlist Button */}
-        <button
-          className="absolute end-4 top-4 z-10 rounded-full bg-white p-1.5 text-gray-900 transition hover:text-gray-900/75"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            // Wishlist logic
-          }}
-          aria-label="Add to wishlist"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="1.5"
-            stroke="currentColor"
-            className="size-4"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-            />
-          </svg>
-        </button>
+    <li className="group relative block overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg">
+      <Link href={`/products/${product.slug}`} className="block">
+        {/* Product Badges */}
+        <div className="absolute left-3 top-3 z-10 flex flex-col gap-1">
+          {/* {product.is_new && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+              <Sparkles className="h-3 w-3" />
+              New
+            </span>
+          )}
+          {product.is_featured && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
+              <Star className="h-3 w-3" />
+              Featured
+            </span>
+          )}
+          {product.is_bestseller && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+              <Tag className="h-3 w-3" />
+              Bestseller
+            </span>
+          )} */}
+          {hasDiscount && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2.5 py-1 text-xs font-medium text-white">
+              <BadgePercent className="h-4 w-4" />
+              -{discountPercentage}%
+            </span>
+          )}
+        </div>
+
+        {/* Category Badge */}
+        <div className="absolute right-3 top-3 z-10">
+          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+            {product.category.name}
+          </span>
+        </div>
 
         {/* Product Image */}
-        <Image
-          width={400}
-          height={400}
-          src={product.images[0]}
-          alt={product.title}
-          className="h-[350px] w-full object-cover transition duration-500 group-hover:scale-105 sm:h-[300px]"
-        />
-
-        {/* Card Content */}
-        <div className="relative border border-gray-100 bg-white p-6">
-          <p className="text-gray-700">
-            ${product.price.toFixed(2)}
-            {product.originalPrice && (
-              <span className="text-gray-400 line-through ml-2">
-                ${product.originalPrice.toFixed(2)}
-              </span>
-            )}
-          </p>
-          <h3 className="mt-1.5 text-lg font-medium text-gray-900">{product.title}</h3>
-          <p className="mt-1.5 line-clamp-3 text-gray-500 text-sm">{product.description}</p>
-        </div>
-      </Link>
-
-      {/* Action Area - Outside the Link */}
-      <div className="relative border border-gray-100 bg-white p-6 pt-0 -mt-6">
-        <div className="mt-4 flex items-center gap-3">
-          {/* Show Add to Cart Button if not in cart */}
-          {!inCart ? (
-            <Button
-              type="button"
-              className="flex-1"
-              onClick={handleAddToCart}
-            >
-              <ShoppingCart className="mr-2 size-4" />
-              Add To Cart
-            </Button>
+        <div className="relative h-64 w-full bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+          {mainImage && mainImage.url ? (
+            <Image
+              src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${mainImage.url.startsWith('/') ? mainImage.url : `/${mainImage.url}`}`}
+              alt={mainImage.alt_text || product.title}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              priority={product.is_featured || product.is_bestseller}
+            />
           ) : (
-            /* Quantity Controls when in cart */
-            <div className="flex items-center justify-between w-full bg-gray-50 rounded-lg border border-gray-200 p-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 w-5 p-0"
-                onClick={handleDecrement}
-              >
-                <Minus className="h34 w34" />
-              </Button>
-
-              <div className="flex flex-col items-center">
-                <span className="text-sm font-medium">{quantity} in cart</span>
-                {/* <span className="text-xs text-gray-500">
-                  ${(quantity * product.price).toFixed(2)}
-                </span> */}
+            // Fallback when no image
+            <div className="flex h-full w-full items-center justify-center">
+              <div className="text-center">
+                <div className="text-4xl mb-2">📱</div>
+                <p className="text-sm text-gray-500">No Image</p>
               </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 w-5 p-0"
-                onClick={handleIncrement}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
             </div>
           )}
 
-          {/* Bookmark Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="flex-shrink-0"
-            onClick={handleBookmark}
-            aria-label="Bookmark"
-          >
-            <Bookmark className="size-5" />
-          </Button>
+          {/* Image count badge */}
+          {hasDefaultVariant && defaultVariant.images?.length > 1 && (
+            <div className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
+              +{defaultVariant.images.length - 1}
+            </div>
+          )}
+        </div>
+
+        {/* Card Content */}
+        <div className="p-5">
+          {/* Product Title & Save Amount */}
+          <div className='flex justify-between w-full pb-2'>
+            <h3 className="font-semibold text-gray-900 line-clamp-1">
+              {product.title}
+            </h3>
+            {hasDiscount && (
+              <span className="text-sm font-medium text-red-600 whitespace-nowrap">
+                Save ${(defaultVariant.price - defaultVariant.discounted_price).toFixed(2)}
+              </span>
+            )}
+          </div>
+
+          {/* Price Section */}
+          <div>
+            {hasDefaultVariant ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-gray-900">
+                  ${defaultVariant.discounted_price.toFixed(2)}
+                </span>
+                {hasDiscount && (
+                  <span className="text-sm text-gray-400 line-through">
+                    ${defaultVariant.price.toFixed(2)}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500 italic">
+                No variants available
+              </div>
+            )}
+
+            {/* Rating */}
+            <div className="mt-2 flex items-center gap-1">
+              <div className="flex items-center">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-4 w-4 ${i < Math.floor(product.average_rating)
+                      ? 'fill-amber-400 text-amber-400'
+                      : 'fill-gray-300 text-gray-300'
+                      }`}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-gray-600 ml-1">
+                {product.average_rating.toFixed(1)}
+              </span>
+              <span className="text-sm text-gray-400">
+                ({product.total_reviews} reviews)
+              </span>
+            </div>
+          </div>
+
+          {/* Stock Status */}
+          <div className="mt-4">
+            {hasDefaultVariant ? (
+              product.total_stock > 0 ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-green-600">
+                    {product.total_stock} in stock
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm font-medium text-red-600">Out of stock</p>
+              )
+            ) : (
+              <p className="text-sm font-medium text-amber-600">No stock available</p>
+            )}
+          </div>
+        </div>
+      </Link>
+
+      {/* Action Buttons */}
+      <div className="border-t border-gray-100 p-5">
+        <div className="flex items-center gap-3">
+          {hasDefaultVariant && defaultVariant.stock > 0 ? (
+            !inCart ? (
+              <Button
+                type="button"
+                className="flex-1"
+                onClick={handleAddToCart}
+              >
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                Add to Cart
+              </Button>
+            ) : (
+              <div className="flex items-center justify-between w-full bg-gray-50 rounded-lg border border-gray-200 px-3 py-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={handleDecrement}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <div className="text-center">
+                  <span className="text-sm font-medium">{quantity} in cart</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={handleIncrement}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            )
+          ) : (
+            <Button
+              type="button"
+              className="flex-1"
+              disabled
+            >
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              {hasDefaultVariant ? 'Out of Stock' : 'Unavailable'}
+            </Button>
+          )}
+
+          {hasDefaultVariant && defaultVariant.stock > 0 && (
+            <Button
+              variant="outline"
+              className="flex-shrink-0"
+              onClick={handleBuyNow}
+              aria-label="Buy now"
+            >
+              Buy Now
+            </Button>
+          )}
         </div>
       </div>
     </li>

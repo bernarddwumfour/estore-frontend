@@ -9,10 +9,17 @@ const nextConfig: NextConfig = {
         hostname: "images.unsplash.com",
       },
       {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8000',
+        pathname: '/media/**',
+      },
+      {
         protocol: "https",
         hostname: "www.tailwind-kit.com",
       },
     ],
+    unoptimized: true,
   },
 };
 

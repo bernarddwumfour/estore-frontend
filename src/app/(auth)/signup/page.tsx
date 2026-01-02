@@ -29,17 +29,22 @@ import {
 import { Card } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
 import Spinner from "@/widgets/loaders/Spinner";
+import { useAuth } from "@/lib/use-auth";
+import { toast } from "sonner";
+
+const GenderEnum = z.enum(["m", "f"]);
+
 
 const formSchema = z
   .object({
-    firstname: z.string().min(2, {
+    first_name: z.string().min(2, {
       message: "Name must be at least 2 characters",
     }),
-    lastname: z.string().min(2, {
+    last_name: z.string().min(2, {
       message: "Name must be at least 2 characters",
     }),
-    gender: z.enum(["m", "f"], {
-      errorMap: () => ({ message: "Please select a gender" }),
+    gender: GenderEnum.refine(Boolean, {
+      message: "Role is required",
     }),
     email: z.string().email({ message: "Please enter a valid email address" }),
     password: z.string().min(8, {
@@ -54,15 +59,15 @@ const formSchema = z
 
 export default function SignupPage() {
   const router = useRouter();
-//   const { signup } = useAuth();
+  const { signup } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstname: "",
-      lastname: "",
+      first_name: "",
+      last_name: "",
       gender: undefined,
       email: "",
       password: "",
@@ -74,18 +79,18 @@ export default function SignupPage() {
     setIsLoading(true);
     try {
       setIsLoading(true); // Assuming setIsLoading is defined
-    //   await signup({
-    //     firstname: values.firstname,
-    //     lastname: values.lastname,
-    //     email: values.email,
-    //     password: values.password,
-    //     gender: values.gender,
-    //   });
+      await signup({
+        last_name: values.last_name,
+        first_name: values.first_name,
+        email: values.email,
+        password: values.password,
+        gender: values.gender,
+      });
 
       // toast and navigation handled in signup, so no need to duplicate here
     } catch (error) {
       console.error("Signup error form submit:", error);
-      // toast.error("Signup failed");
+      toast.error("Signup failed");
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +124,7 @@ export default function SignupPage() {
           >
             <FormField
               control={form.control}
-              name="firstname"
+              name="first_name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>First name</FormLabel>
@@ -132,7 +137,7 @@ export default function SignupPage() {
             />
             <FormField
               control={form.control}
-              name="lastname"
+              name="last_name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Last name</FormLabel>

@@ -13,113 +13,161 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { PlusCircle } from "lucide-react";
-// import { CustomMultiSelect, selectField } from "@/components/widgets/custom-select/CustomMultiSelect";
-import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import securityAxios from "@/axios-instances/SecurityAxios";
 import { endpoints } from "@/constants/endpoints/endpoints";
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
-// Zod Schema for validation
+const RoleEnum = z.enum(["admin", "staff", "customer"]);
+
+// Simplified Zod Schema - only required fields
 const formSchema = z.object({
-  fullName: z.string().min(2, { message: "Full name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }),
   password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-  confirmPassword: z.string(),
-  role: z.string().min(1, { message: "Please select a role" }),
-  permissions: z.array(z.string()).min(1, { message: "Select at least one permission" }),
-  isActive: z.boolean().default(true),
-  phone: z.string().optional(),
-  notes: z.string().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
+  first_name: z.string().min(2, { message: "First name must be at least 2 characters" }),
+  last_name: z.string().min(2, { message: "Last name must be at least 2 characters" }),
+  role: RoleEnum.refine(Boolean, {
+    message: "Role is required",
+  }),
+}).refine((data) => data.password.length >= 8, {
+  message: "Password must be at least 8 characters",
+  path: ["password"],
 });
 
 type FormData = z.infer<typeof formSchema>;
 
+// Role options for Django API
+const roleOptions = [
+  { value: "admin", label: "Administrator" },
+  { value: "staff", label: "Staff" },
+  { value: "customer", label: "Customer" },
+] as const;
+
 export default function UserCreationForm() {
-  // const [selectedPermissions, setSelectedPermissions] = useState<selectField[]>([]);
-  // const [selectedRole, setSelectedRole] = useState<selectField | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+  
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: "",
       email: "",
       password: "",
-      confirmPassword: "",
-      role: "",
-      permissions: [],
-      isActive: true,
-      phone: "",
-      notes: "",
+      first_name: "",
+      last_name: "",
+      role: "customer",
     },
   });
 
   const onSubmit = async (data: FormData) => {
-    // try {
-    //   const payload = {
-    //     ...data,
-    //     role: selectedRole?.value,
-    //     permissions: selectedPermissions.map(p => p.value),
-    //   };
+    try {
+      // Prepare payload with only required fields
+      const payload = {
+        email: data.email,
+        password: data.password,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        role: data.role,
+      };
 
-    //   const response = await securityAxios.post(endpoints.users.createStaff, payload);
+      console.log("Submitting payload:", payload);
 
-    //   if (response.status === 201 || response.status === 200) {
-    //     toast.success(response.data.message || "Staff user created successfully");
-    //     form.reset();
-    //     setSelectedPermissions([]);
-    //     setSelectedRole(null);
-    //   }
-    // } catch (error: any) {
-    //   console.error("Error creating user:", error);
-    //   toast.error(
-    //     error?.response?.data?.error || "Failed to create user. Please try again."
-    //   );
-    // }
+      // Use the Django admin user registration endpoint
+      const response = await securityAxios.post(endpoints.auth.registerUser, payload);
+
+      console.log("API Response:", response.data);
+
+      if (response.status === 201) {
+        const apiResponse = response.data;
+        
+        if (apiResponse.success) {
+          toast.success(apiResponse.message || "User created successfully");
+          form.reset(); // Reset form after successful submission
+        } else {
+          toast.error(apiResponse.error || "Failed to create user");
+        }
+      } else {
+        toast.error(`Unexpected status: ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      
+      // Handle Django validation errors
+      if (error?.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        
+        // Display first validation error
+        const firstErrorKey = Object.keys(validationErrors)[0];
+        const firstError = validationErrors[firstErrorKey];
+        
+        if (Array.isArray(firstError)) {
+          toast.error(firstError[0]);
+        } else {
+          toast.error(firstError);
+        }
+        
+        // Set form errors for specific fields
+        Object.keys(validationErrors).forEach((field) => {
+          const fieldName = field as keyof FormData;
+          const errorMessage = Array.isArray(validationErrors[field]) 
+            ? validationErrors[field][0] 
+            : validationErrors[field];
+          
+          form.setError(fieldName, {
+            type: "manual",
+            message: errorMessage,
+          });
+        });
+      } else if (error?.response?.data?.error) {
+        toast.error(error.response.data.error);
+      } else if (error?.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error("Failed to create user. Please try again.");
+      }
+    }
   };
-
-  // Role options
-  // const roleOptions: selectField[] = [
-  //   { id: 1, label: "Super Admin", value: "super_admin" },
-  //   { id: 2, label: "Admin", value: "admin" },
-  //   { id: 3, label: "Manager", value: "manager" },
-  //   { id: 4, label: "Staff", value: "staff" },
-  //   { id: 5, label: "Inventory Manager", value: "inventory_manager" },
-  //   { id: 6, label: "Customer Support", value: "support" },
-  // ];
-
-  // // Permission options (customize as needed)
-  // const permissionOptions: selectField[] = [
-  //   { id: 1, label: "Manage Products", value: "manage_products" },
-  //   { id: 2, label: "Manage Orders", value: "manage_orders" },
-  //   { id: 3, label: "Manage Users", value: "manage_users" },
-  //   { id: 4, label: "View Analytics", value: "view_analytics" },
-  //   { id: 5, label: "Manage Categories", value: "manage_categories" },
-  //   { id: 6, label: "Process Refunds", value: "process_refunds" },
-  //   { id: 7, label: "Manage Promotions", value: "manage_promotions" },
-  //   { id: 8, label: "View Reports", value: "view_reports" },
-  // ];
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-800">Create Admin / Staff User</h2>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-2xl mx-auto">
+      
+        {/* Email */}
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email Address *</FormLabel>
+              <FormControl>
+                <Input
+                  type="email"
+                  placeholder="john@example.com"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        {/* Basic Info */}
+        {/* Name Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="fullName"
+            name="first_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Full Name *</FormLabel>
+                <FormLabel>First Name *</FormLabel>
                 <FormControl>
-                  <Input placeholder="John Doe" {...field} />
+                  <Input placeholder="John" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -128,12 +176,12 @@ export default function UserCreationForm() {
 
           <FormField
             control={form.control}
-            name="email"
+            name="last_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email Address *</FormLabel>
+                <FormLabel>Last Name *</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="john@example.com" {...field} />
+                  <Input placeholder="Doe" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -141,99 +189,84 @@ export default function UserCreationForm() {
           />
         </div>
 
-        {/* Passwords */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password *</FormLabel>
-                <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirm Password *</FormLabel>
-                <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Role & Status */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-
-          <FormField
-            control={form.control}
-            name="isActive"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                <FormLabel className="font-normal">Account Active</FormLabel>
-              </FormItem>
-            )}
-          />
-        </div>
-
-
-        {/* Optional Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="+1 (555) 123-4567" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="md:col-span-2">
-            <FormField
+        {/* Password */}
+        <FormField
               control={form.control}
-              name="notes"
+              name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
+                  {" "}
+                  <FormLabel>Password</FormLabel>{" "}
                   <FormControl>
-                    <Textarea
-                      placeholder="Any additional information about this user..."
-                      rows={3}
-                      {...field}
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        {...field}
+                        className="pr-10"
+                      />
+
+                      {/* Toggle Button */}
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-black"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </div>
-        </div>
 
-        {/* Submit */}
+        {/* Role Selection */}
+        <FormField
+          control={form.control}
+          name="role"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Role *</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {roleOptions.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Submit Button */}
         <div className="pt-6">
-          <Button type="submit" size="lg" className="w-full md:w-auto">
+          <Button 
+            type="submit" 
+            size="lg"
+            className="w-full"
+          >
             Create User
           </Button>
         </div>
+
+        {/* Form Status */}
+        {form.formState.isSubmitting && (
+          <div className="text-center">
+            <p className="text-sm text-blue-600">Creating user...</p>
+          </div>
+        )}
       </form>
     </Form>
   );

@@ -71,14 +71,14 @@ export default function CartPage() {
                         <div className="flex gap-3">
                           <button
                             className="h-9 w-9 border border-gray-300 rounded-sm text-lg font-medium hover:bg-gray-50"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.sku, item.quantity - 1)}
                           >
                             -
                           </button>
                           <span className="text-lg font-medium w-12 text-center">{item.quantity}</span>
                           <button
                             className="h-9 w-9 border border-gray-300 rounded-sm text-lg font-medium hover:bg-gray-50"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.sku, item.quantity + 1)}
                           >
                             +
                           </button>
@@ -86,7 +86,7 @@ export default function CartPage() {
                         <Button
                           variant={"ghost"}
                           className='text-destructive hover:text-desctructive'
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeItem(item.sku)}
                         >
                           <Trash />
                         </Button>

@@ -104,13 +104,18 @@ export default function Footer() {
                         <h4 className="font-semibold mb-4 text-zinc-100">Legal</h4>
                         <ul className="space-y-2 text-sm">
                             <li>
-                                <Link href="/privacy" className="text-zinc-400 hover:text-zinc-100">
+                                <Link href="/privacy-policy" className="text-zinc-400 hover:text-zinc-100">
                                     Privacy
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/terms" className="text-zinc-400 hover:text-zinc-100">
+                                <Link href="/terms-and-conditions" className="text-zinc-400 hover:text-zinc-100">
                                     Terms
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/return-policy" className="text-zinc-400 hover:text-zinc-100">
+                                    Return policy
                                 </Link>
                             </li>
                         </ul>

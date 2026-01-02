@@ -1,17 +1,12 @@
 "use client";
 
-import Product from './Product';
 import { products } from '@/constants/products';
-import { useCartStore } from '@/app/lib/store/cart-store';
-import { useEffect } from 'react';
+import ProductsGrid from './ProductsGrid';
 
 export default function Products() {
   // Subscribe to cart items — even if we don't use the value directly
   // This forces the component (and its children) to re-render when cart changes
-  useCartStore((state) => state.items);
 
-  // Optional: force re-render on mount/navigation if needed
-  useEffect(() => {}, []);
 
   return (
     <section className="relative py-32 bg-cover bg-center">
@@ -24,11 +19,7 @@ export default function Products() {
             This is the main content area. The footer will stay at the bottom.
           </p>
         </div>
-        <ul className="grid gap-4 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-          {products.map((product) => (
-            <Product product={product} key={product.id} />
-          ))}
-        </ul>
+        <ProductsGrid />
       </div>
     </section>
   );

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Product from "./products/Product";
 import { products } from "@/constants/products";
+import ProductsGrid from "./products/ProductsGrid";
 
 export default function Home() {
   return (
@@ -200,11 +201,7 @@ function Products1() {
           <p className="text-gray-600">This is the main content area. The footer will stay at the bottom.</p>
         </div>
 
-        <ul className="mt-8 grid gap-4 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-          {products.slice(0, 8).map((product) => (
-            <Product product={product} key={product.id} />
-          ))}
-        </ul>
+        <ProductsGrid />
       </div>
     </section>
 
