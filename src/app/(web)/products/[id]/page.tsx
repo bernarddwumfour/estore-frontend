@@ -8,8 +8,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import Product from '../Product';
 import { useCartStore } from '@/app/lib/store/cart-store';
-import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
+import unAuthenticatedAxios from '@/axios-instances/UnAuthenticatedAxios';
 
 interface ProductDetailData {
   id: string;
@@ -42,7 +42,7 @@ interface ProductDetailData {
     is_default: boolean;
     is_in_stock: boolean;
     is_low_stock: boolean;
-    images: {url :string,alt_text:string,type:string}[];
+    images: { url: string, alt_text: string, type: string }[];
     dimensions: {
       weight: number | null;
       height: number | null;
@@ -73,7 +73,7 @@ export default function ProductDetail() {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
   // Selected image (starts with first image of default variant)
-  const [selectedImage, setSelectedImage] = useState<{url :string,alt_text:string,type:string}|undefined>(undefined);
+  const [selectedImage, setSelectedImage] = useState<{ url: string, alt_text: string, type: string } | undefined>(undefined);
 
   // Cart store
   const items = useCartStore(state => state.items);
@@ -86,19 +86,19 @@ export default function ProductDetail() {
     fetchProductDetail(slug as string);
   }, [slug]);
 
-  const fetchProductDetail = async (slug:string) => {
+  const fetchProductDetail = async (slug: string) => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const response = await securityAxios.get(endpoints.products.getProductDetailsWeb.replace(":slug",slug));
-      
+
+      const response = await unAuthenticatedAxios.get(endpoints.products.getProductDetailsWeb.replace(":slug", slug));
+
       if (response.data.success) {
         const productData = response.data.data;
         setProduct(productData);
-        
+
         // Initialize selected options from default variant
-        const defaultVariant = productData.variants.find((v:any) => v.is_default) || productData.variants[0];
+        const defaultVariant = productData.variants.find((v: any) => v.is_default) || productData.variants[0];
         if (defaultVariant) {
           setSelectedOptions(defaultVariant.attributes);
           if (defaultVariant.images.length > 0) {
@@ -155,6 +155,7 @@ export default function ProductDetail() {
 
     addItem({
       id: product!.id,
+      slug: product!.slug,
       sku: selectedVariant.sku,
       title: product!.title,
       price: selectedVariant.discounted_price,
@@ -162,6 +163,7 @@ export default function ProductDetail() {
       quantity: 1,
       originalPrice: selectedVariant.discount_amount > 0 ? selectedVariant.price : undefined,
       attributes: selectedVariant.attributes,
+      variantId : selectedVariant.id
     });
   };
 
@@ -173,7 +175,7 @@ export default function ProductDetail() {
   // Quantity controls
   const handleCartQuantityChange = (delta: number) => {
     if (!selectedVariant) return;
-    
+
     const newQuantity = cartQuantity + delta;
     if (newQuantity <= 0) {
       removeItem(selectedVariant.sku);
@@ -213,7 +215,7 @@ export default function ProductDetail() {
       <div className="min-h-screen bg-gray-50 py-32">
         <div className="container mx-auto px-4 text-center">
           <p className="text-red-600 mb-4">Error: {error || 'Product not found'}</p>
-          <Button onClick={()=>fetchProductDetail}>Try Again</Button>
+          <Button onClick={() => fetchProductDetail}>Try Again</Button>
         </div>
       </div>
     );
@@ -223,13 +225,13 @@ export default function ProductDetail() {
     <div className="min-h-screen bg-gray-50 py-32">
       <div className="container mx-auto px-4">
         {/* Main Product Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-12 mb-20">
           {/* Left: Images */}
-          <div className="space-y-4">
+          <div className="space-y-4  lg:col-span-3 ">
             <div className="relative aspect-square overflow-hidden rounded-lg bg-white border border-gray-100">
               {selectedImage ? (
                 <Image
-                  src={selectedImage?.url 
+                  src={selectedImage?.url
                     ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${selectedImage.url}`
                     : '/placeholder.jpg'
                   }
@@ -247,7 +249,6 @@ export default function ProductDetail() {
                 </div>
               )}
             </div>
-              {`http://localhost:8000${selectedImage?.url}`}
 
             {/* Thumbnails */}
             {selectedVariant && selectedVariant.images.length > 0 && (
@@ -269,28 +270,32 @@ export default function ProductDetail() {
           </div>
 
           {/* Right: Details */}
-          <div className="flex flex-col justify-center space-y-8">
+          <div className="flex flex-col justify-center space-y-8  lg:col-span-4">
             <div>
-              {/* Product Badges */}
-              <div className="flex gap-2 mb-4">
-                {product.is_new && (
-                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-                    New
-                  </span>
-                )}
-                {product.is_featured && (
-                  <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
-                    Featured
-                  </span>
-                )}
-                {product.is_bestseller && (
-                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                    Bestseller
-                  </span>
-                )}
-              </div>
+              <div className="flex justify-between flex-col md:flex-row">
 
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">{product.title}</h1>
+                <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-4">{product.title}</h1>
+
+                {/* Product Badges */}
+                <div className="flex gap-2 mb-4 flex-none h-fit">
+                  {product.is_new && (
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                      New
+                    </span>
+                  )}
+                  {product.is_featured && (
+                    <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
+                      Featured
+                    </span>
+                  )}
+                  {product.is_bestseller && (
+                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                      Bestseller
+                    </span>
+                  )}
+                </div>
+
+              </div>
 
               {/* Rating */}
               <div className="flex items-center gap-2 mb-4">
@@ -298,11 +303,10 @@ export default function ProductDetail() {
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-4 w-4 ${
-                        i < Math.floor(product.average_rating)
-                          ? 'fill-amber-400 text-amber-400'
-                          : 'fill-gray-300 text-gray-300'
-                      }`}
+                      className={`h-4 w-4 ${i < Math.floor(product.average_rating)
+                        ? 'fill-amber-400 text-amber-400'
+                        : 'fill-gray-300 text-gray-300'
+                        }`}
                     />
                   ))}
                 </div>
@@ -321,12 +325,12 @@ export default function ProductDetail() {
               {/* Price */}
               {selectedVariant && (
                 <div className="flex items-baseline gap-4 mb-3">
-                  <span className="text-3xl font-bold text-gray-900">
+                  <span className="text-xl md:text-3xl font-bold text-gray-900">
                     ${selectedVariant.discounted_price.toFixed(2)}
                   </span>
                   {selectedVariant.discount_amount > 0 && (
                     <>
-                      <span className="text-xl text-gray-500 line-through">
+                      <span className="md:text-xl text-gray-500 line-through">
                         ${selectedVariant.price.toFixed(2)}
                       </span>
                       <span className="text-sm font-medium text-red-600">
@@ -337,7 +341,7 @@ export default function ProductDetail() {
                 </div>
               )}
 
-              <p className="text-gray-700 text-lg leading-relaxed mb-2">{product.description}</p>
+              <p className="text-gray-700 text-sm lg:text-base leading-relaxed mb-2">{product.description}</p>
 
               {/* Stock Status */}
               {selectedVariant && (
@@ -386,7 +390,7 @@ export default function ProductDetail() {
                                 value={value}
                                 checked={selected}
                                 onChange={() => handleOptionChange(optionKey, value)}
-                                disabled={!available}
+                                // disabled={!available}
                                 className="sr-only"
                               />
                               {value}
@@ -399,20 +403,8 @@ export default function ProductDetail() {
                 </div>
               )}
 
-              {/* Features */}
-              {product.features.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-lg font-medium mb-4">Key Features</h3>
-                  <ul className="space-y-1 text-gray-700">
-                    {product.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start text-sm">
-                        <span className="mr-3 text-green-600">✓</span>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <Features features={product.features} />
+
             </div>
 
             {/* Action Buttons */}
@@ -502,7 +494,7 @@ export default function ProductDetail() {
             <h2 className="text-3xl font-bold mb-10 text-center">You Might Also Like</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {product.related_products.map((relatedProduct) => (
-                <Product product={relatedProduct}/>
+                <Product product={relatedProduct} />
               ))}
             </div>
           </div>
@@ -510,4 +502,30 @@ export default function ProductDetail() {
       </div>
     </div>
   );
+}
+
+function Features({ features }: { features: any[] }) {
+  const [isExpanded, setIsExpnded] = useState(false)
+  return (
+    <div className='relative'>
+
+      {/* Features */}
+      {features.length > 0 && (
+        <div className={`mb-4 ${!isExpanded ? "max-h-[210px] overflow-hidden" : "max-h-auto"}`}>
+          <h3 className="text-lg font-medium mb-4">Key Features</h3>
+          <ul className="space-y-1 text-gray-700">
+            {features.map((feature, idx) => (
+              <li key={idx} className="flex items-start text-sm">
+                <span className="mr-3 text-green-600">✓</span>
+                {feature}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div onClick={()=>setIsExpnded(prev=>!prev)} className={`${!isExpanded?"bg-white/80 -bottom-2 ":"-bottom-8"} py-2 absolute cursor-pointer flex justify-center right-0 w-full`}>
+        <p className="text-center text-sm text-gray-500">{!isExpanded?"See more":"See Less"}</p></div>
+    </div>
+  )
 }

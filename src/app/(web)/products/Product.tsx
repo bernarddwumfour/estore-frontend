@@ -7,46 +7,10 @@ import Link from 'next/link'
 import { useRouter } from "next/navigation"
 import React from 'react'
 import Image from 'next/image'
+import { ProductType } from '@/types/productTypes'
 
-interface ProductProps {
-  product: {
-    id: string
-    title: string
-    slug: string
-    description: string
-    category: {
-      id: string
-      name: string
-      slug: string
-    }
-    features: string[]
-    options: Record<string, string[]>
-    min_price: number
-    max_price: number
-    average_rating: number
-    total_reviews: number
-    total_stock: number
-    has_stock: boolean
-    is_featured: boolean
-    is_bestseller: boolean
-    is_new: boolean
-    default_variant: {
-      sku: string
-      price: number
-      discounted_price: number
-      stock: number
-      attributes: Record<string, string>
-      images: Array<{
-        url: string
-        alt_text: string
-        image_type: string
-      }>
-    } | null
-    created_at: string
-  }
-}
 
-const Product = ({ product }: ProductProps) => {
+const Product = ({ product }: {product:ProductType}) => {
   const router = useRouter()
   const addItem = useCartStore((state) => state.addItem)
   const updateQuantity = useCartStore((state) => state.updateQuantity)
@@ -63,7 +27,7 @@ const Product = ({ product }: ProductProps) => {
 
   // Get the first/main image from default variant
   const mainImage = hasDefaultVariant && defaultVariant.images?.length > 0
-    ? defaultVariant.images.find(img => img.image_type === 'main') || defaultVariant.images[0]
+    ? defaultVariant.images.find(img => img.type === 'main') || defaultVariant.images[0]
     : null
 
   const inCart = isInCart(product.default_variant?.sku!)
@@ -77,6 +41,7 @@ const Product = ({ product }: ProductProps) => {
 
     addItem({
       id: product.id,
+      slug: product.slug,
       sku: defaultVariant.sku,
       title: product.title,
       price: defaultVariant.discounted_price || defaultVariant.price,
@@ -84,6 +49,7 @@ const Product = ({ product }: ProductProps) => {
       quantity: 1,
       originalPrice: defaultVariant.price,
       attributes: defaultVariant.attributes,
+      variantId : defaultVariant.id
     })
   }
 
@@ -112,7 +78,7 @@ const Product = ({ product }: ProductProps) => {
   }
 
   return (
-    <li className="group relative block overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg">
+    <li className="group relative block overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md">
       <Link href={`/products/${product.slug}`} className="block">
         {/* Product Badges */}
         <div className="absolute left-3 top-3 z-10 flex flex-col gap-1">
@@ -150,13 +116,13 @@ const Product = ({ product }: ProductProps) => {
         </div>
 
         {/* Product Image */}
-        <div className="relative h-64 w-full bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+        <div className="relative  w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
           {mainImage && mainImage.url ? (
             <Image
               src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${mainImage.url.startsWith('/') ? mainImage.url : `/${mainImage.url}`}`}
               alt={mainImage.alt_text || product.title}
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-cover scale-100 transition-transform duration-300 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority={product.is_featured || product.is_bestseller}
             />

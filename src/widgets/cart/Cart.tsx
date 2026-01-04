@@ -93,11 +93,11 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
               <ul className="space-y-6">
                 {items.map((item) => (
                   <li key={item.id} className="flex items-start gap-4">
-                    <Link href={`/products/${item.id}`} className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
+                    <Link href={`/products/${item.slug}`} className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
                       <Image
                         width={88}
                         height={88}
-                        src={item.imageUrl}
+                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${item.imageUrl}`}
                         alt={item.title}
                         className="object-cover h-full w-full"
                       />
@@ -204,7 +204,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
           )}
         </div>
       </div>
-      
+
     </>
   )
 }

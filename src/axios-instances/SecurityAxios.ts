@@ -1,11 +1,11 @@
 // axios-instances/SecurityAxios.ts
 import { endpoints } from "@/constants/endpoints/endpoints";
 import { getAuthCookie, setAuthCookie } from "@/lib/providers/auth-provider";
-import axios, { 
-  AxiosInstance, 
-  InternalAxiosRequestConfig, 
-  AxiosError, 
-  AxiosResponse 
+import axios, {
+  AxiosInstance,
+  InternalAxiosRequestConfig,
+  AxiosError,
+  AxiosResponse
 } from "axios";
 
 // ==================== TYPE DEFINITIONS ====================
@@ -23,11 +23,13 @@ interface ApiResponse<T = any> {
 }
 
 // CHANGED: Added type for refresh token response
-interface RefreshTokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type?: string;
-  expires_in?: number;
+type RefreshTokenResponse = {
+  data: {
+    access_token: string;
+    refresh_token: string;
+
+
+  }
 }
 
 // ==================== AXIOS INSTANCE CONFIGURATION ====================
@@ -101,8 +103,8 @@ const isPublicEndpoint = (url: string | undefined): boolean => {
 
   // Check if URL starts with any public endpoint
   // Using startsWith to handle endpoints with parameters
-  return publicEndpoints.some(ep => 
-    url.startsWith(ep) || 
+  return publicEndpoints.some(ep =>
+    url.startsWith(ep) ||
     url.includes(ep) // Also check includes for flexibility
   );
 };
@@ -130,7 +132,7 @@ securityAxios.interceptors.request.use(
     } else {
       // CHANGED: Redirect to login if no token found for protected endpoint
       console.warn("No access token found for protected endpoint:", normalizedConfig.url);
-      
+
       // Only redirect on client side
       if (typeof window !== "undefined" && !normalizedConfig.url?.includes("auth")) {
         // Don't redirect if already on login page
@@ -154,12 +156,12 @@ securityAxios.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
     // CHANGED: Optionally handle successful responses here
     // You could normalize the response data structure
-    
+
     return response;
   },
   async (error: AxiosError<ApiResponse>) => {
     const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
-    
+
     if (!originalRequest) {
       return Promise.reject(error);
     }
@@ -171,9 +173,9 @@ securityAxios.interceptors.response.use(
     // CHANGED: Handle token expiration
     if (
       status === 401 &&
-      (errorMessage?.includes("expired") || 
-       errorMessage?.includes("invalid token") ||
-       errorData?.error === "Token has expired") && // CHANGED: Match Django error message
+      (errorMessage?.includes("expired") ||
+        errorMessage?.includes("invalid token") ||
+        errorData?.error === "Token has expired") && // CHANGED: Match Django error message
       !originalRequest._retry &&
       !originalRequest.url?.includes(endpoints.auth.refreshToken) &&
       !isPublicEndpoint(originalRequest.url)
@@ -186,7 +188,7 @@ securityAxios.interceptors.response.use(
           refreshSubscribers.push((token: string) => {
             originalRequest.headers = originalRequest.headers || {};
             originalRequest.headers.Authorization = `Bearer ${token}`;
-            
+
             // Retry the original request
             securityAxios(originalRequest)
               .then(response => resolve(response))
@@ -212,7 +214,7 @@ securityAxios.interceptors.response.use(
           { refresh_token: refreshToken }
         );
 
-        const { access_token, refresh_token } = refreshResponse.data;
+        const { access_token, refresh_token } = refreshResponse.data.data;
 
         if (!access_token || !refresh_token) {
           throw new Error("Invalid tokens received from refresh");
@@ -247,19 +249,19 @@ securityAxios.interceptors.response.use(
 
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
-        
+
         // Clear auth data on refresh failure
         const authData = getAuthCookie();
         if (authData) {
           // CHANGED: Clear the cookie properly
           document.cookie = "auth_data=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         }
-        
+
         // Redirect to login
         if (typeof window !== "undefined") {
           window.location.href = "/login";
         }
-        
+
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -269,13 +271,13 @@ securityAxios.interceptors.response.use(
     // CHANGED: Handle other authentication errors
     if (status === 401 || status === 403) {
       console.error("Authentication error:", errorMessage);
-      
+
       // Clear auth data
       const authData = getAuthCookie();
       if (authData) {
         document.cookie = "auth_data=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       }
-      
+
       // Redirect to login if not already there
       if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
         window.location.href = "/login";
@@ -289,10 +291,10 @@ securityAxios.interceptors.response.use(
     }
 
     // CHANGED: Extract error message properly
-    const displayMessage = errorData?.error || 
-                          errorData?.message || 
-                          error.message || 
-                          "An error occurred";
+    const displayMessage = errorData?.error ||
+      errorData?.message ||
+      error.message ||
+      "An error occurred";
 
     // CHANGED: Create a new error with proper message
     const enhancedError = new Error(displayMessage);

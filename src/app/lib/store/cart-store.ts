@@ -8,10 +8,12 @@ export interface CartItem {
   sku: string           // unique variant identifier
   title: string
   price: number
+  slug:string,
   imageUrl: string
   quantity: number
   originalPrice?: number
   attributes: Record<string, string>  // e.g., { brand: "Sony", color: "Black", size: "40mm" }
+  variantId : string
 }
 
 interface CartStore {

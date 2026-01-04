@@ -2,5 +2,5 @@
 import { redirect } from 'next/navigation';
 
 export default function OldPage() {
-  redirect('/dashboard/users');
+  redirect('/dashboard/products');
 }

@@ -44,10 +44,11 @@ export default function CartPage() {
                   <li key={item.id} className="flex items-start gap-6 pb-6 border-b border-gray-100 last:border-0">
                     <div className="relative size-32 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
                       <Image
-                        src={item.imageUrl}
+                        width={88}
+                        height={88}
+                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${item.imageUrl}`}
                         alt={item.title}
-                        fill
-                        className="object-cover"
+                        className="object-cover h-full w-full"
                       />
                     </div>
                     <div className="flex-1">

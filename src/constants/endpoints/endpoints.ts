@@ -10,7 +10,9 @@ export const endpoints = {
       resendEmailVerificationLink: "/auth/resend-verification/",
       resendOTPVerificationCode: "/auth/otp/resend/",
       logout: "/auth/logout/",
-      refreshToken: "/auth/token/refresh/"
+      refreshToken: "/auth/refresh-token/",
+      getProfile:"auth/profile/",
+      updateProfile :"auth/profile/update/"
     },
  
     products : {
@@ -20,11 +22,19 @@ export const endpoints = {
       updateCategory :"/products/admin/categories/:id/",
       listProducts: "/products/admin/products/",
       listProductsWeb: "/products/",
+      listCategoriesWeb: "/products/categories/",
       addProduct : "/products/admin/products/create/",
       createVariant : "/products/admin/products/:id/variants/" ,
       getProductDetails :"/products/admin/products/:id/",
       getProductDetailsWeb :"/products/:slug/"
 
+    },
+    orders : {
+      listOrders :"/orders/admin/orders/",
+      listUserOrders :"/orders/",
+      createOrder :"/orders/create/",
+      orderDetails:"/orders/:id/",
+      cancelOrder:"orders/:id/cancel/"
     },
     users: {
       listUsersCardAnalytics: "/analytics/overall/?module=user_management",

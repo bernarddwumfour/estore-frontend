@@ -3,28 +3,31 @@
 import { ProductType } from "@/types/productTypes";
 import Product from "./Product";
 import { useEffect, useState } from "react";
-import securityAxios from "@/axios-instances/SecurityAxios";
 import { endpoints } from "@/constants/endpoints/endpoints";
 import { Loader2 } from "lucide-react";
+import { useCartStore } from "@/app/lib/store/cart-store";
+import unAuthenticatedAxios from "@/axios-instances/UnAuthenticatedAxios";
 
-const ProductsGrid = () => {
+const ProductsGrid = ({category,searchParams}:{category?:string,searchParams?: string}) => {
   const [products, setProducts] = useState<ProductType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+    const items = useCartStore(state => state.items);
+  
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [searchParams]);
 
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await securityAxios.get(endpoints.products.listProductsWeb, {
+      const response = await unAuthenticatedAxios.get(endpoints.products.listProductsWeb, {
         params: {
           status: 'published',
           limit: 20,
+          category : category || undefined 
         }
       });
 
@@ -72,13 +75,6 @@ const ProductsGrid = () => {
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">Products</h2>
-        <p className="text-muted-foreground">
-          Showing {products.length} products
-        </p>
-      </div>
-
       {products.length > 0 ? (
         <ul className="grid gap-4 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {products.map((product) => (

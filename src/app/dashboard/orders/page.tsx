@@ -13,8 +13,8 @@ import { endpoints } from "@/constants/endpoints/endpoints";
 import securityAxios from "@/axios-instances/SecurityAxios";
 
 
-export const fetchUsers = async () => {
-  const response = await securityAxios.get(endpoints.users.listUsers_Dashboard);
+export const fetchOrders = async () => {
+  const response = await securityAxios.get(endpoints.orders.listOrders);
   return response.data; // Return the actual data
 };
 
@@ -27,8 +27,8 @@ function ListUsers() {
     error,
     isFetching,
   } = useQuery({
-    queryKey: [endpoints.users.listUsers_Dashboard], // Unique cache key
-    queryFn: fetchUsers, // Your Axios fetch function
+    queryKey: [endpoints.orders.listOrders], // Unique cache key
+    queryFn: fetchOrders, // Your Axios fetch function
     // staleTime: 60 * 1000, // Data stays fresh for 1 minute
   });
 
@@ -36,7 +36,7 @@ function ListUsers() {
   if (isLoading || isFetching) return <TableLoader/>;
 
   if (isError) return (
-    <AlertMessage variant="error" message={`${error?.message || "Failed to load users"}`} />
+    <AlertMessage variant="error" message={`${error?.message || "Failed to load orders"}`} />
   )
    
 
@@ -82,7 +82,7 @@ function ListUsers() {
 
 
     <div>
-      <DataTable data={data.data} hiddenColumns={["id"]} actionsDropdown={ActionsDropdown} badgesConfig={{
+      <DataTable data={data.data.orders} hiddenColumns={["id"]} actionsDropdown={ActionsDropdown} badgesConfig={{
     is_active: {
       values: ["Yes", "No"],
       variants: ["success", "destructive"], 

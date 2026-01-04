@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Heart, LayoutDashboard, LogOut, Mail, Menu, Phone, ShoppingCart, User, User2, X } from "lucide-react"
+import { Handbag, Heart, LayoutDashboard, LogOut, Mail, Menu, Phone, ShoppingCart, User, User2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
@@ -99,26 +99,17 @@ export default function Navbar() {
                                             className="z-[1002] min-w-[200px]"
                                         >
 
-                                            {/* <DropdownMenuItem asChild className="cursor-pointer"> */}
-                                            {/* <Link href={"/profile/recommended-scholarships"}>
-                        <div className="flex w-full justify-between gap-6 items-center py-2">
-                          <p>Recommended Scholarships</p>
-                          <Award size={16} />
-                        </div>
-                      </Link>
-                    </DropdownMenuItem>
 
+                                            <DropdownMenuItem asChild className="cursor-pointer py-1">
+                                                <Link href={"/orders"}>
+                                                    <div className="flex w-full justify-between gap-6 items-center py-2">
+                                                        <p>Orders</p>
+                                                        <Handbag size={16} />
+                                                    </div>
+                                                </Link>
+                                            </DropdownMenuItem>
 
-                    <DropdownMenuItem asChild className="cursor-pointer">
-                      <Link href={"/profile/saved-scholarships"}>
-                        <div className="flex w-full justify-between gap-6 items-center py-2">
-                          <p>Saved Scholarships</p>
-                          <Bookmark size={16} />
-                        </div>
-                      </Link>
-                    </DropdownMenuItem> */}
-
-                                            <DropdownMenuItem asChild className="cursor-pointer">
+                                            <DropdownMenuItem asChild className="cursor-pointer py-1">
                                                 <Link href={"/profile"}>
                                                     <div className="flex w-full justify-between gap-6 items-center py-2">
                                                         <p>Profile</p>
@@ -127,22 +118,18 @@ export default function Navbar() {
                                                 </Link>
                                             </DropdownMenuItem>
 
-                                            {/* <DropdownMenuItem>
-                      <div>
-                        <p>{`${user?.firstname} ${user?.lastname}`}</p>
-                        <span className="text-xs text-gray-500">{`${user?.role}`}</span>
-                      </div>
-                    </DropdownMenuItem> */}
 
                                             <DropdownMenuItem>
-                                                <div>
-                                                    <p>{`${user?.first_name} ${user?.last_name}`}</p>
-                                                    <span className="text-xs text-gray-500">{`${user?.role}`}</span>
-                                                </div>
+                                                <Link href={"/profile"}>
+                                                    <div>
+                                                        <p>{`${user?.first_name} ${user?.last_name}`}</p>
+                                                        <span className="text-xs text-gray-500">{`${user?.role}`}</span>
+                                                    </div>
+                                                </Link>
                                             </DropdownMenuItem>
 
 
-                                            <DropdownMenuItem onClick={() => logout()}>
+                                            <DropdownMenuItem className="cursor-pointer py-1" onClick={() => logout()}>
                                                 <LogOut />
                                                 Logout
                                             </DropdownMenuItem>

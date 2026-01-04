@@ -199,7 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // CHANGED: Check email_verified (not is_email_verified)
       if (!userData.email_verified) {
-        router.push("/verify-email");
+        router.push(`/verification-link-sent/?email=${userData.email}`);
       } else {
         router.push("/");
       }
@@ -242,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       toast.success(apiResponse.message || "Registration successful");
 
-      router.push("/verify-email");
+      router.push(`/verification-link-sent/?email=${userData.email}`);
       
     } catch (error: any) {
       console.error("Signup error:", error);

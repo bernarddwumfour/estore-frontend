@@ -3,16 +3,15 @@ import TestimonialsSlider from "@/widgets/slider/Slider";
 import { ArrowUpRight, Bookmark, BookMarked, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import Product from "./products/Product";
-import { products } from "@/constants/products";
 import ProductsGrid from "./products/ProductsGrid";
+import Categories from "@/widgets/categories/Categories";
 
 export default function Home() {
   return (
     <>
       <div className="py-12"></div>
       <Hero2 />
-      <Categories1 />
+      <ProductCategories />
       <Products1 />
       <About1 />
       <Products1 />
@@ -21,40 +20,7 @@ export default function Home() {
   );
 }
 
-const categories = [
-  {
-    title: "Portable Electronics",
-    subtitle: "Travel Ready",
-    image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&q=80&w=1160",
-    items: "203",
-  },
-  {
-    title: "Audio & Sound",
-    subtitle: "Premium Acoustics",
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=1160",
-    items: "156",
-  },
-  {
-    title: "Smart Wearables",
-    subtitle: "Connected Lifestyle",
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=1160",
-    href: "/category/wearables",
-  },
-  {
-    title: "Gaming Gear",
-    subtitle: "Ultimate Performance",
-    image: "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?auto=format&fit=crop&q=80&w=1160",
-    items: "89",
-    href: "/category/gaming",
-  },
-  {
-    title: "Mobile Accessories",
-    subtitle: "Essential Companions",
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1160",
-    items: "247",
-  },
 
-];
 
 
 
@@ -99,11 +65,13 @@ function Hero2() {
   return (
 
     <section className="relative py-64 bg-cover bg-center" >
-      <div className="absolute inset-0 bg-gray-400 bg-opacity-60"></div>
+      <div className="absolute inset-0 bg-gray-400 bg-opacity-60">
+        <Image src="https://images.unsplash.com/photo-1609334761848-77b4d1994040?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Home Image" objectFit="cover" fill className="absolute w-full h-full brightness-60" />
+      </div>
 
       <div className="relative z-[2] max-w-4xl mx-auto px-6 h-full flex flex-col justify-center items-center text-center text-white">
-        <h1 className="text-4xl md:text-6xl font-extrabold mb-4">Transform Your Garden</h1>
-        <p className="text-lg md:text-xl mb-8">Expert gardening & landscaping services to turn your outdoor dreams into reality.</p>
+        <h1 className="text-4xl md:text-6xl font-extrabold mb-4">Authentic Apple Products.  Designed for You.</h1>
+        <p className="text-lg md:text-xl mb-8 bg-white/20  backdrop-blur-md p-3 my-2">iPhone, MacBook, iPad, Apple Watch, AirPods — everything Apple, all in one place.</p>
         <Button asChild className="p-7">
           <Link href="/products">
             Shop Now
@@ -118,16 +86,22 @@ function Hero2() {
 function About1() {
   return (
     <section className="bg-primary/5">
-      <div className="mx-auto container py-16">
+      <div className="mx-auto container py-32">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-center justify-between md:gap-8">
           <div>
             <div className="max-w-prose md:max-w-none space-y-6">
               <h2 className="text-2xl font-semibold text-gray-900 sm:text-3xl">
-                Lorem ipsum dolor sit amet consectetur adipisicing elit.
+                Your Trusted Apple Destination – Authentic Products, Exceptional Service
               </h2>
 
               <p className="mt-4 text-pretty text-gray-700 leading-8">
-                Lorem ipsum dolor sit amet consectetur adipisicing elit. Fuga non eos pariatur suscipit repellendus ex dolores error voluptatum voluptas autem ipsum nemo ea repellat voluptate aut facere natus ut voluptates eaque assumenda obcaecati, ipsa tempora. Totam repellendus beatae quae quo! Obcaecati, et voluptatibus expedita rerum recusandae fugit culpa architecto voluptas molestias soluta. Eveniet eum numquam nemo unde laboriosam totam sed! Ducimus inventore eveniet aut, pariatur eligendi repudiandae itaque illum omnis laboriosam nulla.
+                Welcome to IPlug, your trusted destination for genuine Apple products. As an authorized Apple reseller, we bring the latest iPhones, MacBooks, iPads, and accessories directly to you with guaranteed authenticity and full manufacturer warranty.
+
+                Founded by Apple enthusiasts, we're passionate about connecting people with technology that inspires. Every product is carefully selected, thoroughly tested, and shipped with care to ensure you receive Apple's signature quality.
+
+                We believe great technology should come with great service. That's why we offer free shipping, expert support, and a hassle-free return policy—because your experience matters as much as your products.
+
+                Join thousands of satisfied customers who choose us for their Apple needs.
               </p>
               <Button className="p-7">
                 Learn More
@@ -136,7 +110,7 @@ function About1() {
           </div>
 
           <div>
-            <Image width={1000} height={1000} src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=1160" className="m-auto" alt="hero image" />
+            <Image width={1000} height={1000} src="https://images.unsplash.com/photo-1609334761848-77b4d1994040?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" className="m-auto" alt="hero image" />
           </div>
         </div>
       </div>
@@ -146,59 +120,15 @@ function About1() {
 
 
 
-function Categories1() {
-  return (
-
-    <section className="relative py-24 bg-cover bg-center bg-primary/5" >
-
-      <div className="mx-auto container">
-        <div className="py-6">
-          <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-4">Explore Our Products</h1>
-          <p className="text-gray-600">This is the main content area. The footer will stay at the bottom.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 ">
-
-
-
-          {categories.map((category, i) => (
-            <div key={category.title + i} className="relative group cursor-pointer h-64 p-4 flex justify-center items-end">
-              <img
-                src={category.image || "/placeholder.svg"}
-                alt={category.title}
-                className="absolute w-full h-full object-cover group-hover:scale-95 transition-transform duration-700"
-              />
-
-              <div className="relative overflow-hidden mb-6 bg-stone-200 p-6 z-[2] opacity-70 group-hover:opacity-100 ">
-                <div className="absolute bottom-4 right-4 bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ArrowUpRight className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-stone-500 mb-2 font-serif">{category.subtitle}</p>
-                  <h3 className="text-2xl font-serif mb-2 group-hover:text-stone-600 transition-colors">
-                    {category.title}
-                  </h3>
-                  <p className="text-sm text-stone-500">{category.items} Products</p>
-                </div>
-              </div>
-
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-  )
-}
-
 function Products1() {
   return (
 
     <section className="relative py-24 bg-cover bg-center" >
 
       <div className="mx-auto container">
-        <div className="py-6">
-          <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-4">Explore Our Catalogue</h1>
-          <p className="text-gray-600">This is the main content area. The footer will stay at the bottom.</p>
+        <div className="py-8">
+          <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-4">Best Sellers</h1>
+          <p className="text-gray-600">Most Loved by Our Customers , See What Everyone's Choosing.</p>
         </div>
 
         <ProductsGrid />
@@ -207,6 +137,22 @@ function Products1() {
 
   )
 }
+
+
+function ProductCategories() {
+  return (
+    <section className="py-24 bg-gray-50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="py-6">
+          <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-4">Shop by Category</h1>
+          <p className="text-gray-600">Explore our many apple products</p>
+        </div>
+        <Categories/>
+      </div>
+    </section>
+  )
+}
+
 
 function Testimonials() {
   return (

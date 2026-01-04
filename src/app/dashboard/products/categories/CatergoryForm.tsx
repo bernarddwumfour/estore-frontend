@@ -27,12 +27,13 @@ import { endpoints } from "@/constants/endpoints/endpoints";
 import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, Upload, X, Image as ImageIcon } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import Image from "next/image";
 
 // Zod Schema for Category
 const formSchema = z.object({
@@ -50,7 +51,6 @@ const formSchema = z.object({
   // Status
   is_active: z.boolean().default(true),
 }).refine((data) => {
-  // If meta_title is provided, it should have reasonable length
   if (data.meta_title && data.meta_title.length < 5) {
     return false;
   }
@@ -62,12 +62,10 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-// Interface for category options
 interface CategoryOption {
   id: string;
   name: string;
   full_path: string;
-  has_children?: boolean;
 }
 
 export default function CategoryCreationForm() {
@@ -76,6 +74,11 @@ export default function CategoryCreationForm() {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
   
+  // Image upload states
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
   // Initialize form
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -99,19 +102,17 @@ export default function CategoryCreationForm() {
       setIsLoadingCategories(true);
       const response = await securityAxios.get(endpoints.products.listcategories, {
         params: {
-          limit: 100, // Get all categories
-          include_inactive: false, // Only active categories can be parents
+          limit: 100,
+          include_inactive: false,
         }
       });
 
       if (response.data.success) {
-        // Transform categories for dropdown
         const categories = response.data.data.categories || [];
         setParentCategories(categories.map((cat: any) => ({
           id: cat.id,
           name: cat.name,
-          full_path: cat.full_path,
-          has_children: cat.has_children,
+          full_path: cat.full_path || cat.name,
         })));
       }
     } catch (error) {
@@ -122,70 +123,117 @@ export default function CategoryCreationForm() {
     }
   };
 
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("File must be an image");
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be less than 5MB");
+      return;
+    }
+    
+    setImage(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset file input
+    e.target.value = '';
+  };
+
+  const removeImage = () => {
+    setImage(null);
+    setImagePreview(null);
+  };
+
   const onSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true);
+      setIsUploadingImage(true);
       
-      // Prepare payload - remove empty strings and null values
-      const payload: Record<string, any> = {
-        name: data.name.trim(),
-        description: data.description?.trim() || "",
-        is_active: data.is_active,
-      };
+      // Create FormData for multipart upload
+      const formData = new FormData();
       
-      // Add parent_id only if selected
+      // Add text fields
+      formData.append('name', data.name.trim());
+      formData.append('description', data.description?.trim() || "");
+      formData.append('is_active', data.is_active.toString());
+      
       if (data.parent_id && data.parent_id !== "null") {
-        payload.parent_id = data.parent_id;
+        formData.append('parent_id', data.parent_id);
       }
       
-      // Add SEO fields only if provided
       if (data.meta_title?.trim()) {
-        payload.meta_title = data.meta_title.trim();
+        formData.append('meta_title', data.meta_title.trim());
       }
       
       if (data.meta_description?.trim()) {
-        payload.meta_description = data.meta_description.trim();
+        formData.append('meta_description', data.meta_description.trim());
       }
       
-      console.log("Submitting category payload:", payload);
+      // Add image if exists
+      if (image) {
+        formData.append('image', image);
+      }
+      
+      console.log("Submitting category with image:", !!image);
 
-      // Use your Django category creation endpoint
-      const response = await securityAxios.post(endpoints.products.addCategory, payload);
+      // Use multipart/form-data endpoint for category creation with image
+      const response = await securityAxios.post(
+        endpoints.products.addCategory, // Update this endpoint to handle multipart
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
 
       console.log("API Response:", response.data);
 
-      if (response.status === 201) {
+      if (response.status === 201 || response.data.success) {
         const apiResponse = response.data;
         
-        if (apiResponse.success) {
-          toast.success(apiResponse.message || "Category created successfully");
-          
-          // Reset form but keep parent selection for creating siblings
-          form.reset({
-            name: "",
-            description: "",
-            parent_id: data.parent_id, // Keep same parent
-            meta_title: "",
-            meta_description: "",
-            is_active: true,
-          });
-          
-          // Refresh parent categories list
-          fetchParentCategories();
-        } else {
-          toast.error(apiResponse.error || "Failed to create category");
-        }
+        toast.success(apiResponse.message || "Category created successfully");
+        
+        // Reset form
+        form.reset({
+          name: "",
+          description: "",
+          parent_id: null,
+          meta_title: "",
+          meta_description: "",
+          is_active: true,
+        });
+        
+        // Clear image
+        removeImage();
+        
+        // Refresh parent categories list
+        fetchParentCategories();
       } else {
-        toast.error(`Unexpected status: ${response.status}`);
+        toast.error(apiResponse.error || "Failed to create category");
       }
     } catch (error: any) {
       console.error("Error creating category:", error);
       
-      // Handle Django validation errors
+      // Handle validation errors
       if (error?.response?.data?.errors) {
         const validationErrors = error.response.data.errors;
         
-        // Display first validation error in toast
         const firstErrorKey = Object.keys(validationErrors)[0];
         const firstError = validationErrors[firstErrorKey];
         
@@ -195,7 +243,7 @@ export default function CategoryCreationForm() {
           toast.error(firstError);
         }
         
-        // Set form errors for specific fields
+        // Set form errors
         Object.keys(validationErrors).forEach((field) => {
           const fieldName = field as keyof FormData;
           const errorMessage = Array.isArray(validationErrors[field]) 
@@ -220,6 +268,7 @@ export default function CategoryCreationForm() {
       }
     } finally {
       setIsSubmitting(false);
+      setIsUploadingImage(false);
     }
   };
 
@@ -244,7 +293,7 @@ export default function CategoryCreationForm() {
                 <FormLabel>Category Name *</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="e.g., Electronics, Clothing, Furniture"
+                    placeholder="e.g., iPhone, Mac, Accessories"
                     {...field}
                   />
                 </FormControl>
@@ -256,6 +305,72 @@ export default function CategoryCreationForm() {
             )}
           />
           
+          {/* Category Image Upload */}
+          <div className="space-y-3">
+            <FormLabel>Category Image</FormLabel>
+            <div className="flex flex-col gap-4">
+              {/* Image Preview */}
+              {imagePreview ? (
+                <div className="relative w-full max-w-xs aspect-video rounded-lg overflow-hidden border">
+                  <Image
+                    src={imagePreview}
+                    alt="Category preview"
+                    fill
+                    className="object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={removeImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center w-full max-w-xs aspect-video border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                  <ImageIcon className="h-12 w-12 text-gray-400" />
+                </div>
+              )}
+              
+              {/* Upload Button */}
+              <div className="flex flex-col gap-2">
+                <input
+                  type="file"
+                  id="category-image"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={isSubmitting}
+                />
+                <div className="flex gap-2">
+                  <label
+                    htmlFor="category-image"
+                    className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {image ? "Change Image" : "Upload Image"}
+                  </label>
+                  {image && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={removeImage}
+                      disabled={isSubmitting}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  PNG, JPG, WebP up to 5MB. Recommended: 800x600px
+                </p>
+              </div>
+            </div>
+          </div>
+          
           {/* Parent Category */}
           <FormField
             control={form.control}
@@ -266,7 +381,7 @@ export default function CategoryCreationForm() {
                 <Select
                   onValueChange={field.onChange}
                   value={field.value || "null"}
-                  disabled={isLoadingCategories}
+                  disabled={isLoadingCategories || isSubmitting}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -284,12 +399,7 @@ export default function CategoryCreationForm() {
                     <SelectItem value="null">None (Root Category)</SelectItem>
                     {parentCategories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{category.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({category.full_path})
-                          </span>
-                        </div>
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -314,6 +424,7 @@ export default function CategoryCreationForm() {
                     placeholder="Describe this category for customers and SEO..."
                     className="min-h-[100px]"
                     {...field}
+                    disabled={isSubmitting}
                   />
                 </FormControl>
                 <FormDescription>
@@ -337,6 +448,7 @@ export default function CategoryCreationForm() {
                 type="button"
                 variant="ghost"
                 className="w-full justify-between p-0 hover:bg-transparent"
+                disabled={isSubmitting}
               >
                 <div className="text-left">
                   <h3 className="text-lg font-semibold">Advanced Options</h3>
@@ -369,6 +481,7 @@ export default function CategoryCreationForm() {
                           placeholder="Optimized title for search engines"
                           {...field}
                           value={field.value || ""}
+                          disabled={isSubmitting}
                         />
                       </FormControl>
                       <FormDescription>
@@ -392,6 +505,7 @@ export default function CategoryCreationForm() {
                           className="min-h-[80px]"
                           {...field}
                           value={field.value || ""}
+                          disabled={isSubmitting}
                         />
                       </FormControl>
                       <FormDescription>
@@ -425,6 +539,7 @@ export default function CategoryCreationForm() {
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={isSubmitting}
                         />
                       </FormControl>
                     </FormItem>
@@ -440,7 +555,10 @@ export default function CategoryCreationForm() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => form.reset()}
+            onClick={() => {
+              form.reset();
+              removeImage();
+            }}
             disabled={isSubmitting}
           >
             Reset Form
@@ -454,7 +572,7 @@ export default function CategoryCreationForm() {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Category...
+                {isUploadingImage ? "Uploading..." : "Creating Category..."}
               </>
             ) : (
               "Create Category"

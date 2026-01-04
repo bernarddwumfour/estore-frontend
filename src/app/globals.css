@@ -128,7 +128,7 @@
   }
 
   .background-gradient {
-    @apply bg-gradient-to-r from-cyan-500 to-blue-500;
+    @apply bg-gradient-to-r from-cyan-500/95 to-blue-500/95 backdrop-blur-xl;
   }
 }
 
