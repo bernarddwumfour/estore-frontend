@@ -86,7 +86,7 @@ function Hero2() {
 function About1() {
   return (
     <section className="bg-primary/5">
-      <div className="mx-auto container py-32">
+      <div className="mx-auto container px-4 py-32">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-center justify-between md:gap-8">
           <div>
             <div className="max-w-prose md:max-w-none space-y-6">
@@ -125,7 +125,7 @@ function Products1() {
 
     <section className="relative py-24 bg-cover bg-center" >
 
-      <div className="mx-auto container">
+      <div className="mx-auto px-4 container">
         <div className="py-8">
           <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-4">Best Sellers</h1>
           <p className="text-gray-600">Most Loved by Our Customers , See What Everyone's Choosing.</p>

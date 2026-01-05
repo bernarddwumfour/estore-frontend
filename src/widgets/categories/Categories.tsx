@@ -141,7 +141,7 @@ function CategoryComponent({ type = "withImage" }: CategoriesProps){
 
   return (
     <section className="relative bg-center">
-      <div className="container mx-auto pb-8">
+      <div className="container mx-auto px-4 pb-8">
 
         {type === "withImage" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Handbag, Heart, LayoutDashboard, LogOut, Mail, Menu, Phone, ShoppingCart, User, User2, X } from "lucide-react"
+import { Handbag, Heart, LayoutDashboard, LogIn, LogOut, Mail, Menu, Phone, ShoppingCart, User, User2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
@@ -147,6 +147,12 @@ export default function Navbar() {
                                 </>
                             )}
 
+                            {!user?.id && <Button onClick={() => setMobileMenuOpen(false)} asChild className="w-full py-4 justify-start lg:hidden bg-transparent w-fit">
+                                <Link href="/login">
+                                    <LogIn/>
+                                </Link>
+                            </Button>}
+
 
 
                             <div className="relative">
@@ -181,26 +187,24 @@ export default function Navbar() {
                     )}
                 >
                     <div className="container mx-auto px-4 py-6 space-y-1">
-                        <Link href="/" className="block text-base  hover:text-blue-600 py-3 ">
+                        <Link onClick={() => setMobileMenuOpen(false)} href="/" className="block text-base  hover:text-blue-600 py-3 ">
                             Home
                         </Link>
-                        <Link href="/about" className="block text-base  hover:text-blue-600 py-3 ">
+                        <Link onClick={() => setMobileMenuOpen(false)} href="/products" className="block text-base  hover:text-blue-600 py-3 ">
+                            Products
+                        </Link>
+                        <Link onClick={() => setMobileMenuOpen(false)} href="/about" className="block text-base  hover:text-blue-600 py-3 ">
                             About
                         </Link>
-                        <Link href="/contact" className="block text-base  hover:text-blue-600 py-3 ">
+                        <Link onClick={() => setMobileMenuOpen(false)} href="/contact" className="block text-base  hover:text-blue-600 py-3 ">
                             Contact
                         </Link>
-                        <Link href="/blog" className="block text-base  hover:text-blue-600 py-3 ">
+                        <Link onClick={() => setMobileMenuOpen(false)} href="/blog" className="block text-base  hover:text-blue-600 py-3 ">
                             Blog
                         </Link>
                         <div className="pt-4 space-y-2">
-                            <Button variant="outline" asChild className="w-full justify-start bg-transparent">
-                                <Link href="/login">
-                                    <User className="h-4 w-4 mr-2" />
-                                    Login
-                                </Link>
-                            </Button>
-                            <Button variant="outline" asChild className="w-full justify-start bg-transparent">
+
+                            <Button onClick={() => setMobileMenuOpen(false)} variant="outline" asChild className="w-full justify-start bg-transparent py-6">
                                 <Link href="/dashboard">
                                     <LayoutDashboard className="h-4 w-4 mr-2" />
                                     Dashboard

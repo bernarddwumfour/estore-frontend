@@ -76,7 +76,7 @@ const ProductsGrid = ({category,searchParams}:{category?:string,searchParams?: s
   return (
     <div>
       {products.length > 0 ? (
-        <ul className="grid gap-4 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        <ul className="grid gap-4 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 px-4">
           {products.map((product) => (
             <Product product={product} key={product.id} />
           ))}
