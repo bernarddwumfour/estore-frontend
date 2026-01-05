@@ -212,7 +212,7 @@ export default function OrderDetailsPage() {
                         <Image
                           width={96}
                           height={96}
-                          src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${item.image}`}
+                          src={`${item.image}`}
                           alt={item.product_title}
                           className="object-cover h-full w-full"
                         />

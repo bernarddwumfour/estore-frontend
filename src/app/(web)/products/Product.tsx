@@ -119,7 +119,7 @@ const Product = ({ product }: {product:ProductType}) => {
         <div className="relative  w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
           {mainImage && mainImage.url ? (
             <Image
-              src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${mainImage.url.startsWith('/') ? mainImage.url : `/${mainImage.url}`}`}
+              src={`${mainImage.url}`}
               alt={mainImage.alt_text || product.title}
               fill
               className="object-cover scale-100 transition-transform duration-300 group-hover:scale-105"

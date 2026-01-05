@@ -232,7 +232,7 @@ export default function ProductDetail() {
               {selectedImage ? (
                 <Image
                   src={selectedImage?.url
-                    ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${selectedImage.url}`
+                    ? selectedImage.url
                     : '/placeholder.jpg'
                   }
                   alt={selectedImage.alt_text}
@@ -262,7 +262,7 @@ export default function ProductDetail() {
                       : 'border-gray-200 hover:border-gray-400'
                       }`}
                   >
-                    <Image src={`http://localhost:8000${img?.url}`} alt={img.alt_text} fill className="object-cover" />
+                    <Image src={`${img?.url}`} alt={img.alt_text} fill className="object-cover" />
                   </button>
                 ))}
               </div>

@@ -46,7 +46,7 @@ export default function CartPage() {
                       <Image
                         width={88}
                         height={88}
-                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${item.imageUrl}`}
+                        src={`${item.imageUrl}`}
                         alt={item.title}
                         className="object-cover h-full w-full"
                       />

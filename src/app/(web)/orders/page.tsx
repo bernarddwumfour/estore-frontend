@@ -212,7 +212,7 @@ export default function MyOrdersPage() {
                           <div className="relative size-20 rounded-lg border border-gray-200 overflow-hidden flex-shrink-0">
                             {item.image ? (
                               <Image
-                                src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${item.image}`}
+                                src={`${item.image}`}
                                 alt={item.product_title}
                                 fill
                                 className="object-cover"

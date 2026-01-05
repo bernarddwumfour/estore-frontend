@@ -21,8 +21,7 @@ interface Category {
   parent_name?: string
   is_active: boolean
   product_count: number
-  image_url?: string
-  image?: string
+  image: string
   created_at: string
 }
 
@@ -72,23 +71,7 @@ function CategoryComponent({ type = "withImage" }: CategoriesProps){
     }
   }
 
-  const getImageUrl = (category: Category): string => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-    if (category.image_url) {
-      return category.image_url
-    }
-
-    if (category.image) {
-      // Remove leading slash if present
-      const imagePath = category.image.startsWith('/')
-        ? category.image.slice(1)
-        : category.image
-      return `${baseUrl}/${imagePath}`
-    }
-
-    return '/placeholder.svg'
-  }
 
   // Loading skeleton
   if (loading) {
@@ -154,7 +137,7 @@ function CategoryComponent({ type = "withImage" }: CategoriesProps){
                 <div className="relative overflow-hidden group cursor-pointer h-58 p-4 flex justify-center items-end transition-all duration-300 ">
                   <div className="absolute inset-0 w-full h-full">
                     <Image
-                      src={getImageUrl(category)}
+                      src={category.image}
                       alt={category.name}
                       fill
                       className="object-cover scale-105 group-hover:scale-100 transition-transform duration-700"
