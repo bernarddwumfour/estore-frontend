@@ -55,8 +55,7 @@ const formSchema = z.object({
   path: ["discount_amount"],
 });
 
-type FormData = z.infer<typeof formSchema>;
-
+type FormData = z.input<typeof formSchema>;
 interface ProductOption {
   key: string;
   label: string;

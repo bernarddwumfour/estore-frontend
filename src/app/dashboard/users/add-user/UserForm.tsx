@@ -42,8 +42,7 @@ const formSchema = z.object({
   path: ["password"],
 });
 
-type FormData = z.infer<typeof formSchema>;
-
+type FormData = z.input<typeof formSchema>;
 // Role options for Django API
 const roleOptions = [
   { value: "admin", label: "Administrator" },

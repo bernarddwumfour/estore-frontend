@@ -60,8 +60,7 @@ const formSchema = z.object({
   path: ["meta_title"],
 });
 
-type FormData = z.infer<typeof formSchema>;
-
+type FormData = z.input<typeof formSchema>;
 interface CategoryOption {
   id: string;
   name: string;
@@ -170,7 +169,7 @@ export default function CategoryCreationForm() {
       // Add text fields
       formData.append('name', data.name.trim());
       formData.append('description', data.description?.trim() || "");
-      formData.append('is_active', data.is_active.toString());
+      formData.append('is_active', data.is_active!.toString());
       
       if (data.parent_id && data.parent_id !== "null") {
         formData.append('parent_id', data.parent_id);
@@ -225,7 +224,7 @@ export default function CategoryCreationForm() {
         // Refresh parent categories list
         fetchParentCategories();
       } else {
-        toast.error(apiResponse.error || "Failed to create category");
+        toast.error("Failed to create category");
       }
     } catch (error: any) {
       console.error("Error creating category:", error);

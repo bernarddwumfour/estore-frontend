@@ -57,7 +57,7 @@ const formSchema = z.object({
   meta_description: z.string().max(500, { message: "Meta description cannot exceed 500 characters" }).optional(),
 });
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.input<typeof formSchema>;
 
 interface CategoryOption {
   id: string;
