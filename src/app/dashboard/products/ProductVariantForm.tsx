@@ -31,31 +31,28 @@ import Image from "next/image";
 
 // Zod Schema for Variant with images
 const formSchema = z.object({
-  // Required fields
   sku: z.string().min(1, { message: "SKU is required" }),
   price: z.coerce.number().positive({ message: "Price must be positive" }),
-  stock: z.coerce.number().min(0, { message: "Stock cannot be negative" }).default(0),
+  stock: z.coerce.number().min(0).default(0),
   
-  // Attributes (dynamic based on product options)
-  attributes: z.record(z.string(), z.string()),
+  // Ensure attributes is always a Record, never undefined
+  attributes: z.record(z.string(), z.string()).default({}),
   
-  // Optional fields
-  discount_amount: z.coerce.number().min(0, { message: "Discount cannot be negative" }).default(0),
+  discount_amount: z.coerce.number().min(0).default(0),
   is_default: z.boolean().default(false),
-  weight: z.coerce.number().min(0, { message: "Weight cannot be negative" }).optional(),
-  height: z.coerce.number().min(0, { message: "Height cannot be negative" }).optional(),
-  width: z.coerce.number().min(0, { message: "Width cannot be negative" }).optional(),
-  depth: z.coerce.number().min(0, { message: "Depth cannot be negative" }).optional(),
-  low_stock_threshold: z.coerce.number().min(0, { message: "Threshold cannot be negative" }).default(5),
-}).refine((data) => {
-  // Discount cannot be greater than price
-  return data.discount_amount <= data.price;
-}, {
+  
+  // Keep these optional but ensure they are numbers if provided
+  weight: z.coerce.number().min(0).optional(),
+  height: z.coerce.number().min(0).optional(),
+  width: z.coerce.number().min(0).optional(),
+  depth: z.coerce.number().min(0).optional(),
+  low_stock_threshold: z.coerce.number().min(0).default(5),
+}).refine((data) => data.discount_amount <= data.price, {
   message: "Discount cannot exceed price",
   path: ["discount_amount"],
 });
+type FormData = z.infer<typeof formSchema>;
 
-type FormData = z.input<typeof formSchema>;
 interface ProductOption {
   key: string;
   label: string;
