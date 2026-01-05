@@ -223,7 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await securityAxios.post(endpoints.auth.signup, {
         email: userData.email,
         password: userData.password,
-        username: userData.username || userData.email?.split("@")[0],
+        // username: userData.username || userData.email?.split("@")[0],
         first_name: userData.first_name,
         last_name: userData.last_name,
         phone: userData.phone,

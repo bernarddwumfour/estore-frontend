@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import unAuthenticatedAxios from '@/axios-instances/UnAuthenticatedAxios'
@@ -33,6 +33,12 @@ interface CategoriesProps {
 }
 
 function Categories({ type = "withImage" }: CategoriesProps) {
+  return (<Suspense fallback="">
+    <CategoryComponent type={type}/>
+  </Suspense>)
+}
+
+function CategoryComponent({ type = "withImage" }: CategoriesProps){
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

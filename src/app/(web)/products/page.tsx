@@ -1,9 +1,8 @@
+import { Suspense } from 'react';
 import Categories from '@/widgets/categories/Categories';
 import ProductsPageProducts from './ProductsPageProducts';
 
 export default function Products() {
-  
-
   return (
     <section className="relative py-32 bg-cover bg-center">
       <div className="mx-auto container">
@@ -12,11 +11,14 @@ export default function Products() {
             Explore Our Catalogue
           </h1>
           <p className="text-gray-600">
-            This is the main content area. The footer will stay at the bottom.
+            Find the perfect products for your needs.
           </p>
         </div>
         <Categories type='badge'/>
-        <ProductsPageProducts />
+        
+        <Suspense fallback={<div className="p-10 text-center">Loading Products...</div>}>
+          <ProductsPageProducts />
+        </Suspense>
       </div>
     </section>
   );

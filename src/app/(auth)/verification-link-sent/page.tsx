@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,14 @@ import { useAuth } from "@/lib/use-auth";
 import { Separator } from "@/components/ui/separator";
 
 export default function EmailVerificationSentPage() {
+  return (
+    <Suspense fallback="Getting Token">
+      <EmailVerification />
+    </Suspense>
+  )
+}
+
+function EmailVerification(){
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
 

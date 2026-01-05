@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { z } from "zod";
@@ -32,6 +32,12 @@ const formSchema = z.object({
 });
 
 export default function ResetPasswordPage() {
+  return (<Suspense fallback="Getting Token">
+    <ResetPassword />
+  </Suspense>)
+}
+
+function ResetPassword() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const email = searchParams.get("email");

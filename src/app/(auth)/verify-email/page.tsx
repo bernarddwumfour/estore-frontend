@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,12 @@ import { Check, MessageCircleWarning, Mail } from "lucide-react";
 import { useAuth } from "@/lib/use-auth";
 
 export default function VerifyEmailPage() {
+    return (<Suspense fallback="Getting Token">
+        <VerifyEmail />
+      </Suspense>)
+}
+
+function VerifyEmail(){
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const email = searchParams.get("email");
