@@ -5,8 +5,8 @@ import ProductsPageProducts from './ProductsPageProducts';
 export default function Products() {
   return (
     <section className="relative py-32 bg-cover bg-center">
-      <div className="mx-auto px-4 container">
-        <div className="py-6">
+      <div className="mx-auto container">
+        <div className="py-6  px-4">
           <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-2">
             Explore Our Catalogue
           </h1>

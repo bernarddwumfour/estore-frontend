@@ -147,9 +147,9 @@ export default function Navbar() {
                                 </>
                             )}
 
-                            {!user?.id && <Button onClick={() => setMobileMenuOpen(false)} asChild className="w-full py-4 justify-start lg:hidden bg-transparent w-fit">
+                            {!user?.id && <Button size="sm" variant={"outline"} onClick={() => setMobileMenuOpen(false)} asChild className="p-[1.15rem] lg:hidden bg-transparent">
                                 <Link href="/login">
-                                    <LogIn/>
+                                    <LogIn className="h-5 w-5 mr-1" />
                                 </Link>
                             </Button>}
 

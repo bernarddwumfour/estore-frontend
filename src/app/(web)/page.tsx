@@ -125,8 +125,8 @@ function Products1() {
 
     <section className="relative py-24 bg-cover bg-center" >
 
-      <div className="mx-auto px-4 container">
-        <div className="py-8">
+      <div className="mx-auto container">
+        <div className="py-8 px-4">
           <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-4">Best Sellers</h1>
           <p className="text-gray-600">Most Loved by Our Customers , See What Everyone's Choosing.</p>
         </div>
