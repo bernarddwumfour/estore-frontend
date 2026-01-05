@@ -37,21 +37,21 @@ const formSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters" }),
   category_id: z.string().min(1, { message: "Category is required" }),
   description: z.string().min(10, { message: "Description must be at least 10 characters" }),
-  
+
   // Features (array of strings)
-  features: z.array(z.string()).optional().default([]),
-  
+  features: z.array(z.string()).default([]),
+
   // Options (object with string arrays)
-  options: z.record(z.string(), z.array(z.string())).optional().default({}),
-  
+  options: z.record(z.string(), z.array(z.string())).default({}),
+
   // Status
   status: z.enum(["draft", "published", "archived"]).default("draft"),
-  
+
   // Flags
   is_featured: z.boolean().default(false),
   is_bestseller: z.boolean().default(false),
   is_new: z.boolean().default(false),
-  
+
   // SEO Fields
   meta_title: z.string().max(200, { message: "Meta title cannot exceed 200 characters" }).optional(),
   meta_description: z.string().max(500, { message: "Meta description cannot exceed 500 characters" }).optional(),
@@ -70,12 +70,12 @@ export default function ProductCreationForm() {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [newFeature, setNewFeature] = useState("");
-  
+
   // State for managing options
   const [newOptionName, setNewOptionName] = useState("");
   const [newOptionValue, setNewOptionValue] = useState("");
   const [currentOptionKey, setCurrentOptionKey] = useState<string | null>(null);
-  
+
   // Initialize form
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -103,7 +103,7 @@ export default function ProductCreationForm() {
     try {
       setIsLoadingCategories(true);
       const response = await securityAxios.get(endpoints.products.listcategories);
-      
+
       if (response.data.success) {
         const categoriesData = response.data.data.categories || [];
         setCategories(categoriesData.map((cat: any) => ({
@@ -140,7 +140,7 @@ export default function ProductCreationForm() {
     if (newOptionName.trim()) {
       const currentOptions = form.getValues("options") || {};
       const optionKey = newOptionName.trim().toLowerCase().replace(/\s+/g, '_');
-      
+
       if (!currentOptions[optionKey]) {
         form.setValue("options", {
           ...currentOptions,
@@ -165,7 +165,7 @@ export default function ProductCreationForm() {
     if (currentOptionKey && newOptionValue.trim()) {
       const currentOptions = form.getValues("options") || {};
       const currentValues = currentOptions[currentOptionKey] || [];
-      
+
       if (!currentValues.includes(newOptionValue.trim())) {
         form.setValue("options", {
           ...currentOptions,
@@ -180,7 +180,7 @@ export default function ProductCreationForm() {
     const currentOptions = form.getValues("options") || {};
     const currentValues = currentOptions[optionKey] || [];
     const updatedValues = currentValues.filter((_, i) => i !== valueIndex);
-    
+
     form.setValue("options", {
       ...currentOptions,
       [optionKey]: updatedValues
@@ -190,7 +190,7 @@ export default function ProductCreationForm() {
   const onSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true);
-      
+
       // Prepare payload
       const payload: Record<string, any> = {
         title: data.title.trim(),
@@ -201,26 +201,26 @@ export default function ProductCreationForm() {
         is_bestseller: data.is_bestseller,
         is_new: data.is_new,
       };
-      
+
       // Add features if any
       if (data.features && data.features.length > 0) {
         payload.features = data.features;
       }
-      
+
       // Add options if any
       if (data.options && Object.keys(data.options).length > 0) {
         payload.options = data.options;
       }
-      
+
       // Add SEO fields if provided
       if (data.meta_title?.trim()) {
         payload.meta_title = data.meta_title.trim();
       }
-      
+
       if (data.meta_description?.trim()) {
         payload.meta_description = data.meta_description.trim();
       }
-      
+
       console.log("Submitting product payload:", payload);
 
       // Make POST request to create product
@@ -230,10 +230,10 @@ export default function ProductCreationForm() {
 
       if (response.status === 201) {
         const apiResponse = response.data;
-        
+
         if (apiResponse.success) {
           toast.success(apiResponse.message || "Product created successfully");
-          
+
           // Reset form
           form.reset({
             title: "",
@@ -248,7 +248,7 @@ export default function ProductCreationForm() {
             meta_title: "",
             meta_description: "",
           });
-          
+
           setNewFeature("");
           setNewOptionName("");
           setNewOptionValue("");
@@ -261,28 +261,28 @@ export default function ProductCreationForm() {
       }
     } catch (error: any) {
       console.error("Error creating product:", error);
-      
+
       // Handle validation errors
       if (error?.response?.data?.errors) {
         const validationErrors = error.response.data.errors;
-        
+
         // Display first validation error in toast
         const firstErrorKey = Object.keys(validationErrors)[0];
         const firstError = validationErrors[firstErrorKey];
-        
+
         if (Array.isArray(firstError)) {
           toast.error(firstError[0]);
         } else {
           toast.error(firstError);
         }
-        
+
         // Set form errors for specific fields
         Object.keys(validationErrors).forEach((field) => {
           const fieldName = field as keyof FormData;
-          const errorMessage = Array.isArray(validationErrors[field]) 
-            ? validationErrors[field][0] 
+          const errorMessage = Array.isArray(validationErrors[field])
+            ? validationErrors[field][0]
             : validationErrors[field];
-          
+
           form.setError(fieldName, {
             type: "manual",
             message: errorMessage,
@@ -318,7 +318,7 @@ export default function ProductCreationForm() {
               Enter the basic details for your new product
             </p>
           </div>
-          
+
           {/* Product Title */}
           <FormField
             control={form.control}
@@ -339,7 +339,7 @@ export default function ProductCreationForm() {
               </FormItem>
             )}
           />
-          
+
           {/* Category Selection */}
           <FormField
             control={form.control}
@@ -383,7 +383,7 @@ export default function ProductCreationForm() {
               </FormItem>
             )}
           />
-          
+
           {/* Product Description */}
           <FormField
             control={form.control}
@@ -405,7 +405,7 @@ export default function ProductCreationForm() {
               </FormItem>
             )}
           />
-          
+
           {/* Product Features */}
           <div>
             <FormLabel>Product Features</FormLabel>
@@ -431,7 +431,7 @@ export default function ProductCreationForm() {
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               {/* Features List */}
               <div className="flex flex-wrap gap-2 min-h-[40px]">
                 {features.length === 0 ? (
@@ -457,7 +457,7 @@ export default function ProductCreationForm() {
             </FormDescription>
           </div>
         </div>
-        
+
         {/* Product Options Section */}
         <div className="space-y-6 p-6 border rounded-lg bg-card">
           <div>
@@ -466,7 +466,7 @@ export default function ProductCreationForm() {
               Define options for product variants (e.g., color, size, brand)
             </p>
           </div>
-          
+
           {/* Add New Option */}
           <div className="space-y-3">
             <div className="flex gap-2">
@@ -494,7 +494,7 @@ export default function ProductCreationForm() {
               Create options that customers can choose from when selecting variants
             </FormDescription>
           </div>
-          
+
           {/* Options List */}
           {Object.keys(options).length > 0 && (
             <div className="space-y-4">
@@ -517,7 +517,7 @@ export default function ProductCreationForm() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   {/* Add values to selected option */}
                   {currentOptionKey === optionKey && (
                     <div className="flex gap-2">
@@ -542,7 +542,7 @@ export default function ProductCreationForm() {
                       </Button>
                     </div>
                   )}
-                  
+
                   {/* Option values list */}
                   <div className="space-y-2">
                     {Array.isArray(values) && values.length > 0 ? (
@@ -566,7 +566,7 @@ export default function ProductCreationForm() {
                       </p>
                     )}
                   </div>
-                  
+
                   {/* Button to manage values */}
                   <Button
                     type="button"
@@ -582,7 +582,7 @@ export default function ProductCreationForm() {
               ))}
             </div>
           )}
-          
+
           {Object.keys(options).length === 0 && (
             <div className="text-center p-4 border rounded-lg">
               <p className="text-sm text-muted-foreground">
@@ -591,7 +591,7 @@ export default function ProductCreationForm() {
             </div>
           )}
         </div>
-        
+
         {/* Status and Flags Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Status Selection */}
@@ -626,11 +626,11 @@ export default function ProductCreationForm() {
               )}
             />
           </div>
-          
+
           {/* Flags Section */}
           <div className="space-y-4 p-6 border rounded-lg bg-card">
             <h4 className="font-semibold">Product Flags</h4>
-            
+
             <FormField
               control={form.control}
               name="is_featured"
@@ -651,7 +651,7 @@ export default function ProductCreationForm() {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="is_bestseller"
@@ -672,7 +672,7 @@ export default function ProductCreationForm() {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="is_new"
@@ -695,7 +695,7 @@ export default function ProductCreationForm() {
             />
           </div>
         </div>
-        
+
         {/* SEO Section */}
         <div className="space-y-6 p-6 border rounded-lg bg-card">
           <div>
@@ -704,7 +704,7 @@ export default function ProductCreationForm() {
               Optimize your product for search engines
             </p>
           </div>
-          
+
           <div className="space-y-4">
             <FormField
               control={form.control}
@@ -726,7 +726,7 @@ export default function ProductCreationForm() {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="meta_description"
@@ -750,7 +750,7 @@ export default function ProductCreationForm() {
             />
           </div>
         </div>
-        
+
         {/* Submit Button */}
         <div className="flex justify-end gap-4 pt-6">
           <Button
@@ -766,8 +766,8 @@ export default function ProductCreationForm() {
           >
             Reset Form
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             size="lg"
             className="min-w-[200px]"
             disabled={isSubmitting}
