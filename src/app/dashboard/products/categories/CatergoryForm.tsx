@@ -34,6 +34,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import Image from "next/image";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Zod Schema for Category
 const formSchema = z.object({
@@ -77,6 +78,7 @@ export default function CategoryCreationForm() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const queryClient = useQueryClient()
 
   // Initialize form
   const form = useForm<FormData>({
@@ -223,6 +225,9 @@ export default function CategoryCreationForm() {
         
         // Refresh parent categories list
         fetchParentCategories();
+        queryClient.invalidateQueries(
+          {queryKey:[endpoints.products.listcategories],exact:false}
+        )
       } else {
         toast.error("Failed to create category");
       }

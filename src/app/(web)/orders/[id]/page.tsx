@@ -1,147 +1,204 @@
-// app/orders/[id]/page.js
-'use client';
+// app/orders/[id]/page.tsx
+'use server';
 
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
 import { 
   ShoppingCart, Home, ArrowLeft, Package, Calendar, Truck, CheckCircle, 
   XCircle, Clock, MapPin, CreditCard, Phone, Mail, Download, Printer 
 } from 'lucide-react';
-import { toast } from 'sonner';
-import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import { ApiError } from 'next/dist/server/api-utils';
-import { AxiosError } from 'axios';
+import CancelOrderButton from '../(components)/CancelOrderButton';
 
-export default function OrderDetailsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const [order, setOrder] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCancelling, setIsCancelling] = useState(false);
+// Fetch order details on the server
+async function getOrderDetails(orderId: string) {
+  const cookieStore = await cookies();
+  
+  // Get ALL cookies to debug
+  const allCookies = cookieStore.getAll();
+  console.log('Order Details - All cookies found:', allCookies.map(c => ({ name: c.name })));
+  
+  const authCookie = cookieStore.get('auth_data')?.value;
+  
+  if (!authCookie) {
+    console.log('Order Details - No auth_data found, redirecting to login');
+    redirect('/login');
+  }
 
-  useEffect(() => {
-    fetchOrderDetails();
-  }, [params.id]);
-
-  const fetchOrderDetails = async () => {
-    try {
-      setIsLoading(true);
-      
-      const response = await securityAxios.get(endpoints.orders.orderDetails.replace(":id",String(params.id )));
-      
-      if (response.data.success) {
-        setOrder(response.data.data?.order || response.data.data);
-      } else {
-        toast.error(response.data.error || 'Failed to load order details');
-        router.push('/orders');
-      }
-    } catch (error:any) {
-      console.error('Error fetching order details:', error);
-      
-      if (error?.response?.status === 404) {
-        toast.error('Order not found');
-        router.push('/orders');
-      } else if (error?.response?.status === 403) {
-        toast.error('You do not have permission to view this order');
-        router.push('/orders');
-      } else if (error?.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error('Failed to load order details');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCancelOrder = async () => {
-    if (!confirm('Are you sure you want to cancel this order?')) return;
+  let accessToken;
+  try {
+    console.log('Order Details - Raw auth cookie length:', authCookie.length);
     
-    try {
-      setIsCancelling(true);
-      
-      const response = await securityAxios.post(endpoints.orders.cancelOrder.replace(":id",String(params.id)), {
-        reason: 'Cancelled by customer'
-      });
-      
-      if (response.data.success) {
-        toast.success('Order cancelled successfully');
-        fetchOrderDetails(); // Refresh order details
-      } else {
-        toast.error(response.data.error || 'Failed to cancel order');
-      }
-    } catch (error:any) {
-      console.error('Error cancelling order:', error);
-      
-      if (error?.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error('Failed to cancel order');
-      }
-    } finally {
-      setIsCancelling(false);
+    // Try to decode and parse
+    const decodedCookie = decodeURIComponent(authCookie);
+    console.log('Order Details - Decoded cookie (first 200 chars):', decodedCookie.substring(0, 200));
+    
+    const authData = JSON.parse(decodedCookie);
+    console.log('Order Details - Parsed auth data keys:', Object.keys(authData));
+    
+    accessToken = authData.tokens?.access_token;
+    
+    if (!accessToken) {
+      console.log('Order Details - No access token found in auth data');
+      console.log('Order Details - Auth data tokens keys:', authData.tokens ? Object.keys(authData.tokens) : 'No tokens object');
+      redirect('/login');
     }
-  };
-
-  const getStatusIcon = (status:any) => {
-    switch (status) {
-      case 'pending': return <Clock className="h-5 w-5 text-amber-500" />;
-      case 'confirmed': return <CheckCircle className="h-5 w-5 text-blue-500" />;
-      case 'processing': return <Package className="h-5 w-5 text-purple-500" />;
-      case 'shipped': return <Truck className="h-5 w-5 text-indigo-500" />;
-      case 'delivered': return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'cancelled': return <XCircle className="h-5 w-5 text-red-500" />;
-      default: return <Package className="h-5 w-5 text-gray-500" />;
+    
+    console.log('Order Details - Access token found (first 30 chars):', accessToken.substring(0, 30) + '...');
+    
+  } catch (error) {
+    console.error('Order Details - Error parsing auth cookie:', error);
+    if (error instanceof SyntaxError) {
+      console.error('Order Details - Invalid JSON in cookie');
     }
-  };
+    redirect('/login');
+  }
 
-  const getStatusColor = (status:any) => {
-    switch (status) {
-      case 'pending': return 'bg-amber-100 text-amber-800';
-      case 'confirmed': return 'bg-blue-100 text-blue-800';
-      case 'processing': return 'bg-purple-100 text-purple-800';
-      case 'shipped': return 'bg-indigo-100 text-indigo-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Using native fetch for Next.js caching benefits
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.slice(0, -1);
+  const endpoint = endpoints.orders.orderDetails.replace(":id", orderId);
+  console.log(`Order Details - Fetching from: ${baseUrl}${endpoint}`);
+  
+  const url = new URL(`${baseUrl}${endpoint}`);
 
-  const formatDate = (dateString :any) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+  try {
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store', // Remove cache for dynamic data
     });
-  };
 
-  const formatCurrency = (amount:number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: order?.currency || 'USD'
-    }).format(amount);
-  };
+    console.log('Order Details - Response status:', response.status);
+    
+    if (response.status === 401) {
+      console.log('Order Details - 401 Unauthorized response from API');
+      redirect('/login');
+    }
+    
+    if (response.status === 404) {
+      console.log('Order Details - 404 Order not found');
+      return null; // Return null to show "not found" UI
+    }
+    
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      console.error('Order Details - Response is not JSON:', contentType);
+      const text = await response.text();
+      console.error('Order Details - Response text:', text.substring(0, 500));
+      throw new Error('Invalid response format from server');
+    }
+    
+    const result = await response.json();
+    console.log('Order Details - API response success:', result.success);
+    
+    if (!result.success) {
+      console.error('Order Details - API returned error:', result.error);
+      
+      // If it's a permission error (403), redirect to orders list
+      if (response.status === 403) {
+        redirect('/orders');
+      }
+      
+      throw new Error(result.error || "Failed to load order details");
+    }
 
-  if (isLoading) {
+    return result.data?.order || result.data;
+    
+  } catch (error: any) {
+    console.error('Order Details - Fetch error:', error);
+    
+    // Don't redirect for network errors, let the error boundary handle it
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      throw new Error('Unable to connect to the server. Please check your internet connection.');
+    }
+    
+    throw error;
+  }
+}
+
+// Helper functions
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'pending': return 'bg-amber-100 text-amber-800';
+    case 'confirmed': return 'bg-blue-100 text-blue-800';
+    case 'processing': return 'bg-purple-100 text-purple-800';
+    case 'shipped': return 'bg-indigo-100 text-indigo-800';
+    case 'delivered': return 'bg-green-100 text-green-800';
+    case 'cancelled': return 'bg-red-100 text-red-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+interface OrderDetailsPageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default async function OrderDetailsPage({ params }: OrderDetailsPageProps) {
+  // Await the params Promise
+  const resolvedParams = await params;
+  const orderId = resolvedParams.id;
+  
+  console.log(`Order Details - Loading order ID: ${orderId}`);
+  
+  let order;
+  try {
+    order = await getOrderDetails(orderId);
+  } catch (error: any) {
+    console.error('Error in OrderDetailsPage:', error);
+    
+    // Return error UI
     return (
       <div className="min-h-screen bg-gray-50 py-32">
         <div className="container mx-auto px-4">
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          <div className="max-w-md mx-auto text-center">
+            <div className="mb-8">
+              <Package className="h-24 w-24 text-gray-300 mx-auto" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Error Loading Order</h1>
+            <p className="text-gray-600 mb-8">
+              {error.message || 'Failed to load order details. Please try again.'}
+            </p>
+            <div className="space-y-4">
+              <Button asChild size="lg" className="w-full">
+                <Link href="/orders">
+                  <ArrowLeft className="mr-2 h-5 w-5" />
+                  Back to Orders
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/">
+                  <Home className="mr-2 h-5 w-5" />
+                  Back to Home
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  // Order not found (404)
   if (!order) {
     return (
       <div className="min-h-screen bg-gray-50 py-32">
@@ -174,6 +231,13 @@ export default function OrderDetailsPage() {
     );
   }
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: order?.currency || 'USD'
+    }).format(amount);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-32">
       <div className="container mx-auto px-4">
@@ -205,7 +269,7 @@ export default function OrderDetailsPage() {
             <div className="bg-white border border-gray-100 rounded-lg p-8">
               <h2 className="text-2xl font-medium text-gray-900 mb-6">Order Items</h2>
               <div className="space-y-6">
-                {order.items?.map((item:any, index:number) => (
+                {order.items?.map((item: any, index: number) => (
                   <div key={index} className="flex gap-4 pb-6 border-b border-gray-100 last:border-0 last:pb-0">
                     <div className="relative size-24 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
                       {item.image ? (
@@ -223,10 +287,9 @@ export default function OrderDetailsPage() {
                       )}
                     </div>
                     <div className="flex-1">
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600  md:items-end">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 md:items-end">
                         <div>
-                        <h3 className="font-medium text-gray-900 text-lg mb-2">{item.product_title}</h3>
+                          <h3 className="font-medium text-gray-900 text-lg mb-2">{item.product_title}</h3>
                           <p>Quantity: {item.quantity}</p>
                           <p>Unit Price: {formatCurrency(item.unit_price)}</p>
                           {item.discount_amount > 0 && (
@@ -234,19 +297,18 @@ export default function OrderDetailsPage() {
                           )}
                         </div>
                         {item.variant_attributes && Object.keys(item.variant_attributes).length > 0 && (
-                        <div className="mt-4">
-                          <p className="text-sm font-medium text-gray-700 mb-1">Attributes:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {Object.entries(item.variant_attributes).map(([key, value]:any) => (
-                              <span key={key} className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-700">
-                                {key}: {value}
-                              </span>
-                            ))}
+                          <div className="mt-4">
+                            <p className="text-sm font-medium text-gray-700 mb-1">Attributes:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(item.variant_attributes).map(([key, value]: any) => (
+                                <span key={key} className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-700">
+                                  {key}: {value}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                         <div className="text-right md:text-left space-y-1">
-                          
                           <p className="text-sm text-gray-500">
                             {item.quantity} × {formatCurrency(item.unit_price)}
                           </p>
@@ -255,7 +317,6 @@ export default function OrderDetailsPage() {
                           </p>
                         </div>
                       </div>
-                     
                     </div>
                   </div>
                 ))}
@@ -468,16 +529,12 @@ export default function OrderDetailsPage() {
               <h2 className="text-2xl font-medium text-gray-900 mb-6">Order Actions</h2>
               
               <div className="space-y-4">
-                {order.status === 'pending' || order.status === 'confirmed' ? (
-                  <Button 
-                    variant="outline" 
-                    className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={handleCancelOrder}
-                    disabled={isCancelling}
-                  >
-                    {isCancelling ? 'Cancelling...' : 'Cancel Order'}
-                  </Button>
-                ) : null}
+                {/* Client component for interactive cancellation */}
+                <CancelOrderButton 
+                  orderId={order.id}
+                  orderNumber={order.order_number}
+                  status={order.status}
+                />
                 
                 <Button variant="outline" className="w-full">
                   <Download className="mr-2 h-5 w-5" />

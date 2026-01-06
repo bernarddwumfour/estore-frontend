@@ -104,12 +104,7 @@ function ListProducts() {
 
 
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleActivateUser}>
-
-            {row?.is_active ? <>
-              <PowerOff className="mr-2 h-4 w-4" />Deactivate </>
-              : <><Power className="mr-2 h-4 w-4" />Activate </>} User
-          </DropdownMenuItem>
+        
         </DropdownMenuContent>
       </DropdownMenu>
     );

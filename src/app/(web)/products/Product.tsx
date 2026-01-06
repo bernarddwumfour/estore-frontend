@@ -1,23 +1,11 @@
-'use client'
-
-import { useCartStore } from '@/app/lib/store/cart-store'
-import { Button } from '@/components/ui/button'
-import { ShoppingCart, Plus, Minus, Star, Tag, BadgePercent, Sparkles } from 'lucide-react'
+// app/components/Product/Product.tsx
 import Link from 'next/link'
-import { useRouter } from "next/navigation"
-import React from 'react'
 import Image from 'next/image'
+import { BadgePercent, Sparkles, Star, Tag } from 'lucide-react'
+import ProductActions from './(components)/ProductActions'
 import { ProductType } from '@/types/productTypes'
 
-
-const Product = ({ product }: {product:ProductType}) => {
-  const router = useRouter()
-  const addItem = useCartStore((state) => state.addItem)
-  const updateQuantity = useCartStore((state) => state.updateQuantity)
-  const removeItem = useCartStore((state) => state.removeItem)
-  const isInCart = useCartStore((state) => state.isInCart)
-  const getItemQuantity = useCartStore((state) => state.getItemQuantity)
-
+const Product = ({ product }: { product: ProductType }) => {
   const defaultVariant = product.default_variant
   const hasDefaultVariant = defaultVariant !== null
   const hasDiscount = hasDefaultVariant && defaultVariant.discounted_price < defaultVariant.price
@@ -30,59 +18,12 @@ const Product = ({ product }: {product:ProductType}) => {
     ? defaultVariant.images.find(img => img.type === 'main') || defaultVariant.images[0]
     : null
 
-  const inCart = isInCart(product.default_variant?.sku!)
-  const quantity = getItemQuantity(product.default_variant?.sku!)
-
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    if (!hasDefaultVariant || defaultVariant.stock <= 0) return
-
-    addItem({
-      id: product.id,
-      slug: product.slug,
-      sku: defaultVariant.sku,
-      title: product.title,
-      price: defaultVariant.discounted_price || defaultVariant.price,
-      imageUrl: mainImage?.url || '', // Use the image URL
-      quantity: 1,
-      originalPrice: defaultVariant.price,
-      attributes: defaultVariant.attributes,
-      variantId : defaultVariant.id
-    })
-  }
-
-  const handleBuyNow = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    handleAddToCart(e)
-    router.push("/checkout")
-  }
-
-  const handleIncrement = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    updateQuantity(product.default_variant?.sku!, quantity + 1)
-  }
-
-  const handleDecrement = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (quantity <= 1) {
-      removeItem(product.default_variant?.sku!)
-    } else {
-      updateQuantity(product.default_variant?.sku!, quantity - 1)
-    }
-  }
-
   return (
     <li className="group relative block overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md">
       <Link href={`/products/${product.slug}`} className="block">
         {/* Product Badges */}
         <div className="absolute left-3 top-3 z-10 flex flex-col gap-1">
-          {/* {product.is_new && (
+          {product.is_new && (
             <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
               <Sparkles className="h-3 w-3" />
               New
@@ -99,7 +40,7 @@ const Product = ({ product }: {product:ProductType}) => {
               <Tag className="h-3 w-3" />
               Bestseller
             </span>
-          )} */}
+          )}
           {hasDiscount && (
             <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2.5 py-1 text-xs font-medium text-white">
               <BadgePercent className="h-4 w-4" />
@@ -116,7 +57,7 @@ const Product = ({ product }: {product:ProductType}) => {
         </div>
 
         {/* Product Image */}
-        <div className="relative  w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+        <div className="relative w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
           {mainImage && mainImage.url ? (
             <Image
               src={`${mainImage.url}`}
@@ -218,65 +159,14 @@ const Product = ({ product }: {product:ProductType}) => {
         </div>
       </Link>
 
-      {/* Action Buttons */}
-      <div className="border-t border-gray-100 p-5">
-        <div className="flex items-center gap-3">
-          {hasDefaultVariant && defaultVariant.stock > 0 ? (
-            !inCart ? (
-              <Button
-                type="button"
-                className="flex-1"
-                onClick={handleAddToCart}
-              >
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Add to Cart
-              </Button>
-            ) : (
-              <div className="flex items-center justify-between w-full bg-gray-50 rounded-lg border border-gray-200 px-3 py-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={handleDecrement}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <div className="text-center">
-                  <span className="text-sm font-medium">{quantity} in cart</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={handleIncrement}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            )
-          ) : (
-            <Button
-              type="button"
-              className="flex-1"
-              disabled
-            >
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              {hasDefaultVariant ? 'Out of Stock' : 'Unavailable'}
-            </Button>
-          )}
-
-          {hasDefaultVariant && defaultVariant.stock > 0 && (
-            <Button
-              variant="outline"
-              className="flex-shrink-0"
-              onClick={handleBuyNow}
-              aria-label="Buy now"
-            >
-              Buy Now
-            </Button>
-          )}
-        </div>
-      </div>
+      {/* Action Buttons - Client Component */}
+      <ProductActions 
+        product={product}
+        defaultVariant={defaultVariant}
+        hasDefaultVariant={hasDefaultVariant}
+        mainImage={mainImage}
+        hasDiscount={hasDiscount}
+      />
     </li>
   )
 }

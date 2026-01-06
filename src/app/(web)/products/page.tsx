@@ -1,12 +1,22 @@
+// app/products/page.tsx
 import { Suspense } from 'react';
 import Categories from '@/widgets/categories/Categories';
-import ProductsPageProducts from './ProductsPageProducts';
+import ProductsGridSkeleton from './(components)/ProductsGridSkeleton';
+import ProductsGridWrapper from './(components)/ProductsGridWrapper';
 
-export default function Products() {
+// Define types for the page props (searchParams is a Promise in Next.js 15+)
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function Products({ searchParams }: PageProps) {
+  // Await the searchParams to get the actual object
+  const resolvedSearchParams = await searchParams;
+
   return (
     <section className="relative py-32 bg-cover bg-center">
       <div className="mx-auto container">
-        <div className="py-6  px-4">
+        <div className="py-6 px-4">
           <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-2">
             Explore Our Catalogue
           </h1>
@@ -14,10 +24,13 @@ export default function Products() {
             Find the perfect products for your needs.
           </p>
         </div>
-        <Categories type='badge'/>
         
-        <Suspense fallback={<div className="p-10 text-center">Loading Products...</div>}>
-          <ProductsPageProducts />
+        {/* Pass the resolved object down to your component */}
+        <Categories type='badge' searchParams={resolvedSearchParams} />
+
+        <Suspense fallback={<ProductsGridSkeleton />}>
+          {/* Also pass them to the wrapper if it needs to filter products */}
+          <ProductsGridWrapper searchParams={resolvedSearchParams} />
         </Suspense>
       </div>
     </section>

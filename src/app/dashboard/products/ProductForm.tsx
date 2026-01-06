@@ -30,6 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Zod Schema for Product with options
 const formSchema = z.object({
@@ -70,6 +71,7 @@ export default function ProductCreationForm() {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [newFeature, setNewFeature] = useState("");
+  const queryClient = useQueryClient()
 
   // State for managing options
   const [newOptionName, setNewOptionName] = useState("");
@@ -253,6 +255,9 @@ export default function ProductCreationForm() {
           setNewOptionName("");
           setNewOptionValue("");
           setCurrentOptionKey(null);
+          queryClient.invalidateQueries(
+            { queryKey: [endpoints.products.listProducts], exact: false }
+          )
         } else {
           toast.error(apiResponse.error || "Failed to create product");
         }

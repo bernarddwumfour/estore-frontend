@@ -25,6 +25,7 @@ import securityAxios from "@/axios-instances/SecurityAxios";
 import { endpoints } from "@/constants/endpoints/endpoints";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const RoleEnum = z.enum(["admin", "staff", "customer"]);
 
@@ -51,8 +52,9 @@ const roleOptions = [
 ] as const;
 
 export default function UserCreationForm() {
-    const [showPassword, setShowPassword] = useState(false);
-  
+  const [showPassword, setShowPassword] = useState(false);
+  const queryClient = useQueryClient()
+
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -85,10 +87,13 @@ export default function UserCreationForm() {
 
       if (response.status === 201) {
         const apiResponse = response.data;
-        
+
         if (apiResponse.success) {
           toast.success(apiResponse.message || "User created successfully");
           form.reset(); // Reset form after successful submission
+          queryClient.invalidateQueries(
+            { queryKey: [endpoints.products.listcategories], exact: false }
+          )
         } else {
           toast.error(apiResponse.error || "Failed to create user");
         }
@@ -97,28 +102,28 @@ export default function UserCreationForm() {
       }
     } catch (error: any) {
       console.error("Error creating user:", error);
-      
+
       // Handle Django validation errors
       if (error?.response?.data?.errors) {
         const validationErrors = error.response.data.errors;
-        
+
         // Display first validation error
         const firstErrorKey = Object.keys(validationErrors)[0];
         const firstError = validationErrors[firstErrorKey];
-        
+
         if (Array.isArray(firstError)) {
           toast.error(firstError[0]);
         } else {
           toast.error(firstError);
         }
-        
+
         // Set form errors for specific fields
         Object.keys(validationErrors).forEach((field) => {
           const fieldName = field as keyof FormData;
-          const errorMessage = Array.isArray(validationErrors[field]) 
-            ? validationErrors[field][0] 
+          const errorMessage = Array.isArray(validationErrors[field])
+            ? validationErrors[field][0]
             : validationErrors[field];
-          
+
           form.setError(fieldName, {
             type: "manual",
             message: errorMessage,
@@ -137,7 +142,7 @@ export default function UserCreationForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-2xl mx-auto">
-      
+
         {/* Email */}
         <FormField
           control={form.control}
@@ -190,38 +195,38 @@ export default function UserCreationForm() {
 
         {/* Password */}
         <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  {" "}
-                  <FormLabel>Password</FormLabel>{" "}
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        {...field}
-                        className="pr-10"
-                      />
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              {" "}
+              <FormLabel>Password</FormLabel>{" "}
+              <FormControl>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    {...field}
+                    className="pr-10"
+                  />
 
-                      {/* Toggle Button */}
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((prev) => !prev)}
-                        className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-black"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  {/* Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-black"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Role Selection */}
         <FormField
@@ -251,8 +256,8 @@ export default function UserCreationForm() {
 
         {/* Submit Button */}
         <div className="pt-6">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             size="lg"
             className="w-full"
           >

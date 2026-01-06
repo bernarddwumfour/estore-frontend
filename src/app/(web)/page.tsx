@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import ProductsGrid from "./products/ProductsGrid";
 import Categories from "@/widgets/categories/Categories";
+import { Suspense } from "react";
+import ProductsGridSkeleton from "./products/(components)/ProductsGridSkeleton";
 
 export default function Home() {
   return (
@@ -130,8 +132,9 @@ function Products1() {
           <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-4">Best Sellers</h1>
           <p className="text-gray-600">Most Loved by Our Customers , See What Everyone's Choosing.</p>
         </div>
-
+        <Suspense fallback={<ProductsGridSkeleton/>}>
         <ProductsGrid />
+        </Suspense>
       </div>
     </section>
 

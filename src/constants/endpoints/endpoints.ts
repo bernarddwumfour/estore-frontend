@@ -34,7 +34,9 @@ export const endpoints = {
       listUserOrders :"/orders/",
       createOrder :"/orders/create/",
       orderDetails:"/orders/:id/",
-      cancelOrder:"orders/:id/cancel/"
+      cancelOrder:"orders/:id/cancel/",
+      updateStatus :"orders/admin/orders/:id/status/",
+      updatePaymentStatus :"orders/admin/orders/:id/payment-status/",
     },
     users: {
       listUsersCardAnalytics: "/analytics/overall/?module=user_management",
