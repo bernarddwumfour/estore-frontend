@@ -1,14 +1,11 @@
-// app/orders/[id]/page.tsx
-'use server';
-
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
-import { 
-  ShoppingCart, Home, ArrowLeft, Package, Calendar, Truck, CheckCircle, 
-  XCircle, Clock, MapPin, CreditCard, Phone, Mail, Download, Printer 
+import {
+  Home, ArrowLeft, Package, Calendar, Truck, CheckCircle,
+  XCircle, MapPin, CreditCard, Phone, Mail, Download, Printer
 } from 'lucide-react';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import CancelOrderButton from '../(components)/CancelOrderButton';
@@ -16,13 +13,13 @@ import CancelOrderButton from '../(components)/CancelOrderButton';
 // Fetch order details on the server
 async function getOrderDetails(orderId: string) {
   const cookieStore = await cookies();
-  
+
   // Get ALL cookies to debug
   const allCookies = cookieStore.getAll();
   console.log('Order Details - All cookies found:', allCookies.map(c => ({ name: c.name })));
-  
+
   const authCookie = cookieStore.get('auth_data')?.value;
-  
+
   if (!authCookie) {
     console.log('Order Details - No auth_data found, redirecting to login');
     redirect('/login');
@@ -31,24 +28,24 @@ async function getOrderDetails(orderId: string) {
   let accessToken;
   try {
     console.log('Order Details - Raw auth cookie length:', authCookie.length);
-    
+
     // Try to decode and parse
     const decodedCookie = decodeURIComponent(authCookie);
     console.log('Order Details - Decoded cookie (first 200 chars):', decodedCookie.substring(0, 200));
-    
+
     const authData = JSON.parse(decodedCookie);
     console.log('Order Details - Parsed auth data keys:', Object.keys(authData));
-    
+
     accessToken = authData.tokens?.access_token;
-    
+
     if (!accessToken) {
       console.log('Order Details - No access token found in auth data');
       console.log('Order Details - Auth data tokens keys:', authData.tokens ? Object.keys(authData.tokens) : 'No tokens object');
       redirect('/login');
     }
-    
+
     console.log('Order Details - Access token found (first 30 chars):', accessToken.substring(0, 30) + '...');
-    
+
   } catch (error) {
     console.error('Order Details - Error parsing auth cookie:', error);
     if (error instanceof SyntaxError) {
@@ -61,7 +58,7 @@ async function getOrderDetails(orderId: string) {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.slice(0, -1);
   const endpoint = endpoints.orders.orderDetails.replace(":id", orderId);
   console.log(`Order Details - Fetching from: ${baseUrl}${endpoint}`);
-  
+
   const url = new URL(`${baseUrl}${endpoint}`);
 
   try {
@@ -74,17 +71,17 @@ async function getOrderDetails(orderId: string) {
     });
 
     console.log('Order Details - Response status:', response.status);
-    
+
     if (response.status === 401) {
       console.log('Order Details - 401 Unauthorized response from API');
       redirect('/login');
     }
-    
+
     if (response.status === 404) {
       console.log('Order Details - 404 Order not found');
       return null; // Return null to show "not found" UI
     }
-    
+
     // Check if response is JSON
     const contentType = response.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
@@ -93,31 +90,31 @@ async function getOrderDetails(orderId: string) {
       console.error('Order Details - Response text:', text.substring(0, 500));
       throw new Error('Invalid response format from server');
     }
-    
+
     const result = await response.json();
     console.log('Order Details - API response success:', result.success);
-    
+
     if (!result.success) {
       console.error('Order Details - API returned error:', result.error);
-      
+
       // If it's a permission error (403), redirect to orders list
       if (response.status === 403) {
         redirect('/orders');
       }
-      
+
       throw new Error(result.error || "Failed to load order details");
     }
 
     return result.data?.order || result.data;
-    
+
   } catch (error: any) {
     console.error('Order Details - Fetch error:', error);
-    
+
     // Don't redirect for network errors, let the error boundary handle it
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
       throw new Error('Unable to connect to the server. Please check your internet connection.');
     }
-    
+
     throw error;
   }
 }
@@ -157,15 +154,15 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
   // Await the params Promise
   const resolvedParams = await params;
   const orderId = resolvedParams.id;
-  
+
   console.log(`Order Details - Loading order ID: ${orderId}`);
-  
+
   let order;
   try {
     order = await getOrderDetails(orderId);
   } catch (error: any) {
     console.error('Error in OrderDetailsPage:', error);
-    
+
     // Return error UI
     return (
       <div className="min-h-screen bg-gray-50 py-32">
@@ -409,34 +406,34 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
             {/* Order Summary */}
             <div className="bg-white border border-gray-100 rounded-lg p-8">
               <h2 className="text-2xl font-medium text-gray-900 mb-6">Order Summary</h2>
-              
+
               <div className="space-y-4">
                 <div className="flex justify-between text-gray-700">
                   <span>Subtotal</span>
                   <span>{formatCurrency(order.subtotal)}</span>
                 </div>
-                
+
                 {order.shipping_cost > 0 && (
                   <div className="flex justify-between text-gray-700">
                     <span>Shipping</span>
                     <span>{formatCurrency(order.shipping_cost)}</span>
                   </div>
                 )}
-                
+
                 {order.tax_amount > 0 && (
                   <div className="flex justify-between text-gray-700">
                     <span>Tax ({order.tax_rate}%)</span>
                     <span>{formatCurrency(order.tax_amount)}</span>
                   </div>
                 )}
-                
+
                 {order.discount_amount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount</span>
                     <span>-{formatCurrency(order.discount_amount)}</span>
                   </div>
                 )}
-                
+
                 <div className="border-t border-gray-200 pt-4 mt-4">
                   <div className="flex justify-between text-lg font-bold text-gray-900">
                     <span>Total</span>
@@ -460,7 +457,7 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
                 <MapPin className="h-5 w-5" />
                 Shipping Address
               </h2>
-              
+
               <div className="space-y-3">
                 <p className="font-medium text-gray-900">
                   {order.shipping_address?.first_name} {order.shipping_address?.last_name}
@@ -473,7 +470,7 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
                   {order.shipping_address?.city}, {order.shipping_address?.state} {order.shipping_address?.postal_code}
                 </p>
                 <p className="text-gray-600">{order.shipping_address?.country}</p>
-                
+
                 <div className="flex items-center gap-2 mt-4 text-gray-600">
                   <Phone className="h-4 w-4" />
                   <span>{order.shipping_address?.phone}</span>
@@ -482,7 +479,7 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
                   <Mail className="h-4 w-4" />
                   <span>{order.shipping_address?.email}</span>
                 </div>
-                
+
                 {order.shipping_address?.instructions && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <p className="text-sm font-medium text-gray-700 mb-1">Delivery Instructions:</p>
@@ -498,23 +495,22 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
                 <CreditCard className="h-5 w-5" />
                 Payment Information
               </h2>
-              
+
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Payment Method:</span>
                   <span className="font-medium">{order.payment_method_display || order.payment_method}</span>
                 </div>
-                
+
                 <div className="flex justify-between">
                   <span className="text-gray-600">Payment Status:</span>
-                  <span className={`font-medium ${
-                    order.payment_status === 'paid' ? 'text-green-600' : 
-                    order.payment_status === 'failed' ? 'text-red-600' : 'text-amber-600'
-                  }`}>
+                  <span className={`font-medium ${order.payment_status === 'paid' ? 'text-green-600' :
+                      order.payment_status === 'failed' ? 'text-red-600' : 'text-amber-600'
+                    }`}>
                     {order.payment_status_display || order.payment_status}
                   </span>
                 </div>
-                
+
                 {order.payment_intent_id && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Transaction ID:</span>
@@ -527,20 +523,20 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
             {/* Order Actions */}
             <div className="bg-white border border-gray-100 rounded-lg p-8">
               <h2 className="text-2xl font-medium text-gray-900 mb-6">Order Actions</h2>
-              
+
               <div className="space-y-4">
                 {/* Client component for interactive cancellation */}
-                <CancelOrderButton 
+                <CancelOrderButton
                   orderId={order.id}
                   orderNumber={order.order_number}
                   status={order.status}
                 />
-                
+
                 <Button variant="outline" className="w-full">
                   <Download className="mr-2 h-5 w-5" />
                   Download Invoice
                 </Button>
-                
+
                 <Button variant="outline" className="w-full">
                   <Printer className="mr-2 h-5 w-5" />
                   Print Details

@@ -18,7 +18,7 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
+      <div className="min-h-screen bg-gray-50 py-32">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Your Cart is Empty</h1>
           <p className="text-lg text-gray-600 mb-8">Looks like you haven't added anything yet.</p>

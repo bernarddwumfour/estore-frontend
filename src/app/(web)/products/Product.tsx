@@ -1,9 +1,9 @@
 // app/components/Product/Product.tsx
 import Link from 'next/link'
-import Image from 'next/image'
 import { BadgePercent, Sparkles, Star, Tag } from 'lucide-react'
 import ProductActions from './(components)/ProductActions'
 import { ProductType } from '@/types/productTypes'
+import ProductImageCarousel from './(components)/ProductImageCarousel'
 
 const Product = ({ product }: { product: ProductType }) => {
   const defaultVariant = product.default_variant
@@ -13,10 +13,13 @@ const Product = ({ product }: { product: ProductType }) => {
     ? Math.round(((defaultVariant.price - defaultVariant.discounted_price) / defaultVariant.price) * 100)
     : 0
 
-  // Get the first/main image from default variant
-  const mainImage = hasDefaultVariant && defaultVariant.images?.length > 0
-    ? defaultVariant.images.find(img => img.type === 'main') || defaultVariant.images[0]
-    : null
+  // Get all images
+  const images = hasDefaultVariant && defaultVariant.images?.length > 0
+    ? defaultVariant.images
+    : []
+
+  // Get first image for ProductActions (static, not changing)
+  const firstImage = images[0] || null
 
   return (
     <li className="group relative block overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md">
@@ -56,34 +59,13 @@ const Product = ({ product }: { product: ProductType }) => {
           </span>
         </div>
 
-        {/* Product Image */}
-        <div className="relative w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
-          {mainImage && mainImage.url ? (
-            <Image
-              src={`${mainImage.url}`}
-              alt={mainImage.alt_text || product.title}
-              fill
-              className="object-cover scale-100 transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              priority={product.is_featured || product.is_bestseller}
-            />
-          ) : (
-            // Fallback when no image
-            <div className="flex h-full w-full items-center justify-center">
-              <div className="text-center">
-                <div className="text-4xl mb-2">📱</div>
-                <p className="text-sm text-gray-500">No Image</p>
-              </div>
-            </div>
-          )}
-
-          {/* Image count badge */}
-          {hasDefaultVariant && defaultVariant.images?.length > 1 && (
-            <div className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
-              +{defaultVariant.images.length - 1}
-            </div>
-          )}
-        </div>
+        {/* Product Image Carousel - Client Component */}
+        <ProductImageCarousel
+          images={images}
+          productTitle={product.title}
+          isFeatured={product.is_featured}
+          isBestseller={product.is_bestseller}
+        />
 
         {/* Card Content */}
         <div className="p-5">
@@ -164,7 +146,7 @@ const Product = ({ product }: { product: ProductType }) => {
         product={product}
         defaultVariant={defaultVariant}
         hasDefaultVariant={hasDefaultVariant}
-        mainImage={mainImage}
+        mainImage={firstImage}
         hasDiscount={hasDiscount}
       />
     </li>

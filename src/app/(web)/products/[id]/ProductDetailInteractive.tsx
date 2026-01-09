@@ -355,7 +355,7 @@ export function ExpandableFeatures({ features,Features }: { features: string[],F
   
   return (
     <div className='relative'>
-      <div className={`mb-4 ${!isExpanded ? "max-h-[210px] overflow-hidden" : "max-h-auto"}`}>
+      <div className={`mb-4 ${!isExpanded ? "max-h-[160px] overflow-hidden" : "max-h-auto"}`}>
           {
             Features
           }
