@@ -29,7 +29,9 @@ export const endpoints = {
       getProductDetailsWeb :"/products/:slug/",
       listWishList:"/products/wishlist/",
       addToWishList : "/products/wishlist/",
-      removeFromWishList :"/products/wishlist/:id/"
+      removeFromWishList :"/products/wishlist/:id/",
+      createReview : "/products/:slug/reviews/create/",
+      getReviews :"/products/:slug/reviews/"
     },
     orders : {
       listOrders :"/orders/admin/orders/",
