@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Bookmark, ShoppingCart, Minus, Plus, Trash } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/app/lib/store/cart-store';
+import AddToWishList from '../(components)/AddToWishList';
 
 // Image Gallery Component
 export function ProductImageGallery({ 
@@ -316,9 +317,7 @@ export function CartActions({
         >
           Buy Now
         </Button>
-        <Button size="lg" variant="outline" className="p-7">
-          <Bookmark className="h-6 w-6" />
-        </Button>
+        <AddToWishList variantId={selectedVariant?.id} className='relative w-15 rounded-md top-0 left-0' iconSize={"w-12"}/>
       </div>
     </div>
   );

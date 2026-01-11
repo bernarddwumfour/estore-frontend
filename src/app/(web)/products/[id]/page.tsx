@@ -436,7 +436,7 @@ export default async function ProductDetailPage({
                       </ul>
                     </div>
                   )}
-                </> as ReactNode)}
+                </>)}
               />
 
 
@@ -461,10 +461,10 @@ export default async function ProductDetailPage({
 
         {/* Product Reviews Section */}
         <div className="mt-20">
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex flex-col md:flex-row gap-6 items-center justify-between mb-10">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Customer Reviews</h2>
-              <div className="flex items-center space-x-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Customer Reviews</h2>
+              <div className="flex flex-col items-center  md:items-start  space-x-4">
                 <div className="flex items-center">
                   <div className="flex items-center mr-2">
                     {[...Array(5)].map((_, i) => (
@@ -478,12 +478,13 @@ export default async function ProductDetailPage({
                     ))}
                   </div>
                   <span className="text-lg font-semibold text-gray-900">
-                    {product.average_rating.toFixed(1)} out of 5
+                    {product.average_rating.toFixed(1)}
                   </span>
                 </div>
-                <span className="text-gray-600">
-                  {product.total_reviews} {product.total_reviews === 1 ? 'review' : 'reviews'}
-                </span>
+                
+                <p className="text-gray-600">
+                  ({product.total_reviews} {product.total_reviews === 1 ? 'review' : 'reviews'})
+                </p>
               </div>
             </div>
 

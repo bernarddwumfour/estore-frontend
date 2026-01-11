@@ -27,9 +27,13 @@ import {
 interface AddToWishListProps {
   variantId: string
   productTitle?: string
+  className?: string
+  iconSize?: string
+
+  
 }
 
-const AddToWishList = ({ variantId, productTitle }: AddToWishListProps) => {
+const AddToWishList = ({ variantId, productTitle,className,iconSize }: AddToWishListProps) => {
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const router = useRouter()
@@ -131,7 +135,7 @@ const AddToWishList = ({ variantId, productTitle }: AddToWishListProps) => {
       <button
         onClick={handleWishlistAction}
         disabled={isAdding || !hasHydrated}
-        className="absolute flex gap-1 items-center bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`absolute flex gap-1 items-center bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         aria-label={
           !hasHydrated ? 'Loading...' :
           isAdding ? 'Processing...' :
@@ -139,7 +143,7 @@ const AddToWishList = ({ variantId, productTitle }: AddToWishListProps) => {
         }
       >
         <Heart
-          className={`w-4 ${isInWishlist ? 'fill-primary stroke-primary' : ''} ${isAdding ? 'animate-pulse' : ''}`}
+          className={`w-4 ${iconSize} ${isInWishlist ? 'fill-primary stroke-primary' : ''} ${isAdding ? 'animate-pulse' : ''}`}
         />
       </button>
 
