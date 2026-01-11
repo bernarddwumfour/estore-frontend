@@ -26,7 +26,7 @@ const Product = ({ product }: { product: ProductType }) => {
       <Link href={`/products/${product.slug}`} className="block">
         {/* Product Badges */}
         <div className="absolute left-3 top-3 z-10 flex flex-col gap-1">
-          {product.is_new && (
+          {/* {product.is_new && (
             <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
               <Sparkles className="h-3 w-3" />
               New
@@ -43,9 +43,9 @@ const Product = ({ product }: { product: ProductType }) => {
               <Tag className="h-3 w-3" />
               Bestseller
             </span>
-          )}
+          )} */}
           {hasDiscount && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2.5 py-1 text-xs font-medium text-white">
+            <span className="inline-flex items-center scale-80 md:scale-100 gap-1 rounded-full bg-destructive px-2.5 py-1 text-xs font-medium text-white">
               <BadgePercent className="h-4 w-4" />
               -{discountPercentage}%
             </span>
@@ -53,7 +53,7 @@ const Product = ({ product }: { product: ProductType }) => {
         </div>
 
         {/* Category Badge */}
-        <div className="absolute right-3 top-3 z-10">
+        <div className="absolute right-3 top-3 z-10  scale-90 md:scale-100">
           <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
             {product.category.name}
           </span>
@@ -69,14 +69,14 @@ const Product = ({ product }: { product: ProductType }) => {
         />
 
         {/* Card Content */}
-        <div className="p-5">
+        <div className="p-2 md:p-5">
           {/* Product Title & Save Amount */}
-          <div className='flex justify-between w-full pb-2'>
+          <div className='flex flex-col md:flex-row justify-between w-full pb-2'>
             <h3 className="font-semibold text-gray-900 line-clamp-1">
               {product.title}
             </h3>
             {hasDiscount && (
-              <span className="text-sm font-medium text-red-600 whitespace-nowrap">
+              <span className="text-[.7rem] md:text-sm font-medium text-red-600 whitespace-nowrap">
                 Save ${(defaultVariant.price - defaultVariant.discounted_price).toFixed(2)}
               </span>
             )}
@@ -86,11 +86,11 @@ const Product = ({ product }: { product: ProductType }) => {
           <div>
             {hasDefaultVariant ? (
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-gray-900">
+                <span className="md:text-xl font-bold text-gray-900">
                   ${defaultVariant.discounted_price.toFixed(2)}
                 </span>
                 {hasDiscount && (
-                  <span className="text-sm text-gray-400 line-through">
+                  <span className="text-xs md:text-sm text-gray-400 line-through">
                     ${defaultVariant.price.toFixed(2)}
                   </span>
                 )}
@@ -117,7 +117,7 @@ const Product = ({ product }: { product: ProductType }) => {
               <span className="text-sm text-gray-600 ml-1">
                 {product.average_rating.toFixed(1)}
               </span>
-              <span className="text-sm text-gray-400">
+              <span className="hidden md:inline-block text-sm text-gray-400">
                 ({product.total_reviews} reviews)
               </span>
             </div>

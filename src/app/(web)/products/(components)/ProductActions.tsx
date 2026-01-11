@@ -101,7 +101,7 @@ const ProductActions = ({
 
   return (
     <div className="border-t border-gray-100 p-5">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col-reverse md:flex-row md:items-center gap-3">
         {hasDefaultVariant && defaultVariant && defaultVariant.stock > 0 ? (
           !inCart ? (
             <Button

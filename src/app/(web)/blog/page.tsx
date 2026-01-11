@@ -68,7 +68,7 @@ export default function BlogPage() {
       <div className="container mx-auto px-4">
         {/* Page Header */}
         <div className="py-6 pb-12">
-          <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-4">Our Blog</h1>
+          <h1 className="font-bebas-neue uppercase text-2xl md:text-3xl font-bold mb-4">Our Blog</h1>
           <p className="text-gray-600">Stay updated with the latest tech trends, product reviews, and helpful guides from our team.</p>
         </div>
       

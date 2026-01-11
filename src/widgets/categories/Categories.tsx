@@ -128,17 +128,17 @@ export default async function Categories({
 
     return (
       <section className="relative bg-center">
-        <div className="container mx-auto px-4 pb-8">
+        <div className="container mx-auto md:px-4 pb-8">
 
           {type === "withImage" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 grid-cols-2 lg:grid-cols-5 gap-2 md:gap-4">
               {categories.map((category) => (
                 <Link
                   key={category.id}
                   href={`/products?category=${category.slug}`}
                   className="block"
                 >
-                  <div className="relative overflow-hidden group cursor-pointer h-58 p-4 flex justify-center items-end transition-all duration-300 ">
+                  <div className="relative overflow-hidden group cursor-pointer h-42 md:h-58 p-4 flex justify-center items-end transition-all duration-300 ">
                     <div className="absolute inset-0 w-full h-full">
                       <Image
                         src={category.image}
@@ -153,15 +153,15 @@ export default async function Categories({
                       />
                     </div>
 
-                    <div className="relative overflow-hidden w-full mb-6 bg-stone-200 p-6 z-[2] opacity-70 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="relative overflow-hidden w-full md:mb-6 bg-stone-200 p-6 z-[2] opacity-70 group-hover:opacity-100 transition-opacity duration-300">
                       <div className="absolute bottom-4 right-4 bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowUpRight className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-xs uppercase tracking-widest text-stone-500 mb-2 font-serif">
+                        {/* <p className="text-xs uppercase tracking-widest text-stone-500 mb-1 md:mb-2 font-serif">
                           {category.parent_name || 'Apple Products'}
-                        </p>
-                        <h3 className="text-2xl font-serif mb-2 group-hover:text-stone-600 transition-colors">
+                        </p> */}
+                        <h3 className="text-lg md:text-2xl font-serif mb-1 md:mb-2 group-hover:text-stone-600 transition-colors">
                           {category.name}
                         </h3>
                         <p className="text-sm text-stone-500">
@@ -175,11 +175,11 @@ export default async function Categories({
               ))}
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 px-4">
               <Link href="/products">
                 <Badge
                   variant={!currentCategorySlug ? "default" : "outline"}
-                  className="px-4 py-2 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+                  className="px-3 md:px-4 py-1 md:py-2 text-sm md:text-base hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
                 >
                   All
                 </Badge>
@@ -195,7 +195,7 @@ export default async function Categories({
                   >
                     <Badge
                       variant={isCurrentCategory ? "default" : "outline"}
-                      className="px-4 py-2 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+                      className="px-3 md:px-4 py-1 md:py-2 text-sm md:text-base hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
                     >
                       {category.name}
                     </Badge>

@@ -17,7 +17,7 @@ export default async function Products({ searchParams }: PageProps) {
     <section className="relative py-32 bg-cover bg-center">
       <div className="mx-auto container">
         <div className="py-6 px-4">
-          <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-2">
+          <h1 className="font-bebas-neue uppercase text-2xl md:text-3xl font-bold mb-2">
             Explore Our Catalogue
           </h1>
           <p className="text-gray-600">

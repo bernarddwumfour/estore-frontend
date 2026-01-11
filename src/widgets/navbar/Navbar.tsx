@@ -180,7 +180,7 @@ export default function Navbar() {
 
                             <button
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                className="md:hidden p-2 hover:bg-accent rounded-md ml-2"
+                                className="md:hidden p-2 hover:bg-accent rounded-md"
                             >
                                 {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                             </button>
@@ -213,12 +213,12 @@ export default function Navbar() {
                         </Link>
                         <div className="pt-4 space-y-2">
 
-                            <Button onClick={() => setMobileMenuOpen(false)} variant="outline" asChild className="w-full justify-start bg-transparent py-6">
+                            {user?.role !=="customer" && <Button onClick={() => setMobileMenuOpen(false)} variant="outline" asChild className="w-full justify-start bg-transparent py-6">
                                 <Link href="/dashboard">
                                     <LayoutDashboard className="h-4 w-4 mr-2" />
                                     Dashboard
                                 </Link>
-                            </Button>
+                            </Button>}
                         </div>
                     </div>
                 </div>
