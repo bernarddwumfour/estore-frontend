@@ -5,7 +5,7 @@ export default function ContactPage() {
       <div className="container mx-auto px-4">
         {/* Page Header */}
         <div className="py-6 pb-12">
-          <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-2">Contact Us</h1>
+          <h1 className="font-bebas-neue uppercase text-2xl md:text-3xl font-bold mb-2">Contact Us</h1>
           <p className="text-gray-600">We'd love to hear from you. Whether you have a question about products, orders, or anything else, our team is ready to help.
           </p>
         </div>
@@ -13,7 +13,7 @@ export default function ContactPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Form */}
-          <div className="bg-white border border-gray-100 rounded-lg p-8">
+          <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8">
             <h2 className="text-2xl font-medium text-gray-900 mb-6">Send us a message</h2>
             <form className="space-y-6">
               <div>
@@ -81,9 +81,9 @@ export default function ContactPage() {
           {/* Contact Information */}
           <div className="space-y-12">
             {/* Contact Details */}
-            <div className='py-6'>
+            <div className='py-6 px-2'>
               <h2 className="text-2xl font-medium text-gray-900 mb-6">Get in touch</h2>
-              <div className="space-y-6 grid grid-cols-3">
+              <div className="space-y-6 grid grid-cols-1 p md:grid-cols-3">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Address</h3>
                   <p className="text-gray-600">

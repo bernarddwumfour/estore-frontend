@@ -38,11 +38,11 @@ export default function CartPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Cart Items */}
           <div className="lg:col-span-2">
-            <div className="bg-white border border-gray-100 rounded-lg p-8">
+            <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8">
               <ul className="space-y-6">
                 {items.map((item) => (
                   <li key={item.id} className="flex items-start gap-6 pb-6 border-b border-gray-100 last:border-0">
-                    <div className="relative size-32 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
+                    <div className="relative size-24 md:size-32 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
                       <Image
                         width={88}
                         height={88}
@@ -52,11 +52,11 @@ export default function CartPage() {
                       />
                     </div>
                     <div className="flex-1">
-                      <div className="flex justify-between items">
+                      <div className="flex gap-2 justify-between items">
                         <div>
-                          <h3 className="text-lg font-medium text-gray-900">{item.title}</h3>
-                          <p className="text-sm text-gray-600 mt-1">Color: {'N/A'}</p>
-                          <p className="text-sm font-medium text-gray-900 mt-2">
+                          <h3 className="md:text-lg font-medium text-gray-900">{item.title}</h3>
+                          <p className="text-xs md:text-sm text-gray-600 mt-1">Color: {'N/A'}</p>
+                          <p className="text-xs text-sm font-medium text-gray-900 mt-2">
                             ${item.price.toFixed(2)} each
                           </p>
                         </div>
@@ -71,14 +71,14 @@ export default function CartPage() {
                       <div className="mt-4 flex items-center gap-3 justify-between">
                         <div className="flex gap-3">
                           <button
-                            className="h-9 w-9 border border-gray-300 rounded-sm text-lg font-medium hover:bg-gray-50"
+                            className="h-7 w-7 border border-gray-300 rounded-sm font-medium hover:bg-gray-50"
                             onClick={() => updateQuantity(item.sku, item.quantity - 1)}
                           >
                             -
                           </button>
-                          <span className="text-lg font-medium w-12 text-center">{item.quantity}</span>
+                          <span className="font-medium w-12 text-center">{item.quantity}</span>
                           <button
-                            className="h-9 w-9 border border-gray-300 rounded-sm text-lg font-medium hover:bg-gray-50"
+                            className="h-7 w-7 border border-gray-300 rounded-sm font-medium hover:bg-gray-50"
                             onClick={() => updateQuantity(item.sku, item.quantity + 1)}
                           >
                             +
@@ -110,7 +110,7 @@ export default function CartPage() {
 
           {/* Summary Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white border border-gray-100 rounded-lg p-8 sticky top-32">
+            <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8 sticky top-32">
               <h2 className="text-2xl font-medium text-gray-900 mb-6">Order Summary</h2>
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between">

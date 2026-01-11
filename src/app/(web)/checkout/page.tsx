@@ -321,7 +321,7 @@ export default function CheckoutPage() {
             <div className="lg:col-span-2 space-y-12">
               {/* Guest Information (only for non-logged in users) */}
               {!user && (
-                <div className="bg-white border border-gray-100 rounded-lg p-8">
+                <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8">
                   <h2 className="text-2xl font-medium text-gray-900 mb-6">Your Information</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -332,7 +332,7 @@ export default function CheckoutPage() {
                         required
                         value={formData.guest_first_name}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                       />
                     </div>
                     <div>
@@ -343,7 +343,7 @@ export default function CheckoutPage() {
                         required
                         value={formData.guest_last_name}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -354,7 +354,7 @@ export default function CheckoutPage() {
                         required
                         value={formData.guest_email}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -365,7 +365,7 @@ export default function CheckoutPage() {
                         required
                         value={formData.guest_phone}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                         placeholder="+1234567890"
                       />
                     </div>
@@ -374,7 +374,7 @@ export default function CheckoutPage() {
               )}
 
               {/* Shipping Information */}
-              <div className="bg-white border border-gray-100 rounded-lg p-8">
+              <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8">
                 <h2 className="text-2xl font-medium text-gray-900 mb-6">Shipping Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -385,7 +385,7 @@ export default function CheckoutPage() {
                       required
                       value={formData.shipping_address.first_name}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     />
                   </div>
                   <div>
@@ -396,7 +396,7 @@ export default function CheckoutPage() {
                       required
                       value={formData.shipping_address.last_name}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -407,7 +407,7 @@ export default function CheckoutPage() {
                       required
                       value={formData.shipping_address.email}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -418,7 +418,7 @@ export default function CheckoutPage() {
                       required
                       value={formData.shipping_address.phone}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                       placeholder="+1234567890"
                     />
                   </div>
@@ -431,7 +431,7 @@ export default function CheckoutPage() {
                       value={formData.shipping_address.address_line1}
                       onChange={handleInputChange}
                       placeholder="Street address"
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 mb-3"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 mb-3"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -442,7 +442,7 @@ export default function CheckoutPage() {
                       value={formData.shipping_address.address_line2}
                       onChange={handleInputChange}
                       placeholder="Apartment, suite, etc."
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     />
                   </div>
                   <div>
@@ -453,7 +453,7 @@ export default function CheckoutPage() {
                       required
                       value={formData.shipping_address.city}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     />
                   </div>
                   <div>
@@ -462,7 +462,7 @@ export default function CheckoutPage() {
                       name="shipping_address.country"
                       value={formData.shipping_address.country}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     >
                       <option value="Ghana">Ghana</option>
                     </select>
@@ -475,7 +475,7 @@ export default function CheckoutPage() {
                       required
                       value={formData.shipping_address.state}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     />
                   </div>
                   <div>
@@ -486,7 +486,7 @@ export default function CheckoutPage() {
                       required
                       value={formData.shipping_address.postal_code}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -496,7 +496,7 @@ export default function CheckoutPage() {
                       value={formData.shipping_address.instructions}
                       onChange={handleInputChange}
                       placeholder="Leave at door, call on arrival, etc."
-                      className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     />
                   </div>
                 </div>
@@ -517,7 +517,7 @@ export default function CheckoutPage() {
 
               {/* Billing Information (if different from shipping) */}
               {formData.use_separate_billing && (
-                <div className="bg-white border border-gray-100 rounded-lg p-8">
+                <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8">
                   <h2 className="text-2xl font-medium text-gray-900 mb-6">Billing Information</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Same fields as shipping address */}
@@ -529,7 +529,7 @@ export default function CheckoutPage() {
                         required
                         value={formData.billing_address.first_name}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                       />
                     </div>
                     <div>
@@ -540,7 +540,7 @@ export default function CheckoutPage() {
                         required
                         value={formData.billing_address.last_name}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                       />
                     </div>
                     {/* ... repeat all billing address fields ... */}
@@ -549,18 +549,18 @@ export default function CheckoutPage() {
               )}
 
               {/* Payment Method */}
-              <div className="bg-white border border-gray-100 rounded-lg p-8">
+              <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8">
                 <h2 className="text-2xl font-medium text-gray-900 mb-6">Payment Method</h2>
                 <div className="space-y-4">
                   <p className="text-gray-600">Secure payment powered by Stripe</p>
                   <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 text-center">
                     <p className="text-gray-700 font-medium">Credit/Debit Card</p>
                     <div className="mt-4 space-y-3">
-                      <input placeholder="Card number" className="w-full px-4 py-3 rounded-sm border border-gray-300" />
+                      <input placeholder="Card number" className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300" />
                       <div className="grid grid-cols-3 gap-3">
-                        <input placeholder="MM/YY" className="px-4 py-3 rounded-sm border border-gray-300" />
-                        <input placeholder="CVC" className="px-4 py-3 rounded-sm border border-gray-300" />
-                        <input placeholder="ZIP" className="px-4 py-3 rounded-sm border border-gray-300" />
+                        <input placeholder="MM/YY" className="px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300" />
+                        <input placeholder="CVC" className="px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300" />
+                        <input placeholder="ZIP" className="px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300" />
                       </div>
                     </div>
                   </div>
@@ -570,7 +570,7 @@ export default function CheckoutPage() {
 
             {/* Right: Order Summary */}
             <div className="lg:col-span-1">
-              <div className="bg-white border border-gray-100 rounded-lg p-8 sticky top-32">
+              <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8 sticky top-32">
                 <h2 className="text-2xl font-medium text-gray-900 mb-6">Order Summary</h2>
 
                 <div className="space-y-6 mb-8">

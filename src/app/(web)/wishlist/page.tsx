@@ -31,7 +31,7 @@ const page = () => {
             <div className="py-32 container mx-auto px-4">
                 {/* Header */}
                 <div className="mb-6">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">My WishList</h1>
+                    <h1 className="text-2xl md:text-3xl  font-bold text-gray-900 mb-2">My WishList</h1>
                     <p className="text-gray-600">Track and manage all your purchases</p>
                 </div>
 

@@ -37,7 +37,7 @@ export default function Footer() {
                     </div>
 
                     {/* Links Columns */}
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-3">
                         <h4 className="font-semibold mb-4 text-zinc-100">Shop</h4>
                         <ul className="space-y-2 text-sm">
                             <li>
@@ -58,7 +58,7 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-3">
                         <h4 className="font-semibold mb-4 text-zinc-100">Company</h4>
                         <ul className="space-y-2 text-sm">
                             <li>
@@ -79,27 +79,7 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    <div className="md:col-span-2">
-                        <h4 className="font-semibold mb-4 text-zinc-100">Support</h4>
-                        <ul className="space-y-2 text-sm">
-                            <li>
-                                <Link href="/help" className="text-zinc-400 hover:text-zinc-100">
-                                    Help Center
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/shipping" className="text-zinc-400 hover:text-zinc-100">
-                                    Shipping
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/returns" className="text-zinc-400 hover:text-zinc-100">
-                                    Returns
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
-
+                 
                     <div className="md:col-span-2">
                         <h4 className="font-semibold mb-4 text-zinc-100">Legal</h4>
                         <ul className="space-y-2 text-sm">
