@@ -79,14 +79,14 @@ export default function Navbar() {
                         <div className="flex items-center gap-2">
                             {user?.id ? (
                                 <>
-                                    <Button
+                                    {user?.role !=="customer" && <Button
                                         className="hidden md:block"
                                         variant="ghost"
                                         size="sm"
                                         asChild
                                     >
                                         <Link className="py-2" href="/dashboard">Dashboard</Link>
-                                    </Button>
+                                    </Button>}
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="outline" className="rounded-full" size="icon">
@@ -105,6 +105,15 @@ export default function Navbar() {
                                                     <div className="flex w-full justify-between gap-6 items-center py-2">
                                                         <p>Orders</p>
                                                         <Handbag size={16} />
+                                                    </div>
+                                                </Link>
+                                            </DropdownMenuItem>
+
+                                            <DropdownMenuItem asChild className="cursor-pointer py-1">
+                                                <Link href={"/wishlist"}>
+                                                    <div className="flex w-full justify-between gap-6 items-center py-2">
+                                                        <p>WishList</p>
+                                                        <Heart size={16} />
                                                     </div>
                                                 </Link>
                                             </DropdownMenuItem>

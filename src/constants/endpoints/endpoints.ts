@@ -26,8 +26,10 @@ export const endpoints = {
       addProduct : "/products/admin/products/create/",
       createVariant : "/products/admin/products/:id/variants/" ,
       getProductDetails :"/products/admin/products/:id/",
-      getProductDetailsWeb :"/products/:slug/"
-
+      getProductDetailsWeb :"/products/:slug/",
+      listWishList:"/products/wishlist/",
+      addToWishList : "/products/wishlist/",
+      removeFromWishList :"/products/wishlist/:id/"
     },
     orders : {
       listOrders :"/orders/admin/orders/",

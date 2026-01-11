@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { ImageIcon } from 'lucide-react'
+import AddToWishList from './AddToWishList'
 
 interface ProductImageCarouselProps {
   images: Array<{
@@ -15,13 +16,15 @@ interface ProductImageCarouselProps {
   productTitle: string
   isFeatured: boolean
   isBestseller: boolean
+  variantId : string
 }
 
 export default function ProductImageCarousel({
   images,
   productTitle,
   isFeatured,
-  isBestseller
+  isBestseller,
+  variantId
 }: ProductImageCarouselProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
@@ -61,6 +64,9 @@ export default function ProductImageCarousel({
         </div>
       )}
 
+
+      <AddToWishList variantId={variantId}/>
+
       {/* Image count badge - Click to cycle images */}
       {images.length > 1 && (
         <button
@@ -71,6 +77,7 @@ export default function ProductImageCarousel({
           +{images.length - 1} <ImageIcon className='w-3'/>
         </button>
       )}
+
     </div>
   )
 }

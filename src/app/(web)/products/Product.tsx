@@ -65,6 +65,7 @@ const Product = ({ product }: { product: ProductType }) => {
           productTitle={product.title}
           isFeatured={product.is_featured}
           isBestseller={product.is_bestseller}
+          variantId = {defaultVariant?.id!}
         />
 
         {/* Card Content */}

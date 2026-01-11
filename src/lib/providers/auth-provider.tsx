@@ -145,12 +145,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [tokens, setTokens] = useState<Tokens | null>(null);
 
+
   // Initialize auth state from cookies on mount
   useEffect(() => {
     const authData = getAuthCookie();
     if (authData) {
       setUser(authData.user);
       setTokens(authData.tokens);
+      console.log(authData)
+
       
       // Set default axios headers if tokens exist
       if (authData.tokens.access_token) {
@@ -180,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(apiResponse.error || "Login failed");
       }
 
-      const { user: userData, tokens: tokenData } = apiResponse.data;
+      const { user: userData, tokens: tokenData  } = apiResponse.data;
 
       const authData: AuthData = {
         user: userData,

@@ -3,10 +3,11 @@ import Product from "./Product"
 import { endpoints } from "@/constants/endpoints/endpoints"
 
 interface ProductsGridProps {
-  category?: string
+  category?: string,
+  endpoint?:string
 }
 
-async function getProducts(category?: string) {
+async function getProducts(category?: string,endpoint?:string) {
   try {
     const params = new URLSearchParams({
       limit: '20',
@@ -15,7 +16,7 @@ async function getProducts(category?: string) {
 
     // Fix URL construction
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-    const apiPath = endpoints.products.listProductsWeb
+    const apiPath = endpoint || endpoints.products.listProductsWeb
 
     // Ensure we don't have double slashes
     const fullUrl = `${baseUrl.replace(/\/$/, '')}/${apiPath.replace(/^\//, '')}`
@@ -48,12 +49,12 @@ async function getProducts(category?: string) {
   }
 }
 
-export default async function ProductsGrid({ category }: ProductsGridProps) {
+export default async function ProductsGrid({ category,endpoint }: ProductsGridProps) {
   let products: ProductType[] = []
   let error: string | null = null
 
   try {
-    products = await getProducts(category)
+    products = await getProducts(category,endpoint)
   } catch (err: any) {
     error = err.message || "Failed to load products"
   }

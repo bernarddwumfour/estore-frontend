@@ -38,6 +38,7 @@ export function ProductImageGallery({
             </div>
           </div>
         )}
+        
       </div>
 
       {/* Thumbnails */}
@@ -392,10 +393,3 @@ export default function ProductDetailInteractive({
     </>
   );
 }
-
-// Attach all components for easy imports
-// ProductDetailInteractive.ProductImageGallery = ProductImageGallery;
-// ProductDetailInteractive.ProductOptions = ProductOptions;
-// ProductDetailInteractive.CartActions = CartActions;
-// ProductDetailInteractive.ProductInteractive = ProductInteractive;
-// ProductDetailInteractive.ExpandableFeatures = ExpandableFeatures;
