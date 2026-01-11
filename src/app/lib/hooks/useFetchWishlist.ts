@@ -33,7 +33,7 @@ export const useFetchWishlist = (enabled = true) => {
     if (tokens?.access_token) {
       setTimeout(() => {
         setTokenReady(true)
-      }, 3000)
+      }, 300)
     }
   }, [tokens?.access_token])
 

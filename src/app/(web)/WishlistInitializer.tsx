@@ -6,7 +6,7 @@ import { useSetWishlist } from '../lib/store/wishlist-store'
 export const WishlistInitializer = () => {
   const setWishlist = useSetWishlist()
 
-  // useFetchWishlist()
+  useFetchWishlist()
   
   return null
 }
