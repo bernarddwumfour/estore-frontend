@@ -1,6 +1,6 @@
 // useFetchWishlist.ts - Alternative with individual hook
 "use client"
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   useWishlistHydrated,
@@ -13,7 +13,8 @@ import { useAuth } from '@/lib/use-auth'
 export const useFetchWishlist = (enabled = true) => {
   const hasHydrated = useWishlistHydrated()
   const setWishlist = useSetWishlist()
-  const { user } = useAuth()
+  const { user, tokens } = useAuth()
+  const [tokenReady, setTokenReady] = useState(false)
 
 
   const query = useQuery({
@@ -22,9 +23,20 @@ export const useFetchWishlist = (enabled = true) => {
       const response = await securityAxios.get(endpoints.products.listWishList)
       return response.data
     },
-    enabled: enabled && hasHydrated,
+    enabled: enabled && hasHydrated && tokenReady,
     staleTime: 1000 * 60 * 5,
   })
+
+
+  // Wait for token to be available
+  useEffect(() => {
+    if (tokens?.access_token) {
+      setTimeout(() => {
+        setTokenReady(true)
+      }, 3000)
+    }
+  }, [tokens?.access_token])
+
 
   useEffect(() => {
 
@@ -32,12 +44,12 @@ export const useFetchWishlist = (enabled = true) => {
       setWishlist([])
       return
     }
-    
+
     if (query.data && hasHydrated) {
       const variantIds = query.data.data.items.map((item: any) => item.default_variant.id)
       setWishlist(variantIds)
     }
-  }, [query.data, hasHydrated, setWishlist,user])
+  }, [query.data, hasHydrated, setWishlist, user])
 
   return query
 }
