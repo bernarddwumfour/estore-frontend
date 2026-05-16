@@ -4,9 +4,21 @@ export default function ContactPage() {
     <div className="min-h-screen bg-gray-50 py-32">
       <div className="container mx-auto px-4">
         {/* Page Header */}
+        <div className="max-w-6xl space-y-4 pb-6 sm:pb-8 md:pb-10">
+          <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
+            Contact Us
+          </h2>
+          <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            We'd love to hear from you. Whether you have a question about products, orders, or anything else,  {" "}
+            <span className="text-slate-950 relative inline-block">
+              our team is ready to help.
+              <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
+            </span>
+          </h3>
+        </div>
         <div className="py-6 pb-12">
-          <h1 className="font-bebas-neue uppercase text-2xl md:text-3xl font-bold mb-2">Contact Us</h1>
-          <p className="text-gray-600">We'd love to hear from you. Whether you have a question about products, orders, or anything else, our team is ready to help.
+          <h1 className="font-bebas-neue uppercase text-2xl md:text-3xl font-bold mb-2"></h1>
+          <p className="text-gray-600">
           </p>
         </div>
 

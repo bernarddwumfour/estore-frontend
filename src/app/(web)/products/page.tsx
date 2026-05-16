@@ -16,15 +16,20 @@ export default async function Products({ searchParams }: PageProps) {
   return (
     <section className="relative py-32 bg-cover bg-center">
       <div className="mx-auto container">
-        <div className="py-6 px-4">
-          <h1 className="font-bebas-neue uppercase text-2xl md:text-3xl font-bold mb-2">
-            Explore Our Catalogue
-          </h1>
-          <p className="text-gray-600">
-            Find the perfect products for your needs.
-          </p>
+
+        <div className="max-w-4xl space-y-4 pb-6 sm:pb-8 md:pb-10">
+          <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
+            Explore Our Products
+          </h2>
+          <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            Find the perfect products {" "}
+            <span className="text-slate-950 relative inline-block">
+              for your needs.
+              <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
+            </span>
+          </h3>
         </div>
-        
+
         {/* Pass the resolved object down to your component */}
         <Categories type='badge' searchParams={resolvedSearchParams} />
 

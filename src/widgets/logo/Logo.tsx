@@ -2,12 +2,14 @@ import Link from "next/link"
 
 const Logo = () => {
     return (
-        <Link href="/" className="flex items-center gap-2 py-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white font-bold text-xl">
-                S
+        <Link href="/" className="flex items-center gap-2.5 py-3 group">
+            {/* Minimalist Tech Icon Box */}
+            <div className="w-9 h-9 rounded-xl bg-slate-950 flex items-center justify-center text-white font-black text-sm tracking-tighter shadow-sm transition-transform duration-300 group-hover:scale-105">
+                iP
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
-                ShopHub
+            {/* Clean Typography Frame */}
+            <span className="text-xl font-black text-slate-950 tracking-tight transition-colors duration-300 group-hover:text-slate-800">
+                iPlug
             </span>
         </Link>
     )

@@ -65,10 +65,10 @@ const ProductActions = ({
   const handleOpenDialogWithAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
+
     // First add the product to cart
     handleAddToCart(e)
-    
+
     // Then open the dialog
     setIsDialogOpen(true)
   }
@@ -100,7 +100,7 @@ const ProductActions = ({
   }
 
   return (
-    <div className="border-t border-gray-100 p-5">
+    <div className="border-t border-gray-100 py-5">
       <div className="flex flex-col-reverse md:flex-row md:items-center gap-3">
         {hasDefaultVariant && defaultVariant && defaultVariant.stock > 0 ? (
           !inCart ? (
@@ -237,7 +237,7 @@ const ProductActions = ({
                               onClick={() => removeItem(item.sku)}
                             >
                               <span className="sr-only">Remove item</span>
-                              <Trash2 className='w-4'/>
+                              <Trash2 className='w-4' />
                             </button>
                           </div>
                         </li>

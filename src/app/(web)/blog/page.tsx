@@ -62,62 +62,71 @@ const blogPosts = [
 ];
 
 export default function BlogPage() {
-  const {id} = useParams()
+  const { id } = useParams()
   return (
     <div className="min-h-screen bg-gray-50 py-32">
       <div className="container mx-auto px-4">
         {/* Page Header */}
-        <div className="py-6 pb-12">
-          <h1 className="font-bebas-neue uppercase text-2xl md:text-3xl font-bold mb-4">Our Blog</h1>
-          <p className="text-gray-600">Stay updated with the latest tech trends, product reviews, and helpful guides from our team.</p>
+        <div className="max-w-5xl space-y-4 pb-6 sm:pb-8 md:pb-10">
+          <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
+            Our Blog
+          </h2>
+          <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            Stay updated with the latest tech trends, product reviews, and helpful  {" "}
+            <span className="text-slate-950 relative inline-block">
+              guides from our team.
+              <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
+            </span>
+          </h3>
         </div>
-      
+
+
         {/* Blog Posts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {blogPosts.map((post) => (
-           <Link href={`/blog/${id}`}>
-            <article
-              key={post.id}
-              className="group relative block overflow-hidden rounded-lg bg-white border border-gray-100"
-            >
-              {/* Image */}
-              <div className="relative h-64 overflow-hidden">
-                <Image
-                  src={post.imageUrl}
-                  alt={post.title}
-                  fill
-                  className="object-cover transition duration-500 group-hover:scale-105"
-                />
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                {/* Meta */}
-                <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                  <span>{post.author}</span>
-                  <span>•</span>
-                  <span>{post.date}</span>
-                  <span>•</span>
-                  <span>{post.readTime}</span>
+            <Link href={`/blog/${id}`}>
+              <article
+                key={post.id}
+                className="group relative block overflow-hidden rounded-lg bg-white border border-gray-100"
+              >
+                {/* Image */}
+                <div className="relative h-64 overflow-hidden">
+                  <Image
+                    src={post.imageUrl}
+                    alt={post.title}
+                    fill
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                  />
                 </div>
 
-                {/* Title */}
-                <h2 className="text-xl font-medium text-gray-900 mb-3 line-clamp-2">
-                  {post.title}
-                </h2>
+                {/* Content */}
+                <div className="p-6">
+                  {/* Meta */}
+                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                    <span>{post.author}</span>
+                    <span>•</span>
+                    <span>{post.date}</span>
+                    <span>•</span>
+                    <span>{post.readTime}</span>
+                  </div>
 
-                {/* Excerpt */}
-                <p className="text-gray-700 line-clamp-3 mb-4">
-                  {post.excerpt}
-                </p>
+                  {/* Title */}
+                  <h2 className="text-xl font-medium text-gray-900 mb-3 line-clamp-2">
+                    {post.title}
+                  </h2>
 
-                {/* Read More Button */}
-                <Button variant="link" className="p-0 h-auto font-medium text-gray-900 hover:text-gray-600">
-                  Read more →
-                </Button>
-              </div>
-            </article>
-           </Link>
+                  {/* Excerpt */}
+                  <p className="text-gray-700 line-clamp-3 mb-4">
+                    {post.excerpt}
+                  </p>
+
+                  {/* Read More Button */}
+                  <Button variant="link" className="p-0 h-auto font-medium text-gray-900 hover:text-gray-600">
+                    Read more →
+                  </Button>
+                </div>
+              </article>
+            </Link>
           ))}
         </div>
 

@@ -66,7 +66,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items- flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="flex justify-center py-6">
-        <Logo  />
+        <Logo />
       </div>
       <Card className="w-full max-w-md space-y-8 shadow-md p-4  rounded-lg">
         <div className="text-center">
@@ -118,32 +118,32 @@ export default function LoginPage() {
                   {" "}
                   <FormLabel>Password</FormLabel>{" "}
                   <FormControl>
-                   <div className="relative">
-                   <Input
-                      type={showPassword ? "text" : "password"}
-                      {...field}
-                      className="pr-10"
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        {...field}
+                        className="pr-10"
+                      />
 
-                    {/* Toggle Button */}
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-black"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                   </div>
+                      {/* Toggle Button */}
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-black"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </FormControl>
                 </FormItem>
               )}
             />
 
-            
+
             <div className="flex items-center justify-end">
               <div className="text-sm">
                 <Link

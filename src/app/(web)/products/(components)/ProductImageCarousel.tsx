@@ -11,12 +11,12 @@ interface ProductImageCarouselProps {
     id?: string
     url: string
     alt_text?: string,
-    type ?: string
+    type?: string
   }>
   productTitle: string
   isFeatured: boolean
   isBestseller: boolean
-  variantId : string
+  variantId: string
 }
 
 export default function ProductImageCarousel({
@@ -36,7 +36,7 @@ export default function ProductImageCarousel({
   const handleBadgeClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
+
     if (images.length > 1) {
       setCurrentImageIndex((prev) => (prev + 1) % images.length)
     }
@@ -45,7 +45,7 @@ export default function ProductImageCarousel({
   const currentImage = images[currentImageIndex] || null
 
   return (
-    <div className="relative w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+    <div className="relative h-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
       {currentImage && currentImage.url ? (
         <Image
           src={`${currentImage.url}`}
@@ -65,7 +65,7 @@ export default function ProductImageCarousel({
       )}
 
 
-      <AddToWishList variantId={variantId}/>
+      <AddToWishList variantId={variantId} />
 
       {/* Image count badge - Click to cycle images */}
       {images.length > 1 && (
@@ -74,7 +74,7 @@ export default function ProductImageCarousel({
           className="absolute flex gap-1 items-center bottom-2 right-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80 transition-colors cursor-pointer"
           aria-label={`Click to see next image. Image ${currentImageIndex + 1} of ${images.length}`}
         >
-          +{images.length - 1} <ImageIcon className='w-3'/>
+          +{images.length - 1} <ImageIcon className='w-3' />
         </button>
       )}
 

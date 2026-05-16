@@ -1,9 +1,7 @@
 import { ArrowUpRight } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
 import { endpoints } from '@/constants/endpoints/endpoints'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Spinner from '../loaders/Spinner'
 
@@ -22,22 +20,18 @@ interface Category {
 
 type CategoriesDisplayType = "withImage" | "badge"
 
-
 interface ProductsPageProps {
-    category?: string 
+  category?: string
 }
 
 interface CategoriesProps {
   type?: CategoriesDisplayType
-  searchParams?: ProductsPageProps // Pass from parent
+  searchParams?: ProductsPageProps
 }
 
 async function getCategories() {
   try {
-    const url = new URL(`${process.env.NEXT_PUBLIC_API_BASE_URL?.slice(0,-1)}${endpoints.products.listCategoriesWeb}`)
-    
-
-    console.log("URL : ",url)
+    const url = new URL(`${process.env.NEXT_PUBLIC_API_BASE_URL?.slice(0, -1)}${endpoints.products.listCategoriesWeb}`)
 
     const response = await fetch(url.toString(), {
       next: {
@@ -45,8 +39,6 @@ async function getCategories() {
         tags: ['categories']
       }
     })
-
-    console.log("CATEGORIES",response)
 
     if (!response.ok) {
       throw new Error(`Failed to fetch categories: ${response.status}`)
@@ -65,126 +57,92 @@ async function getCategories() {
   }
 }
 
-// Error component for client-side retry
-function CategoriesError({ onRetry }: { onRetry: () => void }) {
-  return (
-    <section className="relative">
-      <div className="container mx-auto">
-        <div className="py-8">
-          <Button
-            onClick={onRetry}
-            variant="default"
-            className="mt-2"
-          >
-            Retry
-          </Button>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// Loading component
+// Loading component matching clean design style
 function CategoriesLoading() {
   return (
-    <section className="relative">
-      <div className="container mx-auto">
-        <div className="flex items-center gap-2">
-          <p className="text-gray-600">
-            Loading Categories.
-          </p>
-          <Spinner size='sm' />
-        </div>
+    <section className="relative py-4">
+      <div className="container mx-auto flex items-center justify-center gap-2">
+        <span className="text-xs font-medium text-slate-400 tracking-wider uppercase">Loading Filters</span>
+        <Spinner size='sm' />
       </div>
     </section>
   )
 }
 
-export default async function Categories({ 
-  type = "withImage", 
-  searchParams 
+export default async function Categories({
+  type = "withImage",
+  searchParams
 }: CategoriesProps) {
   try {
-    // 1. You MUST await searchParams in Next.js 15+
-    const resolvedSearchParams = await searchParams; 
-    console.log(resolvedSearchParams)
-    
-    // 2. Now you can safely access the property
+    const resolvedSearchParams = await searchParams;
     const currentCategorySlug = resolvedSearchParams?.category;
-
     const categories = await getCategories();
 
     if (categories.length === 0) {
       return (
-        <section className="relative">
-          <div className="container mx-auto">
-            <p className="text-gray-600">
-              No categories available at the moment.
-            </p>
+        <section className="relative py-6">
+          <div className="container mx-auto text-center">
+            <p className="text-sm font-medium text-slate-400">No categories available at the moment.</p>
           </div>
         </section>
       )
     }
 
     return (
-      <section className="relative bg-center">
-        <div className="container mx-auto md:px-4 pb-8">
+      <section className="relative w-full">
+        <div className="container mx-auto px-4 lg:px-8">
 
           {type === "withImage" ? (
-            <div className="grid grid-cols-1 grid-cols-2 lg:grid-cols-5 gap-2 md:gap-4">
+            /* Premium Bento/Grid Style Categories (Modulive Grid Concept) */
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6">
               {categories.map((category) => (
                 <Link
                   key={category.id}
                   href={`/products?category=${category.slug}`}
-                  className="block"
+                  className="block group"
                 >
-                  <div className="relative overflow-hidden group cursor-pointer h-42 md:h-58 p-4 flex justify-center items-end transition-all duration-300 ">
-                    <div className="absolute inset-0 w-full h-full">
+                  <div className="relative overflow-hidden bg-[#f8f9fa] rounded-[2rem] border border-slate-100 p-5 aspect-[6/4] flex flex-col justify-between transition-all duration-300 hover:bg-[#f1f3f5]">
+
+                    <div className="w-8 h-8 absolute top-6 right-6 rounded-full bg-white text-slate-950 flex items-center justify-center border border-slate-100 shadow-sm opacity-0 transform translate-y-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </div>
+
+                    {/* Centered Graphic Media Element Context */}
+                    <div className="relative w-full h-[100%] my-auto flex items-center justify-center mix-blend-multiply transition-transform duration-500 group-hover:scale-102">
                       <Image
                         src={category.image}
                         alt={category.name}
                         fill
-                        className="object-cover scale-105 group-hover:scale-100 transition-transform duration-700"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        // onError={(e) => {
-                        //   const target = e.target as HTMLImageElement
-                        //   target.src = '/placeholder.svg'
-                        // }}
+                        className="object-contain max-h-full max-w-full"
+                        sizes="(max-width: 768px) 50vw, 20vw"
                       />
                     </div>
 
-                    <div className="relative overflow-hidden w-full md:mb-6 bg-stone-200 p-6 z-[2] opacity-70 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="absolute bottom-4 right-4 bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ArrowUpRight className="h-5 w-5" />
-                      </div>
-                      <div>
-                        {/* <p className="text-xs uppercase tracking-widest text-stone-500 mb-1 md:mb-2 font-serif">
-                          {category.parent_name || 'Apple Products'}
-                        </p> */}
-                        <h3 className="text-lg md:text-2xl font-serif mb-1 md:mb-2 group-hover:text-stone-600 transition-colors">
-                          {category.name}
-                        </h3>
-                        <p className="text-sm text-stone-500">
-                          {category.product_count} Product
-                          {category.product_count !== 1 ? 's' : ''}
-                        </p>
-                      </div>
+                    {/* Lower Identification Context Labels */}
+                    <div className="pt-2 border-t border-slate-200/40">
+                      <h3 className="text-sm font-extrabold text-slate-950 tracking-tight transition-colors">
+                        {category.name}
+                      </h3>
                     </div>
                   </div>
                 </Link>
               ))}
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2 px-4">
-              <Link href="/products">
-                <Badge
-                  variant={!currentCategorySlug ? "default" : "outline"}
-                  className="px-3 md:px-4 py-1 md:py-2 text-sm md:text-base hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
-                >
+            /* Modulive Centered Horizontal Filter Row Style */
+            <div className="flex flex-wrap items-center justify-start gap-2.5 max-w-3xl  py-4">
+
+              {/* Universal "All" Selector Item */}
+              <Link href="/products" scroll={false}>
+                <span className={`inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 cursor-pointer border ${!currentCategorySlug
+                  ? "bg-slate-950 border-slate-950 text-white shadow-sm"
+                  : "bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-900"
+                  }`}>
                   All
-                </Badge>
+                </span>
               </Link>
 
+              {/* Dynamic Categorized Collection Elements */}
               {categories.map((category) => {
                 const isCurrentCategory = category.slug === currentCategorySlug
 
@@ -192,13 +150,14 @@ export default async function Categories({
                   <Link
                     key={category.id}
                     href={`/products?category=${category.slug}`}
+                    scroll={false}
                   >
-                    <Badge
-                      variant={isCurrentCategory ? "default" : "outline"}
-                      className="px-3 md:px-4 py-1 md:py-2 text-sm md:text-base hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
-                    >
+                    <span className={`inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 cursor-pointer border ${isCurrentCategory
+                      ? "bg-slate-950 border-slate-950 text-white shadow-sm"
+                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-900"
+                      }`}>
                       {category.name}
-                    </Badge>
+                    </span>
                   </Link>
                 )
               })}
@@ -209,19 +168,16 @@ export default async function Categories({
     )
   } catch (error) {
     console.error('Error in Categories component:', error)
-    
-    // Return error component that can be refreshed by parent
+
     return (
-      <section className="relative">
-        <div className="container mx-auto">
-          <div className="py-8">
-            <p className="text-destructive mb-4">Failed to load categories</p>
-            <Link href="/products">
-              <Button variant="default">
-                Try Again
-              </Button>
-            </Link>
-          </div>
+      <section className="relative py-8">
+        <div className="container mx-auto text-center">
+          <p className="text-sm font-semibold text-destructive mb-3">Failed to load categories</p>
+          <Link href="/products">
+            <Button variant="outline" size="sm" className="rounded-full">
+              Try Again
+            </Button>
+          </Link>
         </div>
       </section>
     )
