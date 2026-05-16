@@ -27,13 +27,13 @@ import axios from 'axios';
 
 async function getOrders(page: number = 1, status: string = '') {
   const cookieStore = await cookies();
-  
+
   // Get ALL cookies to debug
   const allCookies = cookieStore.getAll();
   console.log('All cookies found:', allCookies.map(c => ({ name: c.name, value: c.value.substring(0, 50) + '...' })));
-  
+
   const authCookie = cookieStore.get('auth_data')?.value;
-  
+
   if (!authCookie) {
     console.log('No auth_cookie found, redirecting to login');
     redirect('/login');
@@ -42,24 +42,24 @@ async function getOrders(page: number = 1, status: string = '') {
   let accessToken;
   try {
     console.log('Raw auth cookie length:', authCookie.length);
-    
+
     // Try to decode and parse
     const decodedCookie = decodeURIComponent(authCookie);
     console.log('Decoded cookie (first 200 chars):', decodedCookie.substring(0, 200));
-    
+
     const authData = JSON.parse(decodedCookie);
     console.log('Parsed auth data keys:', Object.keys(authData));
-    
+
     accessToken = authData.tokens?.access_token;
-    
+
     if (!accessToken) {
       console.log('No access token found in auth data');
       console.log('Auth data tokens keys:', authData.tokens ? Object.keys(authData.tokens) : 'No tokens object');
       redirect('/login');
     }
-    
+
     console.log('Access token found (first 30 chars):', accessToken.substring(0, 30) + '...');
-    
+
   } catch (error) {
     console.error('Error parsing auth cookie:', error);
     if (error instanceof SyntaxError) {
@@ -71,7 +71,7 @@ async function getOrders(page: number = 1, status: string = '') {
   }
 
   // Using native fetch for Next.js caching benefits
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.slice(0,-1);
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.slice(0, -1);
   console.log(`${baseUrl}${endpoints.orders.listUserOrders}`)
   const url = new URL(`${baseUrl}${endpoints.orders.listUserOrders}`);
   url.searchParams.append('page', page.toString());
@@ -91,13 +91,13 @@ async function getOrders(page: number = 1, status: string = '') {
     });
 
     console.log('Response status:', response.status);
-    
+
     if (response.status === 401) {
       console.log('401 Unauthorized response from API');
       console.log('Response headers:', Object.fromEntries(response.headers.entries()));
       redirect('/login');
     }
-    
+
     // Check if response is JSON
     const contentType = response.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
@@ -106,25 +106,25 @@ async function getOrders(page: number = 1, status: string = '') {
       console.error('Response text:', text.substring(0, 500));
       throw new Error('Invalid response format from server');
     }
-    
+
     const result = await response.json();
     console.log('API response success:', result.success);
-    
+
     if (!result.success) {
       console.error('API returned error:', result.error);
       throw new Error(result.error || "Failed to load orders");
     }
 
     return result.data;
-    
+
   } catch (error: any) {
     console.error('Fetch error:', error);
-    
+
     // Don't redirect for network errors, let the error boundary handle it
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
       throw new Error('Unable to connect to the server. Please check your internet connection.');
     }
-    
+
     throw error;
   }
 }
@@ -176,13 +176,13 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
   const resolvedSearchParams = await searchParams;
   const currentPage = Number(resolvedSearchParams?.page) || 1;
   const statusFilter = resolvedSearchParams?.status || '';
-  
+
   console.log("Current Page:", currentPage, "Status Filter:", statusFilter);
-  
+
   let ordersData;
   try {
     ordersData = await getOrders(currentPage, statusFilter);
-    
+
   } catch (error) {
     // Error state will be handled by the error boundary
     throw error;
@@ -195,13 +195,22 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
     return (
       <div className="bg-gray-50 min-h-screen py-32">
         <div className="container mx-auto px-4">
-          <div className="mb-6">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">My Orders</h1>
-            <p className="text-gray-600">Track and manage all your purchases</p>
+          <div className="max-w-xl space-y-4 mb-6">
+            <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
+              My Orders
+            </h2>
+            <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+              Track and manage all    {" "}
+              <span className="text-slate-950 relative inline-block">
+                Your Purchases
+                <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
+              </span>
+            </h3>
           </div>
-          
+
+
           <StatusFilter currentStatus={statusFilter} />
-          
+
           <div className="text-center bg-white py-12">
             <Package className="h-24 w-24 text-gray-300 mx-auto mb-8" />
             <h1 className="text-2xl font-bold text-gray-900 mb-4">No Orders</h1>
@@ -236,10 +245,10 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
           <h1 className="text-4xl font-bold text-gray-900 mb-2">My Orders</h1>
           <p className="text-gray-600">Track and manage all your purchases</p>
         </div>
-        
+
         {/* Status Filter */}
         <StatusFilter currentStatus={statusFilter} />
-        
+
         {/* Orders List */}
         <div className="space-y-8">
           {orders.map((order: any) => {
@@ -353,9 +362,9 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
                           View Details
                         </Link>
                       </Button>
-                      
+
                       {/* Client component for interactive cancellation */}
-                      <CancelOrderButton 
+                      <CancelOrderButton
                         orderId={order.id}
                         orderNumber={order.order_number}
                         status={order.status}
@@ -369,7 +378,7 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
         </div>
 
         {/* Pagination */}
-        <Pagination 
+        <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           statusFilter={statusFilter}

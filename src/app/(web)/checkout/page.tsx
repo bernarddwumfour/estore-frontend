@@ -310,9 +310,22 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-gray-50 py-32">
       <div className="container mx-auto px-4">
         {/* Page Header with Cart Link */}
+        <div className="max-w-xl space-y-4">
+          <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
+            Checkout
+          </h2>
+          <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            Complete Your Order  {" "}
+            <span className="text-slate-950 relative inline-block">
+              Securely
+              <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
+            </span>
+          </h3>
+        </div>
+
         <div className="py-6 pb-12">
-          <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-2">Checkout</h1>
-          <p className="text-gray-600">Complete your order securely</p>
+          <h1 className="font-bebas-neue uppercase text-3xl font-bold mb-2"></h1>
+          <p className="text-gray-600"></p>
         </div>
 
         <form onSubmit={handleSubmit}>

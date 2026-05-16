@@ -33,7 +33,18 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-32">
       <div className="container mx-auto px-4">
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">Your Cart ({getTotalItems()})</h1>
+        <div className="max-w-4xl space-y-4 pb-6">
+          <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
+            Your Cart  ({getTotalItems()})
+          </h2>
+          <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            Checkout These Items To   {" "}
+            <span className="text-slate-950 relative inline-block">
+              Make A Purchase.
+              <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
+            </span>
+          </h3>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Cart Items */}

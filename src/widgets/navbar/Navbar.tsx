@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Search, Instagram, User, Menu, X, Laptop, ShoppingBag, LayoutDashboard, LogOut, Handbag, User2, LogIn } from "lucide-react"
+import { Search, Instagram, User, Menu, X, Laptop, ShoppingBag, LayoutDashboard, LogOut, Handbag, User2, LogIn, Heart } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Cart from "../cart/Cart"
 import { useCartStore } from "@/app/lib/store/cart-store"
@@ -133,6 +133,14 @@ export default function Navbar() {
                                         <Link href="/orders" className="flex items-center justify-between py-2">
                                             <span>Orders</span>
                                             <Handbag size={16} />
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild className="cursor-pointer py-1">
+                                        <Link href={"/wishlist"}>
+                                            <div className="flex w-full justify-between gap-6 items-center py-2">
+                                                <p>WishList</p>
+                                                <Heart size={16} />
+                                            </div>
                                         </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem asChild className="cursor-pointer">
