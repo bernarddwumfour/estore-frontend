@@ -1,4 +1,5 @@
-"use client";
+// app/dashboard/products/ProductVariantForm.tsx
+'use client';
 
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -59,18 +60,28 @@ interface Product {
   options?: Record<string, string[]>;
 }
 
-export default function ProductVariantForm({ productId }: { productId: string }) {
+interface ProductVariantFormProps {
+  productId: string;
+  variantId?: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export default function ProductVariantForm({ productId, variantId, onSuccess, onCancel }: ProductVariantFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingProduct, setIsLoadingProduct] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [product, setProduct] = useState<Product | null>(null);
   const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
-
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageAltTexts, setImageAltTexts] = useState<string[]>([]);
-  const queryClient = useQueryClient()
+  const [existingImages, setExistingImages] = useState<any[]>([]);
+  const [removeImageIds, setRemoveImageIds] = useState<string[]>([]);
 
-  // Bypass TypeScript errors with 'as any' as requested
+  const queryClient = useQueryClient();
+  const isUpdateMode = !!variantId;
+
+  // IMPORTANT: Use 'as any' to bypass TypeScript strict type checking (same as original working version)
   const form = useForm<ProductVariantFormData>({
     resolver: zodResolver(variantSchema) as any,
     defaultValues: {
@@ -88,10 +99,10 @@ export default function ProductVariantForm({ productId }: { productId: string })
     },
   });
 
+  // Fetch product details
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
-        setIsLoadingProduct(true);
         const response = await securityAxios.get(
           endpoints.products.getProductDetails.replace(":id", productId)
         );
@@ -118,18 +129,60 @@ export default function ProductVariantForm({ productId }: { productId: string })
       } catch (error) {
         console.error("Error fetching product details:", error);
         toast.error("Failed to load product details");
-      } finally {
-        setIsLoadingProduct(false);
       }
     };
 
     fetchProductDetails();
   }, [productId, form]);
 
+  // Fetch variant details for update mode
+  useEffect(() => {
+    const fetchVariantDetails = async () => {
+      if (!isUpdateMode || !variantId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await securityAxios.get(
+          endpoints.products.getVariantDetails?.replace(":id", variantId) || `/api/products/admin/variants/${variantId}/`
+        );
+
+        if (response.data.success) {
+          const variantData = response.data.data;
+
+          form.setValue("sku", variantData.sku || "");
+          form.setValue("price", variantData.price || 0);
+          form.setValue("stock", variantData.stock || 0);
+          form.setValue("attributes", variantData.attributes || {});
+          form.setValue("discount_amount", variantData.discount_amount || 0);
+          form.setValue("is_default", variantData.is_default || false);
+          form.setValue("low_stock_threshold", variantData.low_stock_threshold || 5);
+          form.setValue("weight", variantData.weight);
+          form.setValue("height", variantData.height);
+          form.setValue("width", variantData.width);
+          form.setValue("depth", variantData.depth);
+
+          if (variantData.images && variantData.images.length > 0) {
+            setExistingImages(variantData.images);
+            setImagePreviews(variantData.images.map((img: any) => img.url));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching variant details:", error);
+        toast.error("Failed to load variant details");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVariantDetails();
+  }, [variantId, isUpdateMode, form]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
 
-    if (files.length + images.length > 10) {
+    if (files.length + images.length + existingImages.length > 10) {
       toast.error("Maximum 10 images allowed");
       return;
     }
@@ -139,12 +192,10 @@ export default function ProductVariantForm({ productId }: { productId: string })
         toast.error(`${file.name} is not an image file`);
         return false;
       }
-
       if (file.size > 5 * 1024 * 1024) {
         toast.error(`${file.name} exceeds 5MB limit`);
         return false;
       }
-
       return true;
     });
 
@@ -162,16 +213,28 @@ export default function ProductVariantForm({ productId }: { productId: string })
     e.target.value = '';
   };
 
-  const removeImage = (index: number) => {
+  const removeExistingImage = (imageId: string, index: number) => {
+    setRemoveImageIds(prev => [...prev, imageId]);
+    setExistingImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
     setImageAltTexts(prev => prev.filter((_, i) => i !== index));
   };
 
-  const updateAltText = (index: number, text: string) => {
-    const newAltTexts = [...imageAltTexts];
-    newAltTexts[index] = text;
-    setImageAltTexts(newAltTexts);
+  const updateExistingAltText = (index: number, text: string) => {
+    const updated = [...existingImages];
+    updated[index].alt_text = text;
+    setExistingImages(updated);
+  };
+
+  const updateNewAltText = (index: number, text: string) => {
+    const updated = [...imageAltTexts];
+    updated[index] = text;
+    setImageAltTexts(updated);
   };
 
   const onSubmit = async (data: ProductVariantFormData) => {
@@ -180,7 +243,6 @@ export default function ProductVariantForm({ productId }: { productId: string })
 
       const submitData = new FormData();
 
-      // Add all form fields
       Object.entries(data).forEach(([key, value]) => {
         if (key === 'attributes') {
           submitData.append(key, JSON.stringify(value));
@@ -189,185 +251,178 @@ export default function ProductVariantForm({ productId }: { productId: string })
         }
       });
 
-      // Add images
       images.forEach((image, index) => {
         submitData.append('images', image);
         submitData.append(`image_alt_texts[${index}]`, imageAltTexts[index] || `Image ${index + 1}`);
       });
 
-      console.log("Submitting variant data:", data);
-      console.log("Image count:", images.length);
+      if (removeImageIds.length > 0) {
+        submitData.append('remove_images', JSON.stringify(removeImageIds));
+      }
 
-      const response = await securityAxios.post(
-        endpoints.products.createVariant.replace(":id", productId),
-        submitData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
-
-      console.log("API Response:", response.data);
+      let response;
+      if (isUpdateMode && variantId) {
+        response = await securityAxios.put(
+          endpoints.products.updateVariant?.replace(":id", variantId) || `/api/products/admin/variants/${variantId}/update/`,
+          submitData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+      } else {
+        response = await securityAxios.post(
+          endpoints.products.createVariant.replace(":id", productId),
+          submitData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+      }
 
       if (response.data.success) {
-        toast.success(response.data.message || "Variant created successfully");
+        toast.success(response.data.message || `Variant ${isUpdateMode ? 'updated' : 'created'} successfully`);
 
-        // Reset form but keep attributes structure
-        form.reset({
-          sku: "",
-          price: 0,
-          stock: 0,
-          attributes: form.getValues("attributes"), // Keep attribute structure
-          discount_amount: 0,
-          is_default: false,
-          low_stock_threshold: 5,
-          weight: undefined,
-          height: undefined,
-          width: undefined,
-          depth: undefined,
-        });
+        if (!isUpdateMode) {
+          form.reset({
+            sku: "",
+            price: 0,
+            stock: 0,
+            attributes: form.getValues("attributes"),
+            discount_amount: 0,
+            is_default: false,
+            low_stock_threshold: 5,
+            weight: undefined,
+            height: undefined,
+            width: undefined,
+            depth: undefined,
+          });
+          setImages([]);
+          setImagePreviews([]);
+          setImageAltTexts([]);
+        }
 
-        setImages([]);
-        setImagePreviews([]);
-        setImageAltTexts([]);
-        queryClient.invalidateQueries(
-          { queryKey: [endpoints.products.listProducts], exact: false }
-        )
+        setRemoveImageIds([]);
+        queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+        onSuccess?.();
       } else {
-        toast.error(response.data.error || "Failed to create variant");
+        toast.error(response.data.error || `Failed to ${isUpdateMode ? 'update' : 'create'} variant`);
       }
     } catch (error: any) {
-      console.error("Error creating variant:", error);
+      console.error("Error submitting variant:", error);
 
       if (error.response?.data?.errors) {
         const errors = error.response.data.errors;
         Object.entries(errors).forEach(([field, messages]) => {
-          const errorMessage = Array.isArray(messages) ? messages[0] : String(messages);
           form.setError(field as any, {
             type: "manual",
-            message: errorMessage,
+            message: Array.isArray(messages) ? messages[0] : String(messages),
           });
         });
         toast.error("Please fix the validation errors");
       } else {
-        toast.error(error.response?.data?.error || "Failed to create variant");
+        toast.error(error.response?.data?.message || `Failed to ${isUpdateMode ? 'update' : 'create'} variant`);
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoadingProduct) return (
-    <div className="flex justify-center items-center p-12 min-h-[400px]">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-        <p className="text-gray-600">Loading product details...</p>
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center p-12 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
-    </div>
-  );
+    );
+  }
+
+  const hasAttributes = productOptions.length > 0;
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 bg-white p-6 rounded-xl shadow-sm border">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold">Create Product Variant</h2>
-          <p className="text-gray-600 mt-1">Add a new variant to {product?.title}</p>
-        </div>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-
           {/* Left Column */}
           <div className="space-y-6">
             <div className="border rounded-lg p-6 space-y-4">
               <h3 className="text-lg font-semibold">Variant Information</h3>
 
-              <FormField control={form.control} name="sku" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>SKU *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., PROD-001-RED-L" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="sku"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>SKU *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., PROD-001-RED-L" {...field} disabled={isSubmitting} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField control={form.control} name="price" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price *</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} value={field.value ?? ""} disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <FormField control={form.control} name="stock" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stock Quantity *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        placeholder="0"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="stock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stock Quantity *</FormLabel>
+                      <FormControl>
+                        <Input type="number" min="0" placeholder="0" {...field} value={field.value ?? ""} disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField control={form.control} name="discount_amount" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Discount Amount</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="discount_amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Discount Amount</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} value={field.value ?? ""} disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <FormField control={form.control} name="low_stock_threshold" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Low Stock Threshold</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        placeholder="5"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="low_stock_threshold"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Low Stock Threshold</FormLabel>
+                      <FormControl>
+                        <Input type="number" min="0" placeholder="5" {...field} value={field.value ?? ""} disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
             {/* Attributes */}
-            {productOptions.length > 0 && (
+            {hasAttributes && (
               <div className="border rounded-lg p-6 space-y-4">
                 <h3 className="text-lg font-semibold">Variant Attributes</h3>
-
                 {productOptions.map((option) => (
                   <FormField
                     key={option.key}
@@ -376,10 +431,7 @@ export default function ProductVariantForm({ productId }: { productId: string })
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{option.label} *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value || ""}
-                        >
+                        <Select onValueChange={field.onChange} value={field.value || ""} disabled={isSubmitting}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder={`Select ${option.label.toLowerCase()}`} />
@@ -387,9 +439,7 @@ export default function ProductVariantForm({ productId }: { productId: string })
                           </FormControl>
                           <SelectContent>
                             {option.values.map((value) => (
-                              <SelectItem key={value} value={value}>
-                                {value}
-                              </SelectItem>
+                              <SelectItem key={value} value={value}>{value}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -404,71 +454,39 @@ export default function ProductVariantForm({ productId }: { productId: string })
             {/* Dimensions */}
             <div className="border rounded-lg p-6 space-y-4">
               <h3 className="text-lg font-semibold">Dimensions (Optional)</h3>
-
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="weight" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Weight (kg)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
+                      <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} value={field.value ?? ""} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
-
                 <FormField control={form.control} name="height" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Height (cm)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
+                      <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} value={field.value ?? ""} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
-
                 <FormField control={form.control} name="width" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Width (cm)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
+                      <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} value={field.value ?? ""} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
-
                 <FormField control={form.control} name="depth" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Depth (cm)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
+                      <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} value={field.value ?? ""} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -482,15 +500,10 @@ export default function ProductVariantForm({ productId }: { productId: string })
                 <FormItem className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <FormLabel className="text-base">Default Variant</FormLabel>
-                    <FormDescription>
-                      Set as the default variant for this product
-                    </FormDescription>
+                    <FormDescription>Set as the default variant for this product</FormDescription>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
                   </FormControl>
                 </FormItem>
               )} />
@@ -502,19 +515,9 @@ export default function ProductVariantForm({ productId }: { productId: string })
             <div className="border rounded-lg p-6 space-y-4">
               <h3 className="text-lg font-semibold">Variant Images</h3>
 
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  id="variant-img"
-                />
-                <label
-                  htmlFor="variant-img"
-                  className="cursor-pointer flex flex-col items-center gap-3"
-                >
+              <div className="border-2 border-dashed rounded-xl p-8 text-center">
+                <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" id="variant-img" disabled={isSubmitting} />
+                <label htmlFor="variant-img" className="cursor-pointer flex flex-col items-center gap-3">
                   <Upload className="h-12 w-12 text-gray-400" />
                   <div>
                     <p className="text-sm font-medium">Click to upload images</p>
@@ -525,33 +528,43 @@ export default function ProductVariantForm({ productId }: { productId: string })
 
               {imagePreviews.length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="font-medium">Selected Images ({imagePreviews.length}/10)</h4>
-
+                  <h4 className="font-medium">Images ({imagePreviews.length}/10)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {imagePreviews.map((src, i) => (
                       <div key={i} className="relative">
                         <div className="aspect-square relative rounded-lg border overflow-hidden">
-                          <Image
-                            src={src}
-                            alt={`Preview ${i + 1}`}
-                            fill
-                            className="object-cover"
-                          />
+                          <Image src={src} alt={`Preview ${i + 1}`} fill className="object-cover" />
                           <button
                             type="button"
-                            onClick={() => removeImage(i)}
+                            onClick={() => {
+                              if (i < existingImages.length) {
+                                removeExistingImage(existingImages[i].id, i);
+                              } else {
+                                removeNewImage(i - existingImages.length);
+                              }
+                            }}
                             className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"
                           >
                             <X className="h-3 w-3" />
                           </button>
                         </div>
-
                         <Input
                           type="text"
                           placeholder="Alt text"
-                          value={imageAltTexts[i]}
-                          onChange={(e) => updateAltText(i, e.target.value)}
+                          value={
+                            i < existingImages.length
+                              ? existingImages[i].alt_text || ""
+                              : imageAltTexts[i - existingImages.length] || ""
+                          }
+                          onChange={(e) => {
+                            if (i < existingImages.length) {
+                              updateExistingAltText(i, e.target.value);
+                            } else {
+                              updateNewAltText(i - existingImages.length, e.target.value);
+                            }
+                          }}
                           className="text-sm h-8 mt-2"
+                          disabled={isSubmitting}
                         />
                       </div>
                     ))}
@@ -564,31 +577,28 @@ export default function ProductVariantForm({ productId }: { productId: string })
 
         {/* Submit Buttons */}
         <div className="flex justify-end gap-4 border-t pt-6">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              form.reset();
-              setImages([]);
-              setImagePreviews([]);
-              setImageAltTexts([]);
-            }}
-            disabled={isSubmitting}
-          >
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+              Cancel
+            </Button>
+          )}
+          <Button type="button" variant="outline" onClick={() => {
+            form.reset();
+            setImages([]);
+            setImagePreviews([]);
+            setImageAltTexts([]);
+            setRemoveImageIds([]);
+          }} disabled={isSubmitting}>
             Reset
           </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting || productOptions.length === 0}
-            className="min-w-[200px]"
-          >
+          <Button type="submit" disabled={isSubmitting || (hasAttributes && Object.values(form.getValues("attributes")).some(v => !v))} className="min-w-[200px]">
             {isSubmitting ? (
               <>
-                <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                Creating...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {isUpdateMode ? "Updating..." : "Creating..."}
               </>
             ) : (
-              "Create Variant"
+              isUpdateMode ? "Update Variant" : "Create Variant"
             )}
           </Button>
         </div>

@@ -92,7 +92,7 @@ export default function UserCreationForm() {
           toast.success(apiResponse.message || "User created successfully");
           form.reset(); // Reset form after successful submission
           queryClient.invalidateQueries(
-            { queryKey: [endpoints.products.listcategories], exact: false }
+            { queryKey: [endpoints.products.listCategories], exact: false }
           )
         } else {
           toast.error(apiResponse.error || "Failed to create user");

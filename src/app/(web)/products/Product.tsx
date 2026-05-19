@@ -11,7 +11,7 @@ interface ProductProps {
 }
 
 const Product = ({ product, isMinimal = false }: ProductProps) => {
-  const defaultVariant = product.default_variant
+  const defaultVariant = product.default_variant || product.variant
   const hasDefaultVariant = defaultVariant !== null
   const hasDiscount = hasDefaultVariant && defaultVariant.discounted_price < defaultVariant.price
   const discountPercentage = hasDefaultVariant && hasDiscount

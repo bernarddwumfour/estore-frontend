@@ -1,450 +1,99 @@
-'use client'
+// app/dashboard/orders/page.tsx
+'use client';
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useState } from 'react';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import {
+  Plus, Edit, Trash2, Eye,
+  CheckCircle, XCircle, Truck, PackageCheck,
+  Package, Archive, FileText, Upload, ShoppingCart,
+  MapPin, Calendar, CreditCard, RefreshCw, Ban,
+  CircleDollarSign, AlertCircle
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import securityAxios from '@/axios-instances/SecurityAxios';
+import { endpoints } from '@/constants/endpoints/endpoints';
+import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
+import { CustomSheet } from '@/widgets/CustomSheet/CustomSheet';
+import { DataTable } from '@/widgets/Customtable/DataTable';
+import OrderDetailCard from './OrderDetailCard';
+import OrderItemsList from './OrderItemsList';
+import ShippingAddressCard from './ShippingAddressCard';
 
-import { AlertMessage } from "@/widgets/alert-message/AlertMessage";
-import DataTable from "@/widgets/data-table/DataTable";
-import TableLoader from "@/widgets/loaders/TableLoader";
-import { endpoints } from "@/constants/endpoints/endpoints";
-import securityAxios from "@/axios-instances/SecurityAxios";
-import {
-  MoreHorizontal,
-  Clock,
-  CheckCircle,
-  Truck,
-  XCircle,
-  PackageCheck,
-  RefreshCw,
-  DollarSign,
-  AlertCircle,
-  CreditCard,
-  CircleDollarSign,
-  Ban,
-  ShoppingCart,
-  MapPin,
-  Calendar,
-  Eye,
-  FileText,
-  Package,
-} from "lucide-react";
-import { useState } from "react";
+// Types
+interface Order {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_email: string;
+  status: string;
+  status_display: string;
+  payment_status: string;
+  payment_status_display: string;
+  payment_method: string;
+  payment_method_display: string;
+  subtotal: number;
+  shipping_cost: number;
+  tax_amount: number;
+  discount_amount: number;
+  total: number;
+  currency: string;
+  item_count: number;
+  items: any[];
+  shipping_address: any;
+  created_at: string;
+}
 
-export const fetchOrders = async () => {
+// Fetch orders
+const fetchOrders = async (): Promise<{ data: { orders: Order[]; total: number } }> => {
   const response = await securityAxios.get(endpoints.orders.listOrders);
   return response.data;
 };
 
-// Key-Value Display Component for Objects
-function KeyValueDisplay({ data, title }: { data: Record<string, any>, title?: string }) {
-  return (
-    <div className="space-y-2">
-      {title && <h4 className="font-medium text-sm">{title}</h4>}
-      <div className="border rounded-md divide-y">
-        {Object.entries(data).map(([key, value]) => (
-          <div key={key} className="flex justify-between items-center p-2 hover:bg-muted/50">
-            <span className="text-sm font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
-            <span className="text-sm">
-              {value === null ? '—' : 
-               typeof value === 'boolean' ? (value ? 'Yes' : 'No') :
-               typeof value === 'object' ? JSON.stringify(value) :
-               String(value)}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+// Bulk action mutation
+const bulkOrderAction = async (action: string, orderIds: string[]) => {
+  const response = await securityAxios.post(endpoints.orders.bulkOrderAction, {
+    action,
+    order_ids: orderIds,
+  });
+  return response.data;
+};
 
-// Items Table Component
-function ItemsTable({ items }: { items: any[] }) {
-  return (
-    <div className="space-y-4">
-      <div className="border rounded-md">
-        <div className="grid grid-cols-12 gap-4 p-3 bg-muted/50 border-b font-medium text-sm">
-          <div className="col-span-3">Product</div>
-          <div className="col-span-2">SKU</div>
-          <div className="col-span-2">Variant</div>
-          <div className="col-span-1 text-center">Qty</div>
-          <div className="col-span-2 text-right">Unit Price</div>
-          <div className="col-span-2 text-right">Total</div>
-        </div>
-        {items.map((item, index) => (
-          <div key={item.id} className="grid grid-cols-12 gap-4 p-3 border-b last:border-0 hover:bg-muted/30">
-            <div className="col-span-3 flex items-center space-x-2">
-              {item.image && (
-                <img 
-                  src={item.image} 
-                  alt={item.product_title} 
-                  className="w-10 h-10 rounded object-cover"
-                />
-              )}
-              <div>
-                <p className="font-medium text-sm">{item.product_title}</p>
-                <p className="text-xs text-muted-foreground">{item.product_slug}</p>
-              </div>
-            </div>
-            <div className="col-span-2 flex items-center">
-              <code className="text-xs bg-muted px-2 py-1 rounded">{item.sku}</code>
-            </div>
-            <div className="col-span-2">
-              {item.variant_attributes && Object.keys(item.variant_attributes).length > 0 ? (
-                <div className="space-y-1">
-                  {Object.entries(item.variant_attributes).map(([key, value]) => (
-                    <div key={key} className="text-xs">
-                      <span className="capitalize">{key}:</span> <span className="font-medium">{String(value)}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-sm text-muted-foreground">—</span>
-              )}
-            </div>
-            <div className="col-span-1 flex items-center justify-center">
-              <Badge variant="outline">{item.quantity}</Badge>
-            </div>
-            <div className="col-span-2 flex items-center justify-end">
-              ${item.unit_price.toFixed(2)}
-            </div>
-            <div className="col-span-2 flex items-center justify-end font-medium">
-              ${item.total_price.toFixed(2)}
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      {/* Summary */}
-      {items.length > 0 && (
-        <div className="flex justify-end">
-          <div className="text-sm space-y-1">
-            <div className="flex justify-between space-x-8">
-              <span>Subtotal:</span>
-              <span>${items.reduce((sum, item) => sum + item.total_price, 0).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between space-x-8">
-              <span>Items:</span>
-              <span>{items.length}</span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Items Dialog Component
-function ItemsDialog({ items, orderNumber }: { items: any[], orderNumber: string }) {
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-          <ShoppingCart className="mr-2 h-4 w-4" />
-          View Items ({items.length})
-        </DropdownMenuItem>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Order Items</DialogTitle>
-          <DialogDescription>
-            Items in order {orderNumber}
-          </DialogDescription>
-        </DialogHeader>
-        <ItemsTable items={items} />
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Shipping Address Dialog Component
-function ShippingAddressDialog({ address, orderNumber }: { address: any, orderNumber: string }) {
-  if (!address) return null;
-  
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-          <MapPin className="mr-2 h-4 w-4" />
-          Shipping Address
-        </DropdownMenuItem>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Shipping Address</DialogTitle>
-          <DialogDescription>
-            For order {orderNumber}
-          </DialogDescription>
-        </DialogHeader>
-        <KeyValueDisplay data={address} />
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Timestamps Dialog Component
-function TimestampsDialog({ timestamps, orderNumber }: { timestamps: any, orderNumber: string }) {
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-          <Calendar className="mr-2 h-4 w-4" />
-          Order Timestamps
-        </DropdownMenuItem>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Order Timestamps</DialogTitle>
-          <DialogDescription>
-            Status timeline for order {orderNumber}
-          </DialogDescription>
-        </DialogHeader>
-        <KeyValueDisplay 
-          data={timestamps} 
-          title="Timestamps (null means not yet occurred)"
-        />
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Order Details Dialog Component
-function OrderDetailsDialog({ order }: { order: any }) {
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-          <Eye className="mr-2 h-4 w-4" />
-          View Details
-        </DropdownMenuItem>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Order Details</DialogTitle>
-          <DialogDescription>
-            Complete details for order {order.order_number}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-6">
-          {/* Order Summary */}
-          <div className="grid grid-cols-2 gap-4">
-            <KeyValueDisplay 
-              data={{
-                order_number: order.order_number,
-                customer_name: order.customer_name,
-                customer_email: order.customer_email,
-                status: order.status_display,
-                payment_status: order.payment_status_display,
-                payment_method: order.payment_method_display,
-              }}
-              title="Order Information"
-            />
-            <KeyValueDisplay 
-              data={{
-                subtotal: `$${order.subtotal.toFixed(2)}`,
-                shipping: `$${order.shipping_cost.toFixed(2)}`,
-                tax: `$${order.tax_amount.toFixed(2)} (${order.tax_rate}%)`,
-                discount: `$${order.discount_amount.toFixed(2)}`,
-                total: `$${order.total.toFixed(2)}`,
-                currency: order.currency,
-                created_at: new Date(order.created_at).toLocaleString(),
-              }}
-              title="Financial Information"
-            />
-          </div>
-          
-          {/* Items Preview */}
-          <div>
-            <h4 className="font-medium text-sm mb-2">Order Items ({order.item_count})</h4>
-            <div className="border rounded-md p-3 space-y-2">
-              {order.items.slice(0, 2).map((item: any, index: number) => (
-                <div key={item.id} className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    {item.image && (
-                      <img 
-                        src={item.image} 
-                        alt={item.product_title} 
-                        className="w-8 h-8 rounded object-cover"
-                      />
-                    )}
-                    <div>
-                      <p className="text-sm font-medium">{item.product_title}</p>
-                      <p className="text-xs text-muted-foreground">Qty: {item.quantity} × ${item.unit_price.toFixed(2)}</p>
-                    </div>
-                  </div>
-                  <span className="font-medium">${item.total_price.toFixed(2)}</span>
-                </div>
-              ))}
-              {order.items.length > 2 && (
-                <p className="text-xs text-muted-foreground text-center pt-2">
-                  + {order.items.length - 2} more items
-                </p>
-              )}
-            </div>
-          </div>
-          
-          {/* Guest Info if exists */}
-          {order.guest_info && (
-            <KeyValueDisplay 
-              data={order.guest_info}
-              title="Guest Information"
-            />
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ActionsDropdown({ row }: { row: any }) {
-  const queryClient = useQueryClient();
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Order Actions</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        
-        {/* View Details */}
-        <OrderDetailsDialog order={row} />
-        
-        {/* View Items */}
-        <ItemsDialog items={row.items} orderNumber={row.order_number} />
-        
-        {/* Shipping Address */}
-        <ShippingAddressDialog address={row.shipping_address} orderNumber={row.order_number} />
-        
-        {/* Timestamps */}
-        <TimestampsDialog timestamps={row.timestamps} orderNumber={row.order_number} />
-        
-        <DropdownMenuSeparator />
-        
-        {/* Update Status Dialogs */}
-        <Dialog>
-          <DialogTrigger className="w-full" asChild>
-            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-              <PackageCheck className="mr-2 h-4 w-4" />
-              Update Order Status
-            </DropdownMenuItem>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Update Order Status</DialogTitle>
-              <DialogDescription>
-                Select a new status and add an optional note for order {row.order_number}
-              </DialogDescription>
-            </DialogHeader>
-            <OrderStatusForm 
-              row={row} 
-              queryClient={queryClient} 
-            />
-          </DialogContent>
-        </Dialog>
-
-        <Dialog>
-          <DialogTrigger className="w-full" asChild>
-            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-              <CreditCard className="mr-2 h-4 w-4" />
-              Update Payment Status
-            </DropdownMenuItem>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Update Payment Status</DialogTitle>
-              <DialogDescription>
-                Select a new payment status and add an optional note for order {row.order_number}
-              </DialogDescription>
-            </DialogHeader>
-            <PaymentStatusForm 
-              row={row} 
-              queryClient={queryClient} 
-            />
-          </DialogContent>
-        </Dialog>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-// Order Status Form Component (same as before)
-function OrderStatusForm({ row, queryClient }: { row: any; queryClient: any }) {
+// Update Status Form Component
+function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSuccess: () => void; onCancel: () => void }) {
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const orderStatusOptions = [
-    { value: "processing", label: "Processing", icon: <Clock className="h-4 w-4 mr-2" /> },
-    { value: "confirmed", label: "Confirmed", icon: <CheckCircle className="h-4 w-4 mr-2" /> },
-    { value: "shipped", label: "Shipped", icon: <Truck className="h-4 w-4 mr-2" /> },
-    { value: "delivered", label: "Delivered", icon: <PackageCheck className="h-4 w-4 mr-2" /> },
-    { value: "cancelled", label: "Cancelled", icon: <Ban className="h-4 w-4 mr-2" /> },
-    { value: "refunded", label: "Refunded", icon: <RefreshCw className="h-4 w-4 mr-2" /> },
+  const statusOptions = [
+    { value: "confirmed", label: "Confirmed", icon: <CheckCircle size={14} /> },
+    { value: "processing", label: "Processing", icon: <RefreshCw size={14} /> },
+    { value: "shipped", label: "Shipped", icon: <Truck size={14} /> },
+    { value: "delivered", label: "Delivered", icon: <PackageCheck size={14} /> },
+    { value: "cancelled", label: "Cancelled", icon: <Ban size={14} /> },
   ];
 
   const handleSubmit = async () => {
     if (!selectedStatus) {
-      toast.error("Please select an order status");
+      toast.error("Please select a status");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const endpoint = endpoints.orders.updateStatus.replace(":id", row.id);
-      const payload = {
-        status: selectedStatus,
-        note: note.trim() || undefined
-      };
+      const response = await securityAxios.put(
+        endpoints.orders.updateStatus.replace(":id", order.id),
+        { status: selectedStatus }
+      );
 
-      const response = await securityAxios.post(endpoint, payload);
-
-      if (response.status !== 200) {
-        throw new Error("Failed to update order status");
+      if (response.data.success) {
+        toast.success(`Order status updated to ${selectedStatus}`);
+        onSuccess();
+      } else {
+        toast.error(response.data.message || "Failed to update status");
       }
-
-      toast.success(response.data.message || "Order status updated successfully");
-      queryClient.invalidateQueries({
-        queryKey: [endpoints.orders.listOrders],
-        exact: false
-      });
-
-      // Reset form
-      setSelectedStatus("");
-      setNote("");
-
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Failed to update order status");
+      toast.error(error?.response?.data?.message || "Failed to update status");
     } finally {
       setIsSubmitting(false);
     }
@@ -453,59 +102,38 @@ function OrderStatusForm({ row, queryClient }: { row: any; queryClient: any }) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="order-status">Order Status</Label>
-        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select order status" />
-          </SelectTrigger>
-          <SelectContent>
-            {orderStatusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <div className="flex items-center">
-                  {option.icon}
-                  {option.label}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="note">Note (Optional)</Label>
-        <Textarea
-          id="note"
-          placeholder="Add any notes about this order status change..."
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={3}
-        />
-      </div>
-
-      <DialogFooter>
-        <Button 
-          type="button" 
-          onClick={handleSubmit} 
-          disabled={isSubmitting || !selectedStatus}
+        <label className="text-sm font-medium">Order Status</label>
+        <select
+          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
         >
-          {isSubmitting ? "Updating..." : "Update Order Status"}
+          <option value="">Select status</option>
+          {statusOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex justify-end gap-2 pt-4">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={isSubmitting || !selectedStatus}>
+          {isSubmitting ? "Updating..." : "Update Status"}
         </Button>
-      </DialogFooter>
+      </div>
     </div>
   );
 }
 
-// Payment Status Form Component (same as before)
-function PaymentStatusForm({ row, queryClient }: { row: any; queryClient: any }) {
+// Update Payment Form Component
+function UpdatePaymentForm({ order, onSuccess, onCancel }: { order: Order; onSuccess: () => void; onCancel: () => void }) {
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const paymentStatusOptions = [
-    { value: "pending", label: "Pending", icon: <Clock className="h-4 w-4 mr-2" /> },
-    { value: "paid", label: "Paid", icon: <CircleDollarSign className="h-4 w-4 mr-2" /> },
-    { value: "failed", label: "Failed", icon: <AlertCircle className="h-4 w-4 mr-2" /> },
-    { value: "refunded", label: "Refunded", icon: <RefreshCw className="h-4 w-4 mr-2" /> },
+  const paymentOptions = [
+    { value: "pending", label: "Pending" },
+    { value: "paid", label: "Paid" },
+    { value: "failed", label: "Failed" },
+    { value: "refunded", label: "Refunded" },
   ];
 
   const handleSubmit = async () => {
@@ -516,30 +144,19 @@ function PaymentStatusForm({ row, queryClient }: { row: any; queryClient: any })
 
     setIsSubmitting(true);
     try {
-      const endpoint = endpoints.orders.updatePaymentStatus.replace(":id", row.id);
-      const payload = {
-        payment_status: selectedStatus,
-        note: note.trim() || undefined
-      };
+      const response = await securityAxios.put(
+        endpoints.orders.updatePaymentStatus.replace(":id", order.id),
+        { payment_status: selectedStatus }
+      );
 
-      const response = await securityAxios.post(endpoint, payload);
-
-      if (response.status !== 200) {
-        throw new Error("Failed to update payment status");
+      if (response.data.success) {
+        toast.success(`Payment status updated to ${selectedStatus}`);
+        onSuccess();
+      } else {
+        toast.error(response.data.message || "Failed to update payment");
       }
-
-      toast.success(response.data.message || "Payment status updated successfully");
-      queryClient.invalidateQueries({
-        queryKey: [endpoints.orders.listOrders],
-        exact: false
-      });
-
-      // Reset form
-      setSelectedStatus("");
-      setNote("");
-
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Failed to update payment status");
+      toast.error(error?.response?.data?.message || "Failed to update payment");
     } finally {
       setIsSubmitting(false);
     }
@@ -548,89 +165,328 @@ function PaymentStatusForm({ row, queryClient }: { row: any; queryClient: any })
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="payment-status">Payment Status</Label>
-        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select payment status" />
-          </SelectTrigger>
-          <SelectContent>
-            {paymentStatusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <div className="flex items-center">
-                  {option.icon}
-                  {option.label}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="note">Note (Optional)</Label>
-        <Textarea
-          id="note"
-          placeholder="Add any notes about this payment status change..."
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={3}
-        />
-      </div>
-
-      <DialogFooter>
-        <Button 
-          type="button" 
-          onClick={handleSubmit} 
-          disabled={isSubmitting || !selectedStatus}
+        <label className="text-sm font-medium">Payment Status</label>
+        <select
+          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
         >
-          {isSubmitting ? "Updating..." : "Update Payment Status"}
+          <option value="">Select payment status</option>
+          {paymentOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex justify-end gap-2 pt-4">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={isSubmitting || !selectedStatus}>
+          {isSubmitting ? "Updating..." : "Update Payment"}
         </Button>
-      </DialogFooter>
+      </div>
     </div>
   );
 }
 
-function ListOrders() {
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    isFetching,
-  } = useQuery({
-    queryKey: [endpoints.orders.listOrders],
+export default function OrdersPage() {
+  const queryClient = useQueryClient();
+
+  // State for sheets/dialogs
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
+  const [viewingItemsFor, setViewingItemsFor] = useState<Order | null>(null);
+  const [viewingAddressFor, setViewingAddressFor] = useState<Order | null>(null);
+  const [updatingStatusFor, setUpdatingStatusFor] = useState<Order | null>(null);
+  const [updatingPaymentFor, setUpdatingPaymentFor] = useState<Order | null>(null);
+
+  // Query for orders
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['admin-orders'],
     queryFn: fetchOrders,
   });
 
-  if (isLoading || isFetching) return <TableLoader />;
+  // Bulk action mutation
+  const bulkActionMutation = useMutation({
+    mutationFn: ({ action, ids }: { action: string; ids: string[] }) =>
+      bulkOrderAction(action, ids),
+    onSuccess: (response) => {
+      const { data, message } = response;
+      const { success_count, failed_count } = data;
+      if (success_count > 0) toast.success(message || `Processed ${success_count} orders`);
+      if (failed_count > 0) toast.error(`${failed_count} failed`);
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Bulk action failed'),
+  });
 
-  if (isError) return (
-    <AlertMessage variant="error" message={`${error?.message || "Failed to load orders"}`} />
-  );
+  // Single action helpers
+  const handleDelete = (order: Order) => {
+    if (confirm(`Delete order "${order.order_number}"? This action cannot be undone.`)) {
+      bulkActionMutation.mutate({ action: 'delete', ids: [order.id] });
+    }
+  };
+
+  // Bulk actions
+  const handleBulkConfirm = (selectedItems: Order[]) => {
+    const ids = selectedItems.map(i => i.id);
+    if (confirm(`Confirm ${selectedItems.length} orders?`)) bulkActionMutation.mutate({ action: 'confirm', ids });
+  };
+
+  const handleBulkProcess = (selectedItems: Order[]) => {
+    const ids = selectedItems.map(i => i.id);
+    if (confirm(`Process ${selectedItems.length} orders?`)) bulkActionMutation.mutate({ action: 'process', ids });
+  };
+
+  const handleBulkShip = (selectedItems: Order[]) => {
+    const ids = selectedItems.map(i => i.id);
+    if (confirm(`Ship ${selectedItems.length} orders?`)) bulkActionMutation.mutate({ action: 'ship', ids });
+  };
+
+  const handleBulkDeliver = (selectedItems: Order[]) => {
+    const ids = selectedItems.map(i => i.id);
+    if (confirm(`Mark ${selectedItems.length} orders as delivered?`)) bulkActionMutation.mutate({ action: 'deliver', ids });
+  };
+
+  const handleBulkCancel = (selectedItems: Order[]) => {
+    const ids = selectedItems.map(i => i.id);
+    if (confirm(`Cancel ${selectedItems.length} orders?`)) bulkActionMutation.mutate({ action: 'cancel', ids });
+  };
+
+  const handleBulkExport = (selectedItems: Order[]) => {
+    const exportData = selectedItems.map(item => ({
+      order_number: item.order_number,
+      customer_name: item.customer_name,
+      total: item.total,
+      status: item.status,
+      created_at: item.created_at,
+    }));
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orders_export_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${selectedItems.length} orders`);
+  };
+
+  // Row actions
+  const actions = [
+    {
+      label: 'View Details',
+      icon: <Eye size={14} />,
+      onClick: (order: Order) => setViewingOrder(order)
+    },
+    {
+      label: 'View Items',
+      icon: <ShoppingCart size={14} />,
+      onClick: (order: Order) => setViewingItemsFor(order)
+    },
+    {
+      label: 'Shipping Address',
+      icon: <MapPin size={14} />,
+      onClick: (order: Order) => setViewingAddressFor(order)
+    },
+    {
+      label: 'Update Status',
+      icon: <PackageCheck size={14} />,
+      onClick: (order: Order) => setUpdatingStatusFor(order)
+    },
+    {
+      label: 'Update Payment',
+      icon: <CreditCard size={14} />,
+      onClick: (order: Order) => setUpdatingPaymentFor(order)
+    },
+    {
+      label: 'Delete Order',
+      icon: <Trash2 size={14} />,
+      variant: 'destructive' as const,
+      onClick: handleDelete
+    },
+  ];
+
+  // Bulk actions
+  const bulkActions = [
+    { label: 'Confirm Selected', icon: <CheckCircle size={14} />, onClick: handleBulkConfirm, color: 'emerald' as const },
+    { label: 'Process Selected', icon: <RefreshCw size={14} />, onClick: handleBulkProcess, color: 'blue' as const },
+    { label: 'Ship Selected', icon: <Truck size={14} />, onClick: handleBulkShip, color: 'violet' as const },
+    { label: 'Deliver Selected', icon: <PackageCheck size={14} />, onClick: handleBulkDeliver, color: 'emerald' as const },
+    { label: 'Cancel Selected', icon: <Ban size={14} />, onClick: handleBulkCancel, color: 'rose' as const, variant: 'destructive' as const },
+    { label: 'Export Selected', icon: <Upload size={14} />, onClick: handleBulkExport, color: 'blue' as const },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-500">Error loading orders: {error?.message}</p>
+      </div>
+    );
+  }
+
+  const orders = data?.data?.orders || [];
 
   return (
-    <div>
-      <DataTable 
-        data={data.data.orders} 
-        hiddenColumns={["id", "items", "shipping_address", "timestamps", "guest_info"]} 
-        actionsDropdown={ActionsDropdown}
-        badgesConfig={{
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
+          <p className="text-sm text-muted-foreground">Manage and track customer orders</p>
+        </div>
+      </div>
+
+      {/* ==================== SHEETS ==================== */}
+
+      {/* Order Details Sheet */}
+      <CustomSheet
+        title="Order Details"
+        description="Full order information"
+        side="bottom"
+        size="lg"
+        open={!!viewingOrder}
+        onOpenChange={(open) => !open && setViewingOrder(null)}
+      >
+        {viewingOrder && (
+          <OrderDetailCard
+            orderId={viewingOrder.id}
+            onClose={() => setViewingOrder(null)}
+          />
+        )}
+      </CustomSheet>
+
+      {/* Items Sheet */}
+      <CustomSheet
+        title="Order Items"
+        description={`Items in order ${viewingItemsFor?.order_number || ''}`}
+        side="bottom"
+        size="lg"
+        open={!!viewingItemsFor}
+        onOpenChange={(open) => !open && setViewingItemsFor(null)}
+      >
+        {viewingItemsFor && (
+          <OrderItemsList
+            items={viewingItemsFor.items || []}
+            orderNumber={viewingItemsFor.order_number}
+          />
+        )}
+      </CustomSheet>
+
+      {/* Shipping Address Sheet */}
+      <CustomSheet
+        title="Shipping Address"
+        description={`For order ${viewingAddressFor?.order_number || ''}`}
+        side="bottom"
+        size="md"
+        open={!!viewingAddressFor}
+        onOpenChange={(open) => !open && setViewingAddressFor(null)}
+      >
+        {viewingAddressFor?.shipping_address && (
+          <ShippingAddressCard
+            address={viewingAddressFor.shipping_address}
+            orderNumber={viewingAddressFor.order_number}
+          />
+        )}
+      </CustomSheet>
+
+      {/* ==================== DIALOGS ==================== */}
+
+      {/* Update Status Dialog */}
+      <CustomDialog
+        title="Update Order Status"
+        description={`Update status for order ${updatingStatusFor?.order_number || ''}`}
+        open={!!updatingStatusFor}
+        onOpenChange={(open) => !open && setUpdatingStatusFor(null)}
+        contentWidth="max-w-md"
+      >
+        {updatingStatusFor && (
+          <UpdateStatusForm
+            order={updatingStatusFor}
+            onSuccess={() => {
+              setUpdatingStatusFor(null);
+              queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+            }}
+            onCancel={() => setUpdatingStatusFor(null)}
+          />
+        )}
+      </CustomDialog>
+
+      {/* Update Payment Dialog */}
+      <CustomDialog
+        title="Update Payment Status"
+        description={`Update payment for order ${updatingPaymentFor?.order_number || ''}`}
+        open={!!updatingPaymentFor}
+        onOpenChange={(open) => !open && setUpdatingPaymentFor(null)}
+        contentWidth="max-w-md"
+      >
+        {updatingPaymentFor && (
+          <UpdatePaymentForm
+            order={updatingPaymentFor}
+            onSuccess={() => {
+              setUpdatingPaymentFor(null);
+              queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+            }}
+            onCancel={() => setUpdatingPaymentFor(null)}
+          />
+        )}
+      </CustomDialog>
+
+      {/* Data Table */}
+      <DataTable
+        data={orders}
+        actions={actions}
+        bulkActions={bulkActions}
+        excludeColumns={['id', 'items', 'shipping_address', 'timestamps', 'guest_info', 'admin_note']}
+        dots={{
           status: {
-            values: ["pending", "processing", "confirmed", "shipped", "delivered", "cancelled", "refunded"],
-            variants: ["warning", "info", "success", "info", "success", "destructive", "secondary"],
+            pending: 'amber',
+            confirmed: 'emerald',
+            processing: 'blue',
+            shipped: 'violet',
+            delivered: 'emerald',
+            cancelled: 'rose',
+            refunded: 'zinc'
           },
           payment_status: {
-            values: ["pending", "paid", "failed", "refunded"],
-            variants: ["warning", "success", "destructive", "secondary"],
+            pending: 'amber',
+            paid: 'emerald',
+            failed: 'rose',
+            refunded: 'zinc'
+          },
+        }}
+        badges={{
+          status: {
+            "pending": 'amber',
+            "confirmed": 'emerald',
+            "processing": 'blue',
+            "shipped": 'violet',
+            "delivered": 'emerald',
+            "cancelled": 'rose',
+            "refunded": 'zinc'
+          },
+          payment_status: {
+            "pending": 'amber',
+            "paid": 'emerald',
+            "failed": 'rose',
+            "refunded": 'zinc'
           },
           payment_method: {
-            values: ["credit_card", "paypal", "bank_transfer", "cash_on_delivery"],
-            variants: ["info", "blue", "purple", "green"],
+            "paystack": 'blue',
+            "pod": 'orange'
           },
-        }} 
+        }}
+        links={{
+          order_number: (order: Order) => `/dashboard/orders/${order.id}`
+        }}
+        emptyTitle="No Orders Found"
+        emptyDescription="Orders will appear here once customers place them."
+        onSelectionChange={(selected) => console.log('Selected orders:', selected.length)}
       />
     </div>
   );
 }
-
-export default ListOrders;

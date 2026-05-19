@@ -5,7 +5,7 @@ export type ProductOptions = Record<string, ProductOptionValue[]>;
 export type VariantAttributes = Record<string, ProductOptionValue>;
 
 export interface ProductVariant {
-  id:string;
+  id: string;
   sku: string;
   attributes: VariantAttributes;
   price: number;
@@ -14,7 +14,7 @@ export interface ProductVariant {
   images: string[];
 }
 
-export interface ProductType  {
+export interface ProductType {
   id: string
   title: string
   slug: string
@@ -35,14 +35,23 @@ export interface ProductType  {
   is_featured: boolean
   is_bestseller: boolean
   is_new: boolean
-  default_variant: {
-    id:string;
+  variant: {
+    id: string;
     sku: string
     price: number
     discounted_price: number
     stock: number
     attributes: Record<string, string>
-    images: {url :string,alt_text:string,type:string}[]
+    images: { url: string, alt_text: string, type: string }[]
+  } | null
+  default_variant: {
+    id: string;
+    sku: string
+    price: number
+    discounted_price: number
+    stock: number
+    attributes: Record<string, string>
+    images: { url: string, alt_text: string, type: string }[]
   } | null
   created_at: string
 }

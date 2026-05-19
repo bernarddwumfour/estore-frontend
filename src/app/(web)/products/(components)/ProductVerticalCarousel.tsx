@@ -39,7 +39,7 @@ async function getProducts(category?: string, endpoint?: string) {
             throw new Error(data.error || "Failed to load carousel products");
         }
 
-        return data.data || [];
+        return data.data.items || [];
     } catch (error) {
         console.error("Error fetching carousel items:", error);
         return []; // Gracefully fail with an empty array to prevent breaking layouts

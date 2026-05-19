@@ -209,6 +209,8 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
           </div>
 
 
+
+
           <StatusFilter currentStatus={statusFilter} />
 
           <div className="text-center bg-white py-12">
@@ -241,9 +243,17 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
     <div className="bg-gray-50 min-h-screen">
       <div className="py-32 container mx-auto px-4">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">My Orders</h1>
-          <p className="text-gray-600">Track and manage all your purchases</p>
+        <div className="max-w-xl space-y-4 pb-6 sm:pb-8 md:pb-10">
+          <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
+            My Orders
+          </h2>
+          <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            Track and manage all {" "}
+            <span className="text-slate-950 relative inline-block">
+              your purchases.
+              <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
+            </span>
+          </h3>
         </div>
 
         {/* Status Filter */}

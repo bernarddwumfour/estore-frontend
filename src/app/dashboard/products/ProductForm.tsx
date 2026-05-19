@@ -1,3 +1,4 @@
+// app/dashboard/products/ProductForm.tsx
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -27,33 +28,21 @@ import { endpoints } from "@/constants/endpoints/endpoints";
 import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Trash2 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { X, Plus, Trash2, Loader2 } from "lucide-react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
 // Zod Schema for Product with options
 const formSchema = z.object({
-  // Basic Information
   title: z.string().min(2, { message: "Title must be at least 2 characters" }),
   category_id: z.string().min(1, { message: "Category is required" }),
   description: z.string().min(10, { message: "Description must be at least 10 characters" }),
-
-  // Features (array of strings)
   features: z.array(z.string()).default([]),
-
-  // Options (object with string arrays)
   options: z.record(z.string(), z.array(z.string())).default({}),
-
-  // Status
   status: z.enum(["draft", "published", "archived"]).default("draft"),
-
-  // Flags
   is_featured: z.boolean().default(false),
   is_bestseller: z.boolean().default(false),
   is_new: z.boolean().default(false),
-
-  // SEO Fields
   meta_title: z.string().max(200, { message: "Meta title cannot exceed 200 characters" }).optional(),
   meta_description: z.string().max(500, { message: "Meta description cannot exceed 500 characters" }).optional(),
 });
@@ -66,19 +55,99 @@ interface CategoryOption {
   full_path: string;
 }
 
-export default function ProductCreationForm() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [newFeature, setNewFeature] = useState("");
-  const queryClient = useQueryClient()
+interface ProductFormProps {
+  productId?: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
 
-  // State for managing options
+// Fetch categories
+const fetchCategories = async (): Promise<CategoryOption[]> => {
+  const response = await securityAxios.get(endpoints.products.listCategories);
+  if (response.data.success) {
+    return response.data.data.categories.map((cat: any) => ({
+      id: cat.id,
+      name: cat.name,
+      full_path: cat.full_path,
+    }));
+  }
+  return [];
+};
+
+// Fetch product for update
+const fetchProduct = async (id: string): Promise<any> => {
+  const response = await securityAxios.get(endpoints.products.getProductDetails.replace(":id", id));
+  return response.data.data;
+};
+
+// Create product mutation
+const createProduct = async (data: FormData): Promise<any> => {
+  const payload: Record<string, any> = {
+    title: data.title.trim(),
+    category_id: data.category_id,
+    description: data.description.trim(),
+    status: data.status,
+    is_featured: data.is_featured,
+    is_bestseller: data.is_bestseller,
+    is_new: data.is_new,
+  };
+
+  if (data.features && data.features.length > 0) {
+    payload.features = data.features;
+  }
+  if (data.options && Object.keys(data.options).length > 0) {
+    payload.options = data.options;
+  }
+  if (data.meta_title?.trim()) {
+    payload.meta_title = data.meta_title.trim();
+  }
+  if (data.meta_description?.trim()) {
+    payload.meta_description = data.meta_description.trim();
+  }
+
+  const response = await securityAxios.post(endpoints.products.addProduct, payload);
+  return response.data;
+};
+
+// Update product mutation
+const updateProduct = async (id: string, data: FormData): Promise<any> => {
+  const payload: Record<string, any> = {
+    title: data.title.trim(),
+    category_id: data.category_id,
+    description: data.description.trim(),
+    status: data.status,
+    is_featured: data.is_featured,
+    is_bestseller: data.is_bestseller,
+    is_new: data.is_new,
+  };
+
+  if (data.features && data.features.length > 0) {
+    payload.features = data.features;
+  }
+  if (data.options && Object.keys(data.options).length > 0) {
+    payload.options = data.options;
+  }
+  if (data.meta_title?.trim()) {
+    payload.meta_title = data.meta_title.trim();
+  }
+  if (data.meta_description?.trim()) {
+    payload.meta_description = data.meta_description.trim();
+  }
+
+  const response = await securityAxios.put(endpoints.products.updateProduct.replace(":id", id), payload);
+  return response.data;
+};
+
+export default function ProductForm({ productId, onSuccess, onCancel }: ProductFormProps) {
+  const [newFeature, setNewFeature] = useState("");
   const [newOptionName, setNewOptionName] = useState("");
   const [newOptionValue, setNewOptionValue] = useState("");
   const [currentOptionKey, setCurrentOptionKey] = useState<string | null>(null);
+  const [isFormReady, setIsFormReady] = useState(false);
 
-  // Initialize form
+  const queryClient = useQueryClient();
+  const isUpdateMode = !!productId;
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -96,31 +165,108 @@ export default function ProductCreationForm() {
     },
   });
 
-  // Fetch categories on component mount
+  // Query for categories
+  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['product-form-categories'],
+    queryFn: fetchCategories,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Query for product data (update mode)
+  const { data: productData, isLoading: isLoadingProduct } = useQuery({
+    queryKey: ['product', productId],
+    queryFn: () => fetchProduct(productId!),
+    enabled: isUpdateMode && !!productId,
+    staleTime: 0,
+  });
+
+  // Populate form when product data is loaded
   useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      setIsLoadingCategories(true);
-      const response = await securityAxios.get(endpoints.products.listcategories);
-
-      if (response.data.success) {
-        const categoriesData = response.data.data.categories || [];
-        setCategories(categoriesData.map((cat: any) => ({
-          id: cat.id,
-          name: cat.name,
-          full_path: cat.full_path,
-        })));
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      toast.error("Failed to load categories");
-    } finally {
-      setIsLoadingCategories(false);
+    if (productData) {
+      form.reset({
+        title: productData.title || "",
+        category_id: productData.category?.id || "",
+        description: productData.description || "",
+        features: productData.features || [],
+        options: productData.options || {},
+        status: productData.status || "draft",
+        is_featured: productData.is_featured ?? false,
+        is_bestseller: productData.is_bestseller ?? false,
+        is_new: productData.is_new ?? false,
+        meta_title: productData.meta_title || "",
+        meta_description: productData.meta_description || "",
+      });
+      setIsFormReady(true);
+    } else if (!isUpdateMode && categories) {
+      setIsFormReady(true);
     }
-  };
+  }, [productData, categories, form, isUpdateMode]);
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: createProduct,
+    onSuccess: () => {
+      toast.success("Product created successfully");
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      form.reset({
+        title: "",
+        category_id: "",
+        description: "",
+        features: [],
+        options: {},
+        status: "draft",
+        is_featured: false,
+        is_bestseller: false,
+        is_new: false,
+        meta_title: "",
+        meta_description: "",
+      });
+      setNewFeature("");
+      setNewOptionName("");
+      setNewOptionValue("");
+      setCurrentOptionKey(null);
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      const errorData = error?.response?.data;
+      if (errorData?.errors) {
+        Object.entries(errorData.errors).forEach(([field, messages]) => {
+          form.setError(field as keyof FormData, {
+            message: Array.isArray(messages) ? messages[0] : String(messages),
+          });
+        });
+        toast.error("Please fix the validation errors");
+      } else {
+        toast.error(errorData?.message || "Failed to create product");
+      }
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FormData }) => updateProduct(id, data),
+    onSuccess: () => {
+      toast.success("Product updated successfully");
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['product', productId] });
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      const errorData = error?.response?.data;
+      if (errorData?.errors) {
+        Object.entries(errorData.errors).forEach(([field, messages]) => {
+          form.setError(field as keyof FormData, {
+            message: Array.isArray(messages) ? messages[0] : String(messages),
+          });
+        });
+        toast.error("Please fix the validation errors");
+      } else {
+        toast.error(errorData?.message || "Failed to update product");
+      }
+    },
+  });
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   // Features management
   const addFeature = () => {
@@ -189,125 +335,21 @@ export default function ProductCreationForm() {
     });
   };
 
-  const onSubmit = async (data: FormData) => {
-    try {
-      setIsSubmitting(true);
-
-      // Prepare payload
-      const payload: Record<string, any> = {
-        title: data.title.trim(),
-        category_id: data.category_id,
-        description: data.description.trim(),
-        status: data.status,
-        is_featured: data.is_featured,
-        is_bestseller: data.is_bestseller,
-        is_new: data.is_new,
-      };
-
-      // Add features if any
-      if (data.features && data.features.length > 0) {
-        payload.features = data.features;
-      }
-
-      // Add options if any
-      if (data.options && Object.keys(data.options).length > 0) {
-        payload.options = data.options;
-      }
-
-      // Add SEO fields if provided
-      if (data.meta_title?.trim()) {
-        payload.meta_title = data.meta_title.trim();
-      }
-
-      if (data.meta_description?.trim()) {
-        payload.meta_description = data.meta_description.trim();
-      }
-
-      console.log("Submitting product payload:", payload);
-
-      // Make POST request to create product
-      const response = await securityAxios.post(endpoints.products.addProduct, payload);
-
-      console.log("API Response:", response.data);
-
-      if (response.status === 201) {
-        const apiResponse = response.data;
-
-        if (apiResponse.success) {
-          toast.success(apiResponse.message || "Product created successfully");
-
-          // Reset form
-          form.reset({
-            title: "",
-            category_id: "",
-            description: "",
-            features: [],
-            options: {},
-            status: "draft",
-            is_featured: false,
-            is_bestseller: false,
-            is_new: false,
-            meta_title: "",
-            meta_description: "",
-          });
-
-          setNewFeature("");
-          setNewOptionName("");
-          setNewOptionValue("");
-          setCurrentOptionKey(null);
-          queryClient.invalidateQueries(
-            { queryKey: [endpoints.products.listProducts], exact: false }
-          )
-        } else {
-          toast.error(apiResponse.error || "Failed to create product");
-        }
-      } else {
-        toast.error(`Unexpected status: ${response.status}`);
-      }
-    } catch (error: any) {
-      console.error("Error creating product:", error);
-
-      // Handle validation errors
-      if (error?.response?.data?.errors) {
-        const validationErrors = error.response.data.errors;
-
-        // Display first validation error in toast
-        const firstErrorKey = Object.keys(validationErrors)[0];
-        const firstError = validationErrors[firstErrorKey];
-
-        if (Array.isArray(firstError)) {
-          toast.error(firstError[0]);
-        } else {
-          toast.error(firstError);
-        }
-
-        // Set form errors for specific fields
-        Object.keys(validationErrors).forEach((field) => {
-          const fieldName = field as keyof FormData;
-          const errorMessage = Array.isArray(validationErrors[field])
-            ? validationErrors[field][0]
-            : validationErrors[field];
-
-          form.setError(fieldName, {
-            type: "manual",
-            message: errorMessage,
-          });
-        });
-      } else if (error?.response?.data?.error) {
-        toast.error(error.response.data.error);
-      } else if (error?.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else if (error?.response?.status === 401) {
-        toast.error("Please login to create products");
-      } else if (error?.response?.status === 403) {
-        toast.error("You don't have permission to create products");
-      } else {
-        toast.error("Failed to create product. Please try again.");
-      }
-    } finally {
-      setIsSubmitting(false);
+  const onSubmit = (data: FormData) => {
+    if (isUpdateMode && productId) {
+      updateMutation.mutate({ id: productId, data });
+    } else {
+      createMutation.mutate(data);
     }
   };
+
+  if ((isUpdateMode && !isFormReady) || isLoadingProduct) {
+    return (
+      <div className="flex justify-center items-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   const features = form.watch("features") || [];
   const options = form.watch("options") || {};
@@ -318,13 +360,14 @@ export default function ProductCreationForm() {
         {/* Basic Information Section */}
         <div className="space-y-6 p-6 border rounded-lg bg-card">
           <div>
-            <h3 className="text-lg font-semibold">Basic Information</h3>
+            <h3 className="text-lg font-semibold">
+              {isUpdateMode ? "Edit Product" : "Basic Information"}
+            </h3>
             <p className="text-sm text-muted-foreground">
-              Enter the basic details for your new product
+              {isUpdateMode ? "Update the product details" : "Enter the basic details for your new product"}
             </p>
           </div>
 
-          {/* Product Title */}
           <FormField
             control={form.control}
             name="title"
@@ -332,35 +375,26 @@ export default function ProductCreationForm() {
               <FormItem>
                 <FormLabel>Product Title *</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="e.g., Wireless Bluetooth Headphones"
-                    {...field}
-                  />
+                  <Input placeholder="e.g., Wireless Bluetooth Headphones" {...field} disabled={isSubmitting} />
                 </FormControl>
-                <FormDescription>
-                  This will be displayed to customers and used to generate the URL slug
-                </FormDescription>
+                <FormDescription>This will be displayed to customers and used to generate the URL slug</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          {/* Category Selection */}
           <FormField
             control={form.control}
             name="category_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Category *</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value}
-                  disabled={isLoadingCategories}
-                >
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingCategories || isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
                       {isLoadingCategories ? (
                         <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
                           <span>Loading categories...</span>
                         </div>
                       ) : (
@@ -369,27 +403,22 @@ export default function ProductCreationForm() {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {categories.map((category) => (
+                    {categories?.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         <div className="flex flex-col">
                           <span>{category.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {category.full_path}
-                          </span>
+                          <span className="text-xs text-muted-foreground">{category.full_path}</span>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <FormDescription>
-                  Choose the category where this product belongs
-                </FormDescription>
+                <FormDescription>Choose the category where this product belongs</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          {/* Product Description */}
           <FormField
             control={form.control}
             name="description"
@@ -397,15 +426,9 @@ export default function ProductCreationForm() {
               <FormItem>
                 <FormLabel>Description *</FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder="Describe your product in detail..."
-                    className="min-h-[150px]"
-                    {...field}
-                  />
+                  <Textarea placeholder="Describe your product in detail..." className="min-h-[150px]" {...field} disabled={isSubmitting} />
                 </FormControl>
-                <FormDescription>
-                  Provide detailed information about the product features and benefits
-                </FormDescription>
+                <FormDescription>Provide detailed information about the product features and benefits</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -420,24 +443,14 @@ export default function ProductCreationForm() {
                   value={newFeature}
                   onChange={(e) => setNewFeature(e.target.value)}
                   placeholder="Add a feature (e.g., 'Noise Cancelling')"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addFeature();
-                    }
-                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFeature(); } }}
+                  disabled={isSubmitting}
                 />
-                <Button
-                  type="button"
-                  onClick={addFeature}
-                  variant="outline"
-                  size="sm"
-                >
+                <Button type="button" onClick={addFeature} variant="outline" size="sm" disabled={isSubmitting}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
 
-              {/* Features List */}
               <div className="flex flex-wrap gap-2 min-h-[40px]">
                 {features.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No features added yet</p>
@@ -445,11 +458,7 @@ export default function ProductCreationForm() {
                   features.map((feature, index) => (
                     <Badge key={index} variant="secondary" className="flex items-center gap-1">
                       {feature}
-                      <button
-                        type="button"
-                        onClick={() => removeFeature(index)}
-                        className="ml-1 hover:text-destructive"
-                      >
+                      <button type="button" onClick={() => removeFeature(index)} className="ml-1 hover:text-destructive">
                         <X className="h-3 w-3" />
                       </button>
                     </Badge>
@@ -457,9 +466,7 @@ export default function ProductCreationForm() {
                 )}
               </div>
             </div>
-            <FormDescription>
-              Add key features of your product (optional)
-            </FormDescription>
+            <FormDescription>Add key features of your product (optional)</FormDescription>
           </div>
         </div>
 
@@ -467,40 +474,25 @@ export default function ProductCreationForm() {
         <div className="space-y-6 p-6 border rounded-lg bg-card">
           <div>
             <h3 className="text-lg font-semibold">Product Options</h3>
-            <p className="text-sm text-muted-foreground">
-              Define options for product variants (e.g., color, size, brand)
-            </p>
+            <p className="text-sm text-muted-foreground">Define options for product variants (e.g., color, size, brand)</p>
           </div>
 
-          {/* Add New Option */}
           <div className="space-y-3">
             <div className="flex gap-2">
               <Input
                 value={newOptionName}
                 onChange={(e) => setNewOptionName(e.target.value)}
                 placeholder="Option name (e.g., 'color', 'size', 'brand')"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addOption();
-                  }
-                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption(); } }}
+                disabled={isSubmitting}
               />
-              <Button
-                type="button"
-                onClick={addOption}
-                variant="outline"
-                size="sm"
-              >
+              <Button type="button" onClick={addOption} variant="outline" size="sm" disabled={isSubmitting}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            <FormDescription>
-              Create options that customers can choose from when selecting variants
-            </FormDescription>
+            <FormDescription>Create options that customers can choose from when selecting variants</FormDescription>
           </div>
 
-          {/* Options List */}
           {Object.keys(options).length > 0 && (
             <div className="space-y-4">
               {Object.entries(options).map(([optionKey, values]) => (
@@ -508,79 +500,46 @@ export default function ProductCreationForm() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-medium capitalize">{optionKey.replace(/_/g, ' ')}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        {optionKey}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{optionKey}</p>
                     </div>
-                    <Button
-                      type="button"
-                      onClick={() => removeOption(optionKey)}
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                    >
+                    <Button type="button" onClick={() => removeOption(optionKey)} variant="ghost" size="sm" className="h-8 w-8 p-0" disabled={isSubmitting}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
 
-                  {/* Add values to selected option */}
                   {currentOptionKey === optionKey && (
                     <div className="flex gap-2">
                       <Input
                         value={newOptionValue}
                         onChange={(e) => setNewOptionValue(e.target.value)}
                         placeholder="Add a value (e.g., 'Red', 'Large', 'Sony')"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addOptionValue();
-                          }
-                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOptionValue(); } }}
+                        disabled={isSubmitting}
                       />
-                      <Button
-                        type="button"
-                        onClick={addOptionValue}
-                        variant="outline"
-                        size="sm"
-                      >
+                      <Button type="button" onClick={addOptionValue} variant="outline" size="sm" disabled={isSubmitting}>
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
                   )}
 
-                  {/* Option values list */}
                   <div className="space-y-2">
                     {Array.isArray(values) && values.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {values.map((value, index) => (
                           <Badge key={index} variant="outline" className="flex items-center gap-1">
                             {value}
-                            <button
-                              type="button"
-                              onClick={() => removeOptionValue(optionKey, index)}
-                              className="ml-1 hover:text-destructive"
-                            >
+                            <button type="button" onClick={() => removeOptionValue(optionKey, index)} className="ml-1 hover:text-destructive">
                               <X className="h-3 w-3" />
                             </button>
                           </Badge>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">
-                        No values added yet. Click the option name to add values.
-                      </p>
+                      <p className="text-sm text-muted-foreground">No values added yet. Click below to add values.</p>
                     )}
                   </div>
 
-                  {/* Button to manage values */}
-                  <Button
-                    type="button"
-                    onClick={() => setCurrentOptionKey(
-                      currentOptionKey === optionKey ? null : optionKey
-                    )}
-                    variant="ghost"
-                    size="sm"
-                  >
+                  <Button type="button" onClick={() => setCurrentOptionKey(currentOptionKey === optionKey ? null : optionKey)} variant="ghost" size="sm" disabled={isSubmitting}>
                     {currentOptionKey === optionKey ? 'Done' : 'Manage Values'}
                   </Button>
                 </div>
@@ -590,16 +549,13 @@ export default function ProductCreationForm() {
 
           {Object.keys(options).length === 0 && (
             <div className="text-center p-4 border rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                No options defined. Add options to create product variants.
-              </p>
+              <p className="text-sm text-muted-foreground">No options defined. Add options to create product variants.</p>
             </div>
           )}
         </div>
 
         {/* Status and Flags Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Status Selection */}
           <div className="space-y-4 p-6 border rounded-lg bg-card">
             <h4 className="font-semibold">Product Status</h4>
             <FormField
@@ -607,7 +563,7 @@ export default function ProductCreationForm() {
               name="status"
               render={({ field }) => (
                 <FormItem>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue />
@@ -620,10 +576,8 @@ export default function ProductCreationForm() {
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Draft: Not visible to customers
-                    <br />
-                    Published: Visible on store
-                    <br />
+                    Draft: Not visible to customers<br />
+                    Published: Visible on store<br />
                     Archived: Hidden from store
                   </FormDescription>
                   <FormMessage />
@@ -632,7 +586,6 @@ export default function ProductCreationForm() {
             />
           </div>
 
-          {/* Flags Section */}
           <div className="space-y-4 p-6 border rounded-lg bg-card">
             <h4 className="font-semibold">Product Flags</h4>
 
@@ -643,15 +596,10 @@ export default function ProductCreationForm() {
                 <FormItem className="flex flex-row items-center justify-between">
                   <div className="space-y-0.5">
                     <FormLabel>Featured</FormLabel>
-                    <FormDescription>
-                      Display in featured products section
-                    </FormDescription>
+                    <FormDescription>Display in featured products section</FormDescription>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
                   </FormControl>
                 </FormItem>
               )}
@@ -664,15 +612,10 @@ export default function ProductCreationForm() {
                 <FormItem className="flex flex-row items-center justify-between">
                   <div className="space-y-0.5">
                     <FormLabel>Bestseller</FormLabel>
-                    <FormDescription>
-                      Mark as a best-selling product
-                    </FormDescription>
+                    <FormDescription>Mark as a best-selling product</FormDescription>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
                   </FormControl>
                 </FormItem>
               )}
@@ -685,15 +628,10 @@ export default function ProductCreationForm() {
                 <FormItem className="flex flex-row items-center justify-between">
                   <div className="space-y-0.5">
                     <FormLabel>New Arrival</FormLabel>
-                    <FormDescription>
-                      Mark as a new product
-                    </FormDescription>
+                    <FormDescription>Mark as a new product</FormDescription>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
                   </FormControl>
                 </FormItem>
               )}
@@ -705,9 +643,7 @@ export default function ProductCreationForm() {
         <div className="space-y-6 p-6 border rounded-lg bg-card">
           <div>
             <h3 className="text-lg font-semibold">SEO Settings</h3>
-            <p className="text-sm text-muted-foreground">
-              Optimize your product for search engines
-            </p>
+            <p className="text-sm text-muted-foreground">Optimize your product for search engines</p>
           </div>
 
           <div className="space-y-4">
@@ -718,15 +654,9 @@ export default function ProductCreationForm() {
                 <FormItem>
                   <FormLabel>Meta Title</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="SEO-optimized title for search engines"
-                      {...field}
-                      value={field.value || ""}
-                    />
+                    <Input placeholder="SEO-optimized title for search engines" {...field} value={field.value || ""} disabled={isSubmitting} />
                   </FormControl>
-                  <FormDescription>
-                    Custom title for search engine results pages (optional)
-                  </FormDescription>
+                  <FormDescription>Custom title for search engine results pages (optional)</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -739,16 +669,9 @@ export default function ProductCreationForm() {
                 <FormItem>
                   <FormLabel>Meta Description</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Brief description for search engine results"
-                      className="min-h-[80px]"
-                      {...field}
-                      value={field.value || ""}
-                    />
+                    <Textarea placeholder="Brief description for search engine results" className="min-h-[80px]" {...field} value={field.value || ""} disabled={isSubmitting} />
                   </FormControl>
-                  <FormDescription>
-                    Appears in search results below the title (optional)
-                  </FormDescription>
+                  <FormDescription>Appears in search results below the title (optional)</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -758,26 +681,28 @@ export default function ProductCreationForm() {
 
         {/* Submit Button */}
         <div className="flex justify-end gap-4 pt-6">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              form.reset();
-              setNewOptionName("");
-              setNewOptionValue("");
-              setCurrentOptionKey(null);
-            }}
-            disabled={isSubmitting}
-          >
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+              Cancel
+            </Button>
+          )}
+          <Button type="button" variant="outline" onClick={() => {
+            form.reset();
+            setNewOptionName("");
+            setNewOptionValue("");
+            setCurrentOptionKey(null);
+          }} disabled={isSubmitting}>
             Reset Form
           </Button>
-          <Button
-            type="submit"
-            size="lg"
-            className="min-w-[200px]"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Creating Product..." : "Create Product"}
+          <Button type="submit" size="lg" className="min-w-[200px]" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {isUpdateMode ? "Updating Product..." : "Creating Product..."}
+              </>
+            ) : (
+              isUpdateMode ? "Update Product" : "Create Product"
+            )}
           </Button>
         </div>
       </form>

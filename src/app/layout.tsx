@@ -3,6 +3,7 @@ import { Lato } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/lib/providers/cart-provider";
 import { Providers } from "@/lib/providers/Providers";
+import { ThemeProvider } from "@/components/ui/theme-provider";
 
 // Load Lato font (optimized by Next.js)
 const lato = Lato({
@@ -26,11 +27,17 @@ export default function RootLayout({
     <html lang="en">
       <head />
       <body className={lato.className}>
-        <Providers>
-          <CartProvider>
-            {children}
-          </CartProvider>
-        </Providers>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+        >
+          <Providers>
+            <CartProvider>
+              {children}
+            </CartProvider>
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );

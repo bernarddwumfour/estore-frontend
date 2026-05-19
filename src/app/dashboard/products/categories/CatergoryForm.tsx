@@ -1,3 +1,5 @@
+// components/forms/CategoryForm.tsx - Simplified working version
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -34,53 +36,58 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import Image from "next/image";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
-// Zod Schema for Category
 const formSchema = z.object({
-  // Basic Information
   name: z.string().min(2, { message: "Category name must be at least 2 characters" }),
   description: z.string().optional(),
-  
-  // Parent Category
   parent_id: z.string().optional().nullable(),
-  
-  // SEO Fields
   meta_title: z.string().max(200, { message: "Meta title cannot exceed 200 characters" }).optional(),
   meta_description: z.string().max(500, { message: "Meta description cannot exceed 500 characters" }).optional(),
-  
-  // Status
   is_active: z.boolean().default(true),
-}).refine((data) => {
-  if (data.meta_title && data.meta_title.length < 5) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Meta title should be at least 5 characters if provided",
-  path: ["meta_title"],
+  is_hidden: z.boolean().default(false),
 });
 
 type FormData = z.input<typeof formSchema>;
+
 interface CategoryOption {
   id: string;
   name: string;
   full_path: string;
 }
 
-export default function CategoryCreationForm() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [parentCategories, setParentCategories] = useState<CategoryOption[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  
-  // Image upload states
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const queryClient = useQueryClient()
+interface CategoryFormProps {
+  categoryId?: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
 
-  // Initialize form
+// Fetch all categories for parent dropdown
+const fetchAllCategories = async () => {
+  const response = await securityAxios.get(endpoints.products.adminlistCategories, {
+    params: { limit: 100 }
+  });
+  return response.data.data.categories || [];
+};
+
+// Fetch single category for update
+const fetchCategory = async (id: string) => {
+  const response = await securityAxios.get(
+    endpoints.products.getCategoryDetails.replace(":id", id)
+  );
+  return response.data.data;
+};
+
+export default function CategoryForm({ categoryId, onSuccess, onCancel }: CategoryFormProps) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [removeExistingImage, setRemoveExistingImage] = useState(false);
+  const [isFormReady, setIsFormReady] = useState(false);
+
+  const queryClient = useQueryClient();
+  const isUpdateMode = !!categoryId;
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -90,205 +97,217 @@ export default function CategoryCreationForm() {
       meta_title: "",
       meta_description: "",
       is_active: true,
+      is_hidden: false,
     },
   });
 
-  // Fetch parent categories on component mount
+  // Query for all categories
+  const { data: allCategories, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['all-categories'],
+    queryFn: () => fetchAllCategories(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Query for single category
+  const { data: categoryData, isLoading: isLoadingCategory } = useQuery({
+    queryKey: ['category', categoryId],
+    queryFn: () => fetchCategory(categoryId!),
+    enabled: isUpdateMode && !!categoryId,
+    staleTime: 0,
+  });
+
+  // Set form values when data is loaded
   useEffect(() => {
-    fetchParentCategories();
-  }, []);
+    if (categoryData && allCategories) {
+      console.log("Setting form values for:", categoryData.name);
+      console.log("Parent ID to set:", categoryData.parent_id);
 
-  const fetchParentCategories = async () => {
-    try {
-      setIsLoadingCategories(true);
-      const response = await securityAxios.get(endpoints.products.listcategories, {
-        params: {
-          limit: 100,
-          include_inactive: false,
-        }
-      });
+      // Find the parent to verify it exists
+      const parentExists = allCategories.find((c: any) => c.id === categoryData.parent_id);
+      console.log("Parent exists in list:", parentExists ? parentExists.name : "No");
 
-      if (response.data.success) {
-        const categories = response.data.data.categories || [];
-        setParentCategories(categories.map((cat: any) => ({
-          id: cat.id,
-          name: cat.name,
-          full_path: cat.full_path || cat.name,
-        })));
+      // Set all form values at once
+      form.setValue('name', categoryData.name || "");
+      form.setValue('description', categoryData.description || "");
+      form.setValue('parent_id', categoryData.parent_id || null);
+      form.setValue('meta_title', categoryData.meta_title || "");
+      form.setValue('meta_description', categoryData.meta_description || "");
+      form.setValue('is_active', categoryData.is_active ?? true);
+      form.setValue('is_hidden', categoryData.is_hidden ?? false);
+
+      // Set image
+      if (categoryData.image && !removeExistingImage) {
+        setImagePreview(categoryData.image);
       }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      toast.error("Failed to load parent categories");
-    } finally {
-      setIsLoadingCategories(false);
-    }
-  };
 
-  // Handle image upload
+      setIsFormReady(true);
+    } else if (!isUpdateMode && allCategories) {
+      setIsFormReady(true);
+    }
+  }, [categoryData, allCategories, form, isUpdateMode, removeExistingImage]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    
     if (!file) return;
-    
-    // Validate file type
+
     if (!file.type.startsWith('image/')) {
       toast.error("File must be an image");
       return;
     }
-    
-    // Validate file size (max 5MB)
+
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Image size must be less than 5MB");
       return;
     }
-    
-    setImage(file);
-    
-    // Create preview
+
+    setImageFile(file);
+    setRemoveExistingImage(false);
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-    
-    // Reset file input
     e.target.value = '';
   };
 
-  const removeImage = () => {
-    setImage(null);
+  const handleRemoveImage = () => {
+    setImageFile(null);
     setImagePreview(null);
+    setRemoveExistingImage(true);
   };
 
-  const onSubmit = async (data: FormData) => {
-    try {
-      setIsSubmitting(true);
-      setIsUploadingImage(true);
-      
-      // Create FormData for multipart upload
+  const createMutation = useMutation({
+    mutationFn: async (data: FormData) => {
       const formData = new FormData();
-      
-      // Add text fields
       formData.append('name', data.name.trim());
       formData.append('description', data.description?.trim() || "");
       formData.append('is_active', data.is_active!.toString());
-      
-      if (data.parent_id && data.parent_id !== "null") {
-        formData.append('parent_id', data.parent_id);
-      }
-      
-      if (data.meta_title?.trim()) {
-        formData.append('meta_title', data.meta_title.trim());
-      }
-      
-      if (data.meta_description?.trim()) {
-        formData.append('meta_description', data.meta_description.trim());
-      }
-      
-      // Add image if exists
-      if (image) {
-        formData.append('image', image);
-      }
-      
-      console.log("Submitting category with image:", !!image);
+      formData.append('is_hidden', data.is_hidden!.toString());
+      if (data.parent_id) formData.append('parent_id', data.parent_id);
+      if (data.meta_title?.trim()) formData.append('meta_title', data.meta_title.trim());
+      if (data.meta_description?.trim()) formData.append('meta_description', data.meta_description.trim());
+      if (imageFile) formData.append('image', imageFile);
 
-      // Use multipart/form-data endpoint for category creation with image
+      const response = await securityAxios.post(endpoints.products.addCategory, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success("Category created successfully");
+      queryClient.invalidateQueries({ queryKey: [endpoints.products.adminlistCategories] });
+      queryClient.invalidateQueries({ queryKey: ['all-categories'] });
+      form.reset();
+      setImageFile(null);
+      setImagePreview(null);
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      console.error("Create error:", error);
+      toast.error(error?.response?.data?.message || "Failed to create category");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      const payload = {
+        name: data.name,
+        description: data.description,
+        parent_id: data.parent_id || null,
+        is_active: data.is_active,
+        is_hidden: data.is_hidden,
+        meta_title: data.meta_title || "",
+        meta_description: data.meta_description || "",
+      };
+
+      // If no image changes, send as JSON
+      if (!imageFile && !removeExistingImage) {
+        const response = await securityAxios.put(
+          endpoints.products.updateCategory.replace(":id", categoryId!),
+          payload
+        );
+        return response.data;
+      }
+
+      // If image changes, use FormData
+      const formData = new FormData();
+      formData.append('_method', 'PUT'); // Method override
+      formData.append('name', data.name.trim());
+      formData.append('description', data.description?.trim() || "");
+      formData.append('is_active', String(data.is_active));
+      formData.append('is_hidden', String(data.is_hidden));
+      if (data.parent_id) formData.append('parent_id', data.parent_id);
+      if (data.meta_title?.trim()) formData.append('meta_title', data.meta_title.trim());
+      if (data.meta_description?.trim()) formData.append('meta_description', data.meta_description.trim());
+
+      if (removeExistingImage) {
+        formData.append('remove_image', 'true');
+      } else if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
       const response = await securityAxios.post(
-        endpoints.products.addCategory, // Update this endpoint to handle multipart
+        endpoints.products.updateCategory.replace(":id", categoryId!),
         formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
+        { headers: { 'Content-Type': 'multipart/form-data' } }
       );
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success("Category updated successfully");
+      queryClient.invalidateQueries({ queryKey: [endpoints.products.adminlistCategories] });
+      queryClient.invalidateQueries({ queryKey: ['all-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['category', categoryId] });
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      console.error("Update error:", error);
+      toast.error(error?.response?.data?.message || "Failed to update category");
+    },
+  });
 
-      console.log("API Response:", response.data);
-
-      if (response.status === 201 || response.data.success) {
-        const apiResponse = response.data;
-        
-        toast.success(apiResponse.message || "Category created successfully");
-        
-        // Reset form
-        form.reset({
-          name: "",
-          description: "",
-          parent_id: null,
-          meta_title: "",
-          meta_description: "",
-          is_active: true,
-        });
-        
-        // Clear image
-        removeImage();
-        
-        // Refresh parent categories list
-        fetchParentCategories();
-        queryClient.invalidateQueries(
-          {queryKey:[endpoints.products.listcategories],exact:false}
-        )
-      } else {
-        toast.error("Failed to create category");
-      }
-    } catch (error: any) {
-      console.error("Error creating category:", error);
-      
-      // Handle validation errors
-      if (error?.response?.data?.errors) {
-        const validationErrors = error.response.data.errors;
-        
-        const firstErrorKey = Object.keys(validationErrors)[0];
-        const firstError = validationErrors[firstErrorKey];
-        
-        if (Array.isArray(firstError)) {
-          toast.error(firstError[0]);
-        } else {
-          toast.error(firstError);
-        }
-        
-        // Set form errors
-        Object.keys(validationErrors).forEach((field) => {
-          const fieldName = field as keyof FormData;
-          const errorMessage = Array.isArray(validationErrors[field]) 
-            ? validationErrors[field][0] 
-            : validationErrors[field];
-          
-          form.setError(fieldName, {
-            type: "manual",
-            message: errorMessage,
-          });
-        });
-      } else if (error?.response?.data?.error) {
-        toast.error(error.response.data.error);
-      } else if (error?.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else if (error?.response?.status === 401) {
-        toast.error("Please login to create categories");
-      } else if (error?.response?.status === 403) {
-        toast.error("You don't have permission to create categories");
-      } else {
-        toast.error("Failed to create category. Please try again.");
-      }
-    } finally {
-      setIsSubmitting(false);
-      setIsUploadingImage(false);
+  const onSubmit = (data: FormData) => {
+    console.log("Submitting with parent_id:", data.parent_id);
+    if (isUpdateMode) {
+      updateMutation.mutate(data);
+    } else {
+      createMutation.mutate(data);
     }
   };
 
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  if ((isUpdateMode && !isFormReady) || isLoadingCategory) {
+    return (
+      <div className="flex justify-center items-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Filter out current category from parent options
+  const parentOptions = allCategories?.filter((cat: any) => !isUpdateMode || cat.id !== categoryId) || [];
+
+  // Get current parent_id value
+  const currentParentId = form.watch('parent_id');
+
+  // Find the selected parent for display
+  const selectedParent = parentOptions.find((cat: any) => cat.id === currentParentId);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-3xl mx-auto">
-        {/* Basic Information Section */}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-6 p-6 border rounded-lg bg-card">
           <div>
-            <h3 className="text-lg font-semibold">Basic Information</h3>
+            <h3 className="text-lg font-semibold">
+              {isUpdateMode ? "Edit Category" : "Create Category"}
+            </h3>
             <p className="text-sm text-muted-foreground">
-              Enter the basic details for your new category
+              {isUpdateMode ? "Update the category details" : "Enter the category details"}
             </p>
           </div>
-          
-          {/* Category Name */}
+
           <FormField
             control={form.control}
             name="name"
@@ -296,86 +315,51 @@ export default function CategoryCreationForm() {
               <FormItem>
                 <FormLabel>Category Name *</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="e.g., iPhone, Mac, Accessories"
-                    {...field}
-                  />
+                  <Input placeholder="Category name" {...field} disabled={isSubmitting} />
                 </FormControl>
-                <FormDescription>
-                  This will be displayed to customers and used to generate the URL slug
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
-          
-          {/* Category Image Upload */}
+
+          {/* Image Upload */}
           <div className="space-y-3">
             <FormLabel>Category Image</FormLabel>
             <div className="flex flex-col gap-4">
-              {/* Image Preview */}
               {imagePreview ? (
-                <div className="relative w-full max-w-xs aspect-video rounded-lg overflow-hidden border">
-                  <Image
-                    src={imagePreview}
-                    alt="Category preview"
-                    fill
-                    className="object-cover"
-                  />
-                  <Button
+                <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
+                  <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                  <button
                     type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={removeImage}
+                    onClick={handleRemoveImage}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
               ) : (
-                <div className="flex items-center justify-center w-full max-w-xs aspect-video border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-                  <ImageIcon className="h-12 w-12 text-gray-400" />
+                <div className="w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center">
+                  <ImageIcon className="h-8 w-8 text-gray-400" />
                 </div>
               )}
-              
-              {/* Upload Button */}
-              <div className="flex flex-col gap-2">
-                <input
-                  type="file"
-                  id="category-image"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  disabled={isSubmitting}
-                />
-                <div className="flex gap-2">
-                  <label
-                    htmlFor="category-image"
-                    className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-                  >
-                    <Upload className="h-4 w-4" />
-                    {image ? "Change Image" : "Upload Image"}
-                  </label>
-                  {image && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={removeImage}
-                      disabled={isSubmitting}
-                    >
-                      Remove
-                    </Button>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500">
-                  PNG, JPG, WebP up to 5MB. Recommended: 800x600px
-                </p>
-              </div>
+              <input
+                type="file"
+                id="image-upload"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <label
+                htmlFor="image-upload"
+                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md w-fit"
+              >
+                <Upload className="h-4 w-4" />
+                {imagePreview ? "Change Image" : "Upload Image"}
+              </label>
             </div>
           </div>
-          
-          {/* Parent Category */}
+
+          {/* Parent Category Select - CRITICAL FIX */}
           <FormField
             control={form.control}
             name="parent_id"
@@ -383,25 +367,25 @@ export default function CategoryCreationForm() {
               <FormItem>
                 <FormLabel>Parent Category</FormLabel>
                 <Select
-                  onValueChange={field.onChange}
-                  value={field.value || "null"}
+                  value={field.value || "none"}
+                  onValueChange={(value) => {
+                    console.log("Setting parent_id to:", value === "none" ? null : value);
+                    field.onChange(value === "none" ? null : value);
+                  }}
                   disabled={isLoadingCategories || isSubmitting}
                 >
-                  <FormControl>
-                    <SelectTrigger>
-                      {isLoadingCategories ? (
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Loading categories...</span>
-                        </div>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {!field.value || field.value === "none" ? (
+                        "None (Root Category)"
                       ) : (
-                        <SelectValue placeholder="Select a parent category (optional)" />
+                        selectedParent?.full_path || selectedParent?.name || "Select parent"
                       )}
-                    </SelectTrigger>
-                  </FormControl>
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="null">None (Root Category)</SelectItem>
-                    {parentCategories.map((category) => (
+                    <SelectItem value="none">None (Root Category)</SelectItem>
+                    {parentOptions.map((category: CategoryOption) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
                       </SelectItem>
@@ -415,8 +399,7 @@ export default function CategoryCreationForm() {
               </FormItem>
             )}
           />
-          
-          {/* Description */}
+
           <FormField
             control={form.control}
             name="description"
@@ -424,172 +407,104 @@ export default function CategoryCreationForm() {
               <FormItem>
                 <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder="Describe this category for customers and SEO..."
-                    className="min-h-[100px]"
-                    {...field}
-                    disabled={isSubmitting}
-                  />
+                  <Textarea placeholder="Category description" {...field} disabled={isSubmitting} />
                 </FormControl>
-                <FormDescription>
-                  This helps customers understand what products belong in this category
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-        
-        {/* Advanced Options Collapsible */}
-        <Collapsible
-          open={showAdvanced}
-          onOpenChange={setShowAdvanced}
-          className="border rounded-lg"
-        >
+
+        {/* Advanced Options */}
+        <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced} className="border rounded-lg">
           <div className="p-6">
             <CollapsibleTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full justify-between p-0 hover:bg-transparent"
-                disabled={isSubmitting}
-              >
-                <div className="text-left">
+              <Button type="button" variant="ghost" className="w-full justify-between">
+                <div>
                   <h3 className="text-lg font-semibold">Advanced Options</h3>
-                  <p className="text-sm text-muted-foreground">
-                    SEO settings and visibility controls
-                  </p>
+                  <p className="text-sm text-muted-foreground">SEO and visibility settings</p>
                 </div>
-                {showAdvanced ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
+                {showAdvanced ? <ChevronUp /> : <ChevronDown />}
               </Button>
             </CollapsibleTrigger>
-            
+
             <CollapsibleContent className="space-y-6 pt-6">
-              {/* SEO Section */}
-              <div className="space-y-4">
-                <h4 className="font-medium">SEO Settings</h4>
-                
-                {/* Meta Title */}
-                <FormField
-                  control={form.control}
-                  name="meta_title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Meta Title</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Optimized title for search engines"
-                          {...field}
-                          value={field.value || ""}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Custom title for search engine results pages (optional)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Meta Description */}
-                <FormField
-                  control={form.control}
-                  name="meta_description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Meta Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Brief description for search engine results"
-                          className="min-h-[80px]"
-                          {...field}
-                          value={field.value || ""}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Appears in search results below the title (optional)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              {/* Status Section */}
-              <div className="space-y-4">
-                <h4 className="font-medium">Status</h4>
-                
-                {/* Active Status */}
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Active Category
-                        </FormLabel>
-                        <FormDescription>
-                          Inactive categories won't be visible to customers
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="meta_title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Meta Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="SEO title" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="meta_description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Meta Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="SEO description" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="is_active"
+                render={({ field }) => (
+                  <FormItem className="flex justify-between items-center rounded-lg border p-4">
+                    <div>
+                      <FormLabel>Active</FormLabel>
+                      <FormDescription>Visible to customers</FormDescription>
+                    </div>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="is_hidden"
+                render={({ field }) => (
+                  <FormItem className="flex justify-between items-center rounded-lg border p-4">
+                    <div>
+                      <FormLabel>Hidden</FormLabel>
+                      <FormDescription>Only visible to admins</FormDescription>
+                    </div>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormItem>
+                )}
+              />
             </CollapsibleContent>
           </div>
         </Collapsible>
-        
-        {/* Submit Button */}
-        <div className="flex justify-end gap-4 pt-6">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              form.reset();
-              removeImage();
-            }}
-            disabled={isSubmitting}
-          >
-            Reset Form
-          </Button>
-          <Button 
-            type="submit" 
-            size="lg"
-            className="min-w-[200px]"
-            disabled={isSubmitting}
-          >
+
+        <div className="flex justify-end gap-4">
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isUploadingImage ? "Uploading..." : "Creating Category..."}
+                {isUpdateMode ? "Updating..." : "Creating..."}
               </>
             ) : (
-              "Create Category"
+              isUpdateMode ? "Update Category" : "Create Category"
             )}
           </Button>
         </div>
-        
-        {/* Form Status */}
-        {form.formState.isSubmitted && !form.formState.isSubmitting && (
-          <div className="text-center text-sm text-muted-foreground">
-            Category will be available immediately if marked as active
-          </div>
-        )}
       </form>
     </Form>
   );

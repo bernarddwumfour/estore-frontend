@@ -4,10 +4,10 @@ import { endpoints } from "@/constants/endpoints/endpoints"
 
 interface ProductsGridProps {
   category?: string,
-  endpoint?:string
+  endpoint?: string
 }
 
-async function getProducts(category?: string,endpoint?:string) {
+async function getProducts(category?: string, endpoint?: string) {
   try {
     const params = new URLSearchParams({
       limit: '20',
@@ -42,19 +42,19 @@ async function getProducts(category?: string,endpoint?:string) {
       throw new Error(data.error || "Failed to load products")
     }
 
-    return data.data || []
+    return data.data.items || []
   } catch (error) {
     console.error("Error fetching products:", error)
     throw error
   }
 }
 
-export default async function ProductsGrid({ category,endpoint }: ProductsGridProps) {
+export default async function ProductsGrid({ category, endpoint }: ProductsGridProps) {
   let products: ProductType[] = []
   let error: string | null = null
 
   try {
-    products = await getProducts(category,endpoint)
+    products = await getProducts(category, endpoint)
   } catch (err: any) {
     error = err.message || "Failed to load products"
   }

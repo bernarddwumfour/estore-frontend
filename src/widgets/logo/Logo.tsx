@@ -8,9 +8,9 @@ const Logo = () => {
                 iP
             </div>
             {/* Clean Typography Frame */}
-            <span className="text-xl font-black text-slate-950 tracking-tight transition-colors duration-300 group-hover:text-slate-800">
+            {/* <span className="text-xl font-black text-slate-950 tracking-tight transition-colors duration-300 group-hover:text-slate-800">
                 iPlug
-            </span>
+            </span> */}
         </Link>
     )
 }

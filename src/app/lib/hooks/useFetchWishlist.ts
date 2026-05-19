@@ -46,7 +46,8 @@ export const useFetchWishlist = (enabled = true) => {
     }
 
     if (query.data && hasHydrated) {
-      const variantIds = query.data.data.items.map((item: any) => item.default_variant.id)
+      console.log("QUERY", query)
+      const variantIds = query.data.data.items.map((item: any) => item.variant.id)
       setWishlist(variantIds)
     }
   }, [query.data, hasHydrated, setWishlist, user])
