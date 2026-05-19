@@ -32,11 +32,13 @@ async function getProducts(category?: string, endpoint?: string) {
       }
     })
 
+
     if (!response.ok) {
       throw new Error(`Failed to fetch products: ${response.status}`)
     }
 
     const data = await response.json()
+    console.log("RESPONSE => ", data)
 
     if (!data.success) {
       throw new Error(data.error || "Failed to load products")
