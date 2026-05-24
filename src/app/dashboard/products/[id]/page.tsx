@@ -19,7 +19,7 @@ import { CustomSelect, type selectField } from '@/widgets/custom-select/CustomSe
 import ProductForm from '../ProductForm';
 import ProductVariantForm from '../ProductVariantForm';
 import ProductVariantsList from '../ProductVariantsList';
-import { useState } from 'react';
+import { Dispatch, SetStateAction, useState } from 'react';
 
 interface Variant {
     id: string;
@@ -576,7 +576,7 @@ export default function ProductDetailPage() {
                 <div className="space-y-4">
                     <CustomSelect
                         selectField={selectedStatus}
-                        setSelectField={setSelectedStatus}
+                        setSelectField={setSelectedStatus as Dispatch<SetStateAction<string | selectField | undefined>>}
                         items={statusOptions}
                         placeholder="Select status"
                     />

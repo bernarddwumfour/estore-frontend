@@ -70,7 +70,7 @@ interface ProductVariantFormProps {
 
 // Fetch all products for dropdown
 const fetchAllProducts = async (): Promise<Product[]> => {
-  const response = await securityAxios.get(endpoints.products.listProducts);
+  const response = await securityAxios.get(endpoints.products.adminlistProducts);
   return response.data.data.products || [];
 };
 
