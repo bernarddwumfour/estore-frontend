@@ -88,7 +88,7 @@ export function CustomSort({
             <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Sort by:</span>
                 <Select value={tempSortBy} onValueChange={handleSortByChange}>
-                    <SelectTrigger className="w-36 h-9 border-gray-300 dark:border-gray-700 bg-white dark:bg-black">
+                    <SelectTrigger className="w-36 h-9 border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900/50 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600">
                         <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
                     <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
@@ -108,7 +108,7 @@ export function CustomSort({
                     variant="outline"
                     size="icon"
                     onClick={handleSortOrderToggle}
-                    className="h-9 w-9 border-gray-300 dark:border-gray-700"
+                    className="h-9 w-9 border-gray-300 dark:border-gray-700  dark:hover:bg-gray-800/50 dark:bg-gray-800/70 dark:text-gray-200"
                 >
                     {tempSortOrder === 'asc' ? '↑' : '↓'}
                 </Button>

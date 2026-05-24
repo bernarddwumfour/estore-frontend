@@ -470,14 +470,14 @@ export function DataTable<T extends { id: string | number }>({
                         variant="outline"
                         size="sm"
                         onClick={exportToCSV}
-                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50"
+                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 dark:bg-gray-800/70"
                     >
                         <Download size={14} /> Export
                     </Button>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50">
+                            <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 dark:bg-gray-800/70">
                                 <Settings2 size={14} /> Columns
                             </Button>
                         </DropdownMenuTrigger>
