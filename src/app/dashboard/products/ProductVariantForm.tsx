@@ -33,6 +33,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 // Schema with all fields
 const variantSchema = z.object({
+  product_id: z.string().min(1, "Product is required"), // NEW: Added product_id
   sku: z.string().min(1, "SKU is required"),
   price: z.coerce.number().min(0, "Price must be positive"),
   stock: z.coerce.number().int().min(0, "Stock cannot be negative"),
@@ -61,15 +62,22 @@ interface Product {
 }
 
 interface ProductVariantFormProps {
-  productId: string;
+  productId?: string; // Made optional - can be passed from product page
   variantId?: string;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export default function ProductVariantForm({ productId, variantId, onSuccess, onCancel }: ProductVariantFormProps) {
+// Fetch all products for dropdown
+const fetchAllProducts = async (): Promise<Product[]> => {
+  const response = await securityAxios.get(endpoints.products.listProducts);
+  return response.data.data.products || [];
+};
+
+export default function ProductVariantForm({ productId: propProductId, variantId, onSuccess, onCancel }: ProductVariantFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
   const [product, setProduct] = useState<Product | null>(null);
   const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
   const [images, setImages] = useState<File[]>([]);
@@ -80,11 +88,13 @@ export default function ProductVariantForm({ productId, variantId, onSuccess, on
 
   const queryClient = useQueryClient();
   const isUpdateMode = !!variantId;
+  const hasPreSelectedProduct = !!propProductId;
 
-  // IMPORTANT: Use 'as any' to bypass TypeScript strict type checking (same as original working version)
+  // IMPORTANT: Use 'as any' to bypass TypeScript strict type checking
   const form = useForm<ProductVariantFormData>({
     resolver: zodResolver(variantSchema) as any,
     defaultValues: {
+      product_id: propProductId || "",
       sku: "",
       price: 0,
       stock: 0,
@@ -99,12 +109,39 @@ export default function ProductVariantForm({ productId, variantId, onSuccess, on
     },
   });
 
-  // Fetch product details
+  const watchProductId = form.watch("product_id");
+
+  // Fetch all products for dropdown (only when no product is pre-selected)
+  useEffect(() => {
+    const loadProducts = async () => {
+      if (!hasPreSelectedProduct) {
+        try {
+          const productsList = await fetchAllProducts();
+          setProducts(productsList);
+        } catch (error) {
+          console.error("Error fetching products:", error);
+          toast.error("Failed to load products");
+        }
+      }
+    };
+    loadProducts();
+  }, [hasPreSelectedProduct]);
+
+  // Fetch product details when product_id changes (for dropdown selection)
   useEffect(() => {
     const fetchProductDetails = async () => {
+      const currentProductId = watchProductId || propProductId;
+
+      if (!currentProductId) {
+        setProduct(null);
+        setProductOptions([]);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const response = await securityAxios.get(
-          endpoints.products.getProductDetails.replace(":id", productId)
+          endpoints.products.getProductDetails.replace(":id", currentProductId)
         );
 
         if (response.data.success) {
@@ -129,11 +166,13 @@ export default function ProductVariantForm({ productId, variantId, onSuccess, on
       } catch (error) {
         console.error("Error fetching product details:", error);
         toast.error("Failed to load product details");
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchProductDetails();
-  }, [productId, form]);
+  }, [watchProductId, propProductId, form]);
 
   // Fetch variant details for update mode
   useEffect(() => {
@@ -151,6 +190,7 @@ export default function ProductVariantForm({ productId, variantId, onSuccess, on
         if (response.data.success) {
           const variantData = response.data.data;
 
+          form.setValue("product_id", variantData.product.id);
           form.setValue("sku", variantData.sku || "");
           form.setValue("price", variantData.price || 0);
           form.setValue("stock", variantData.stock || 0);
@@ -261,6 +301,8 @@ export default function ProductVariantForm({ productId, variantId, onSuccess, on
       }
 
       let response;
+      const targetProductId = data.product_id;
+
       if (isUpdateMode && variantId) {
         response = await securityAxios.put(
           endpoints.products.updateVariant?.replace(":id", variantId) || `/api/products/admin/variants/${variantId}/update/`,
@@ -269,7 +311,7 @@ export default function ProductVariantForm({ productId, variantId, onSuccess, on
         );
       } else {
         response = await securityAxios.post(
-          endpoints.products.createVariant.replace(":id", productId),
+          endpoints.products.createVariant.replace(":id", targetProductId),
           submitData,
           { headers: { 'Content-Type': 'multipart/form-data' } }
         );
@@ -280,6 +322,7 @@ export default function ProductVariantForm({ productId, variantId, onSuccess, on
 
         if (!isUpdateMode) {
           form.reset({
+            product_id: propProductId || "",
             sku: "",
             price: 0,
             stock: 0,
@@ -299,6 +342,7 @@ export default function ProductVariantForm({ productId, variantId, onSuccess, on
 
         setRemoveImageIds([]);
         queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-variants'] });
         onSuccess?.();
       } else {
         toast.error(response.data.error || `Failed to ${isUpdateMode ? 'update' : 'create'} variant`);
@@ -336,13 +380,56 @@ export default function ProductVariantForm({ productId, variantId, onSuccess, on
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold">
+            {isUpdateMode ? "Edit Product Variant" : "Create Product Variant"}
+          </h2>
+          <p className="text-muted-foreground mt-1">
+            {isUpdateMode ? "Update variant for" : "Add a new variant to"} {product?.title || "a product"}
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           {/* Left Column */}
           <div className="space-y-6">
             <div className="border rounded-lg p-6 space-y-4">
               <h3 className="text-lg font-semibold">Variant Information</h3>
+
+              {/* Product Selection - Only show if no pre-selected product */}
+              {!hasPreSelectedProduct && !isUpdateMode && (
+                <FormField
+                  control={form.control}
+                  name="product_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || isUpdateMode}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a product" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {products.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Show selected product info when pre-selected or in update mode */}
+              {(hasPreSelectedProduct || isUpdateMode) && product && (
+                <div className="bg-muted/30 p-3 rounded-lg">
+                  <p className="text-sm font-medium">Product</p>
+                  <p className="text-sm text-muted-foreground">{product.title}</p>
+                </div>
+              )}
 
               <FormField
                 control={form.control}

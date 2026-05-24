@@ -33,6 +33,8 @@ async function getOrderDetails(orderId: string) {
     const decodedCookie = decodeURIComponent(authCookie);
     console.log('Order Details - Decoded cookie (first 200 chars):', decodedCookie.substring(0, 200));
 
+
+
     const authData = JSON.parse(decodedCookie);
     console.log('Order Details - Parsed auth data keys:', Object.keys(authData));
 
@@ -93,6 +95,10 @@ async function getOrderDetails(orderId: string) {
 
     const result = await response.json();
     console.log('Order Details - API response success:', result.success);
+    console.log('Order Details - Full order data:', JSON.stringify(result.data, null, 2));
+    console.log('Order Details - Shipping cost:', result.data?.order?.shipping_cost);
+    console.log('Order Details - Total:', result.data?.order?.total);
+
 
     if (!result.success) {
       console.error('Order Details - API returned error:', result.error);
@@ -505,7 +511,7 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
                 <div className="flex justify-between">
                   <span className="text-gray-600">Payment Status:</span>
                   <span className={`font-medium ${order.payment_status === 'paid' ? 'text-green-600' :
-                      order.payment_status === 'failed' ? 'text-red-600' : 'text-amber-600'
+                    order.payment_status === 'failed' ? 'text-red-600' : 'text-amber-600'
                     }`}>
                     {order.payment_status_display || order.payment_status}
                   </span>

@@ -4,30 +4,40 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Home, ArrowLeft, ChevronLeft, Loader2, CreditCard, Truck, Lock } from 'lucide-react';
+import { ShoppingCart, Home, Loader2, CreditCard, Truck, Lock, MapPin, Phone, Mail, User, Package, ChevronRight, UserPlus, CheckCircle } from 'lucide-react';
 import { useCartStore } from '@/app/lib/store/cart-store';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/use-auth';
-import securityAxios from '@/axios-instances/SecurityAxios';
+import UnAuthenticatedAxios from '@/axios-instances/UnAuthenticatedAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import unAuthenticatedAxios from '@/axios-instances/UnAuthenticatedAxios';
 import { useRouter } from 'next/navigation';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+
+interface ShippingOption {
+  id: string;
+  name: string;
+  cost: number;
+  estimated_days: string;
+  is_free: boolean;
+}
 
 export default function CheckoutPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+  const [selectedShippingId, setSelectedShippingId] = useState<string>('');
+  const [isCreatingGuest, setIsCreatingGuest] = useState(false);
+  const [guestUserCreated, setGuestUserCreated] = useState(false);
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    // Guest fields (for non-authenticated users)
-    guest_email: '',
-    guest_first_name: '',
-    guest_last_name: '',
-    guest_phone: '',
 
-    // Shipping address (REQUIRED for all users)
+  // Form data matching the backend expected structure
+  const [formData, setFormData] = useState({
     shipping_address: {
       first_name: '',
       last_name: '',
@@ -40,9 +50,8 @@ export default function CheckoutPage() {
       postal_code: '',
       country: 'Ghana',
       instructions: '',
+      address_type: 'shipping',
     },
-
-    // Billing address
     use_separate_billing: false,
     billing_address: {
       first_name: '',
@@ -55,28 +64,28 @@ export default function CheckoutPage() {
       state: '',
       postal_code: '',
       country: 'Ghana',
+      address_type: 'billing',
     },
-
-    // Order details
-    payment_method: 'paystack', // 'paystack' or 'pod'
-    shipping_method: 'standard',
-    shipping_cost: 9.99,
-    tax_rate: 8.0,
-    discount_amount: 0,
+    payment_method: 'paystack',
     customer_note: '',
-    currency: 'GHS',
   });
 
-  // Get cart state from Zustand
   const items = useCartStore((state) => state.items);
   const getTotalPrice = useCartStore((state) => state.getTotalPrice);
   const clearCart = useCartStore((state) => state.clearCart);
   const { user } = useAuth();
+  const isAuthenticated = !!user
+  // Calculate totals
+  const subtotal = getTotalPrice();
+  const selectedShipping = shippingOptions.find(opt => opt.id === selectedShippingId);
+  const shippingCost = selectedShipping?.cost || 0;
+  const tax = 0;
+  const total = subtotal + shippingCost + tax;
 
   useEffect(() => {
     setIsMounted(true);
 
-    // Pre-fill form with user data if authenticated
+    // If user is logged in, pre-fill shipping address with user data
     if (user) {
       setFormData(prev => ({
         ...prev,
@@ -86,20 +95,67 @@ export default function CheckoutPage() {
           last_name: user.last_name || '',
           email: user.email || '',
           phone: user.phone || '',
+        },
+        billing_address: {
+          ...prev.billing_address,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          email: user.email || '',
+          phone: user.phone || '',
         }
       }));
     }
   }, [user]);
 
-  // Calculate totals
-  const subtotal = getTotalPrice();
-  const shipping = formData.shipping_cost;
-  const tax = subtotal * (formData.tax_rate / 100);
-  const total = subtotal + shipping + tax;
+  // Calculate shipping options when address changes
+  useEffect(() => {
+    const calculateShipping = async () => {
+      const address = formData.shipping_address;
+      const hasRequiredFields = address.country && address.city && address.address_line1;
 
-  // Handle form input changes
-  const handleInputChange = (e: any) => {
-    const { name, value, type, checked } = e.target;
+      if (!hasRequiredFields || items.length === 0) return;
+
+      setIsCalculatingShipping(true);
+      try {
+        const response = await UnAuthenticatedAxios.post(endpoints.orders.shippingOptions, {
+          country_code: address.country,
+          city: address.city,
+          postal_code: address.postal_code,
+          items: items.map(item => ({
+            variant_id: item.variantId,
+            quantity: item.quantity,
+          })),
+        });
+
+        if (response.data.success) {
+          const options = response.data.data.options;
+          setShippingOptions(options);
+          if (options.length > 0 && !selectedShippingId) {
+            setSelectedShippingId(options[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error calculating shipping:', error);
+        const fallbackOptions = [{
+          id: 'standard',
+          name: 'Standard Shipping',
+          cost: 10.00,
+          estimated_days: '3-7 business days',
+          is_free: false,
+        }];
+        setShippingOptions(fallbackOptions);
+        setSelectedShippingId('standard');
+      } finally {
+        setIsCalculatingShipping(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(calculateShipping, 800);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.shipping_address.country, formData.shipping_address.city, formData.shipping_address.address_line1, formData.shipping_address.postal_code, items]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
 
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
@@ -107,23 +163,25 @@ export default function CheckoutPage() {
         ...prev,
         [parent]: {
           ...prev[parent],
-          [child]: type === 'checkbox' ? checked : value
+          [child]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
         }
       }));
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: type === 'checkbox' ? checked : value
+        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
       }));
     }
   };
 
-  // Handle billing same as shipping toggle
   const handleBillingSameAsShipping = (checked: boolean) => {
     setFormData(prev => ({
       ...prev,
       use_separate_billing: !checked,
-      billing_address: checked ? prev.shipping_address : {
+      billing_address: checked ? {
+        ...prev.shipping_address,
+        address_type: 'billing',
+      } : {
         first_name: '',
         last_name: '',
         phone: '',
@@ -134,158 +192,165 @@ export default function CheckoutPage() {
         state: '',
         postal_code: '',
         country: 'Ghana',
+        address_type: 'billing',
       }
     }));
   };
 
-  // Prepare order data for API
-  const prepareOrderData = () => {
-    const orderData = {
-      // Guest fields (only if not authenticated)
-      ...(!user && {
-        guest_email: formData.guest_email,
-        guest_first_name: formData.guest_first_name,
-        guest_last_name: formData.guest_last_name,
-        guest_phone: formData.guest_phone,
-      }),
-
-      // Shipping address (always required)
-      shipping_address: {
-        ...formData.shipping_address,
-        address_type: 'shipping',
-      },
-
-      // Billing address if different
-      ...(formData.use_separate_billing && {
-        billing_address: {
-          ...formData.billing_address,
-          address_type: 'billing',
-        }
-      }),
-
-      // Order details
-      payment_method: formData.payment_method,
-      shipping_method: formData.shipping_method,
-      shipping_cost: shipping,
-      tax_rate: formData.tax_rate,
-      discount_amount: formData.discount_amount,
-      customer_note: formData.customer_note,
-      currency: formData.currency,
-
-      // Cart items
-      items: items.map(item => ({
-        variant_id: item.variantId,
-        quantity: item.quantity,
-      })),
-    };
-
-    return orderData;
+  const handleShippingOptionChange = (optionId: string) => {
+    setSelectedShippingId(optionId);
   };
 
-  // Handle Paystack payment redirect
-  const handlePaystackPayment = (authorizationUrl: string) => {
-    window.location.href = authorizationUrl;
-  };
+  const handleGuestCheckout = async () => {
+    const shipping = formData.shipping_address;
 
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-    setIsLoading(true);
+    // Validate shipping fields
+    if (!shipping.first_name || !shipping.last_name || !shipping.email) {
+      toast.error('Please enter your first name, last name, and email address');
+      return;
+    }
 
+    if (!shipping.email.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    if (!shipping.address_line1 || !shipping.city || !shipping.state || !shipping.postal_code) {
+      toast.error('Please fill all required shipping address fields');
+      return;
+    }
+
+    if (!selectedShippingId && shippingOptions.length > 0) {
+      toast.error('Please select a shipping method');
+      return;
+    }
+
+    setIsCreatingGuest(true);
     try {
-      const validationError = validateForm();
-      if (validationError) {
-        toast.error(validationError);
-        setIsLoading(false);
-        return;
-      }
+      const guestData = {
+        email: shipping.email,
+        first_name: shipping.first_name,
+        last_name: shipping.last_name,
+        phone: shipping.phone,
+      };
 
+      const response = await UnAuthenticatedAxios.post('/auth/guest-checkout/', guestData);
+
+      if (response.data.success) {
+        setGuestUserCreated(true);
+        toast.success('Guest account created! You can now complete your purchase.');
+
+        // Proceed with order creation
+        await createOrder();
+      } else {
+        toast.error(response.data.error || 'Failed to create guest account');
+      }
+    } catch (error: any) {
+      console.error('Guest checkout error:', error);
+      toast.error(error.response?.data?.error || 'Failed to process guest checkout');
+    } finally {
+      setIsCreatingGuest(false);
+    }
+  };
+
+  const createOrder = async () => {
+    setIsLoading(true);
+    try {
       const orderData = prepareOrderData();
       console.log("Submitting order:", orderData);
 
-      const response = user ? await securityAxios.post(
-        endpoints.orders.createOrder,
-        orderData
-      ) : await unAuthenticatedAxios.post(
-        endpoints.orders.createOrder,
-        orderData
-      );
-
-      console.log("Order API Response:", response.data);
+      const response = await UnAuthenticatedAxios.post(endpoints.orders.createOrder, orderData);
 
       if (response.status === 200 || response.status === 201) {
         const apiResponse = response.data;
 
         if (apiResponse.success) {
-          // Clear cart on success
           clearCart();
 
-          // Handle different payment methods
           if (formData.payment_method === 'paystack' && apiResponse.data?.payment?.authorization_url) {
-            // Redirect to Paystack payment page
             toast.success("Redirecting to payment...");
             handlePaystackPayment(apiResponse.data.payment.authorization_url);
           } else if (formData.payment_method === 'pod') {
-            // Pay on Delivery - redirect to order confirmation
             toast.success(apiResponse.message || "Order placed successfully!");
             const orderId = apiResponse.data?.order?.id;
-            if (orderId) {
-              router.push(`/orders/${orderId}/confirmation`);
-            } else {
-              router.push('/orders');
-            }
+            router.push(orderId ? `/orders/${orderId}` : '/orders');
           } else {
-            // Other payment methods or fallback
             toast.success(apiResponse.message || "Order placed successfully!");
             const orderId = apiResponse.data?.order?.id;
-            if (orderId) {
-              router.push(`/orders/${orderId}`);
-            } else {
-              router.push('/orders');
-            }
+            router.push(orderId ? `/orders/${orderId}` : '/orders');
           }
         } else {
           toast.error(apiResponse.error || "Failed to place order");
         }
-      } else {
-        toast.error(`Unexpected status: ${response.status}`);
       }
     } catch (error: any) {
       console.error("Error creating order:", error);
-
-      // Handle specific error messages from backend
       if (error.response?.data?.errors) {
         const errors = error.response.data.errors;
         Object.values(errors).forEach((err: any) => {
-          if (typeof err === 'string') {
-            toast.error(err);
-          } else if (err.payment_method) {
-            toast.error(err.payment_method);
-          } else if (err.items) {
-            toast.error(err.items);
-          }
+          toast.error(typeof err === 'string' ? err : err.payment_method || err.items || "Validation error");
         });
-      } else if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
       } else {
-        toast.error("Failed to create order. Please try again.");
+        toast.error(error.response?.data?.message || "Failed to create order. Please try again.");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Validate form
-  const validateForm = () => {
-    if (!user) {
-      if (!formData.guest_email || !formData.guest_first_name || !formData.guest_last_name || !formData.guest_phone) {
-        return 'Please fill all guest information fields';
-      }
+  const prepareOrderData = () => {
+    return {
+      shipping_address: {
+        ...formData.shipping_address,
+        address_type: 'shipping',
+      },
+      ...(formData.use_separate_billing && {
+        billing_address: {
+          ...formData.billing_address,
+          address_type: 'billing',
+        }
+      }),
+      payment_method: formData.payment_method,
+      shipping_method: selectedShippingId || 'standard',
+      customer_note: formData.customer_note,
+      items: items.map(item => ({
+        variant_id: item.variantId,
+        quantity: item.quantity,
+      })),
+    };
+  };
+
+  const handlePaystackPayment = (authorizationUrl: string) => {
+    window.location.href = authorizationUrl;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const validationError = validateForm();
+    if (validationError) {
+      toast.error(validationError);
+      return;
     }
 
+    // If user is authenticated, proceed directly
+    if (isAuthenticated && user) {
+      await createOrder();
+    } else {
+      // Guest checkout - create guest account first
+      await handleGuestCheckout();
+    }
+  };
+
+  const validateForm = () => {
     const shipping = formData.shipping_address;
     if (!shipping.first_name || !shipping.last_name || !shipping.phone || !shipping.email ||
       !shipping.address_line1 || !shipping.city || !shipping.state || !shipping.postal_code) {
       return 'Please fill all required shipping address fields';
+    }
+
+    if (!selectedShippingId && shippingOptions.length > 0) {
+      return 'Please select a shipping method';
     }
 
     if (formData.use_separate_billing) {
@@ -309,21 +374,10 @@ export default function CheckoutPage() {
               <ShoppingCart className="h-24 w-24 text-gray-300 mx-auto" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4">Your cart is empty</h1>
-            <p className="text-gray-600 mb-8">
-              Looks like you haven't added any products to your cart yet.
-            </p>
+            <p className="text-gray-600 mb-8">Looks like you haven't added any products to your cart yet.</p>
             <div className="space-y-4">
               <Button asChild size="lg" className="w-full">
-                <Link href="/products">
-                  <Home className="mr-2 h-5 w-5" />
-                  Browse Products
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link href="/">
-                  <ArrowLeft className="mr-2 h-5 w-5" />
-                  Back to Home
-                </Link>
+                <Link href="/products"><Home className="mr-2 h-5 w-5" /> Browse Products</Link>
               </Button>
             </div>
           </div>
@@ -332,15 +386,23 @@ export default function CheckoutPage() {
     );
   }
 
+  // Loading state
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-32">
-      <div className="container mx-auto px-4">
-        {/* Page Header */}
-        <div className="max-w-xl space-y-4">
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="container mx-auto px-4 py-16">
+        <div className="max-w-xl space-y-4 pb-6">
           <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
             Checkout
           </h2>
-          <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+          <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
             Complete Your Order{" "}
             <span className="text-slate-950 relative inline-block">
               Securely
@@ -349,381 +411,336 @@ export default function CheckoutPage() {
           </h3>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {/* Left: Forms */}
-            <div className="lg:col-span-2 space-y-12">
-              {/* Guest Information (only for non-logged in users) */}
-              {!user && (
-                <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8">
-                  <h2 className="text-2xl font-medium text-gray-900 mb-6">Your Information</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                      <input
-                        type="text"
-                        name="guest_first_name"
-                        required
-                        value={formData.guest_first_name}
-                        onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                      <input
-                        type="text"
-                        name="guest_last_name"
-                        required
-                        value={formData.guest_last_name}
-                        onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                      <input
-                        type="email"
-                        name="guest_email"
-                        required
-                        value={formData.guest_email}
-                        onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                      <input
-                        type="tel"
-                        name="guest_phone"
-                        required
-                        value={formData.guest_phone}
-                        onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                        placeholder="+233XXXXXXXXX"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+        {/* Guest checkout info banner */}
+        {!isAuthenticated && !guestUserCreated && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <UserPlus className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <p className="text-sm text-blue-800 font-medium">Checking out as a guest?</p>
+                <p className="text-sm text-blue-600">Fill in your details below and we'll create a guest account for you. You can register later to track your orders.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
-              {/* Shipping Information */}
-              <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8">
-                <h2 className="text-2xl font-medium text-gray-900 mb-6">Shipping Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                    <input
-                      type="text"
+        {/* Success message for guest account creation */}
+        {guestUserCreated && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+              <div>
+                <p className="text-sm text-green-800 font-medium">Guest account created!</p>
+                <p className="text-sm text-green-600">Your order is being processed. You'll receive a confirmation email shortly.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column - Forms */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Shipping Address */}
+              <Card>
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <MapPin className="h-5 w-5" /> Shipping Address
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
                       name="shipping_address.first_name"
-                      required
+                      placeholder="First Name *"
                       value={formData.shipping_address.first_name}
                       onChange={handleInputChange}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                    <input
-                      type="text"
-                      name="shipping_address.last_name"
                       required
+                      className="h-12 text-base"
+                    />
+                    <Input
+                      name="shipping_address.last_name"
+                      placeholder="Last Name *"
                       value={formData.shipping_address.last_name}
                       onChange={handleInputChange}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                    <input
-                      type="email"
-                      name="shipping_address.email"
                       required
+                      className="h-12 text-base"
+                    />
+                    <Input
+                      name="shipping_address.email"
+                      type="email"
+                      placeholder="Email *"
                       value={formData.shipping_address.email}
                       onChange={handleInputChange}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                    <input
-                      type="tel"
-                      name="shipping_address.phone"
                       required
+                      className="h-12 text-base"
+                    />
+                    <Input
+                      name="shipping_address.phone"
+                      placeholder="Phone *"
                       value={formData.shipping_address.phone}
                       onChange={handleInputChange}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      placeholder="+233XXXXXXXXX"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1 *</label>
-                    <input
-                      type="text"
-                      name="shipping_address.address_line1"
                       required
-                      value={formData.shipping_address.address_line1}
-                      onChange={handleInputChange}
-                      placeholder="Street address"
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900 mb-3"
+                      className="h-12 text-base"
                     />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2 (Optional)</label>
-                    <input
-                      type="text"
-                      name="shipping_address.address_line2"
-                      value={formData.shipping_address.address_line2}
-                      onChange={handleInputChange}
-                      placeholder="Apartment, suite, etc."
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
-                    <input
-                      type="text"
+                    <div className="md:col-span-2">
+                      <Input
+                        name="shipping_address.address_line1"
+                        placeholder="Street Address *"
+                        value={formData.shipping_address.address_line1}
+                        onChange={handleInputChange}
+                        required
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Input
+                        name="shipping_address.address_line2"
+                        placeholder="Apartment, suite, unit (Optional)"
+                        value={formData.shipping_address.address_line2}
+                        onChange={handleInputChange}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <Input
                       name="shipping_address.city"
-                      required
+                      placeholder="City *"
                       value={formData.shipping_address.city}
                       onChange={handleInputChange}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Region / State *</label>
-                    <input
-                      type="text"
-                      name="shipping_address.state"
                       required
+                      className="h-12 text-base"
+                    />
+                    <Input
+                      name="shipping_address.state"
+                      placeholder="State/Province *"
                       value={formData.shipping_address.state}
                       onChange={handleInputChange}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
-                    <input
-                      type="text"
-                      name="shipping_address.postal_code"
                       required
+                      className="h-12 text-base"
+                    />
+                    <Input
+                      name="shipping_address.postal_code"
+                      placeholder="Postal Code *"
                       value={formData.shipping_address.postal_code}
                       onChange={handleInputChange}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      required
+                      className="h-12 text-base"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
                     <select
                       name="shipping_address.country"
                       value={formData.shipping_address.country}
                       onChange={handleInputChange}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      className="w-full h-12 px-3 border rounded-md text-base bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
                     >
                       <option value="Ghana">Ghana</option>
+                      <option value="Nigeria">Nigeria</option>
+                      <option value="Kenya">Kenya</option>
+                      <option value="South Africa">South Africa</option>
                     </select>
+                    <div className="md:col-span-2">
+                      <Textarea
+                        name="shipping_address.instructions"
+                        placeholder="Delivery Instructions (Optional)"
+                        value={formData.shipping_address.instructions}
+                        onChange={handleInputChange}
+                        rows={2}
+                        className="text-base"
+                      />
+                    </div>
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Instructions (Optional)</label>
-                    <textarea
-                      name="shipping_address.instructions"
-                      value={formData.shipping_address.instructions}
-                      onChange={handleInputChange}
-                      placeholder="Leave at door, call on arrival, etc."
-                      className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      rows={3}
-                    />
-                  </div>
-                </div>
 
-                {/* Billing same as shipping checkbox */}
-                <div className="mt-6">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      onChange={(e) => handleBillingSameAsShipping(e.target.checked)}
-                      className="mr-3 h-5 w-5 rounded border-gray-300"
-                    />
-                    <span className="text-gray-700">Billing address is the same as shipping</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Billing Information (if different from shipping) */}
-              {formData.use_separate_billing && (
-                <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8">
-                  <h2 className="text-2xl font-medium text-gray-900 mb-6">Billing Information</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                  <div className="mt-4">
+                    <label className="flex items-center gap-2">
                       <input
-                        type="text"
+                        type="checkbox"
+                        checked={!formData.use_separate_billing}
+                        onChange={(e) => handleBillingSameAsShipping(e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm">Billing address is the same as shipping</span>
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Billing Address */}
+              {formData.use_separate_billing && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" /> Billing Address
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
                         name="billing_address.first_name"
-                        required
+                        placeholder="First Name *"
                         value={formData.billing_address.first_name}
                         onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                      <input
-                        type="text"
-                        name="billing_address.last_name"
                         required
+                        className="h-12 text-base"
+                      />
+                      <Input
+                        name="billing_address.last_name"
+                        placeholder="Last Name *"
                         value={formData.billing_address.last_name}
                         onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                      <input
-                        type="email"
-                        name="billing_address.email"
                         required
+                        className="h-12 text-base"
+                      />
+                      <Input
+                        name="billing_address.email"
+                        type="email"
+                        placeholder="Email *"
                         value={formData.billing_address.email}
                         onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                      <input
-                        type="tel"
-                        name="billing_address.phone"
                         required
+                        className="h-12 text-base"
+                      />
+                      <Input
+                        name="billing_address.phone"
+                        placeholder="Phone *"
                         value={formData.billing_address.phone}
                         onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1 *</label>
-                      <input
-                        type="text"
-                        name="billing_address.address_line1"
                         required
-                        value={formData.billing_address.address_line1}
-                        onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        className="h-12 text-base"
                       />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2 (Optional)</label>
-                      <input
-                        type="text"
-                        name="billing_address.address_line2"
-                        value={formData.billing_address.address_line2}
-                        onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
-                      <input
-                        type="text"
+                      <div className="md:col-span-2">
+                        <Input
+                          name="billing_address.address_line1"
+                          placeholder="Street Address *"
+                          value={formData.billing_address.address_line1}
+                          onChange={handleInputChange}
+                          required
+                          className="h-12 text-base"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Input
+                          name="billing_address.address_line2"
+                          placeholder="Apartment, suite, unit (Optional)"
+                          value={formData.billing_address.address_line2}
+                          onChange={handleInputChange}
+                          className="h-12 text-base"
+                        />
+                      </div>
+                      <Input
                         name="billing_address.city"
-                        required
+                        placeholder="City *"
                         value={formData.billing_address.city}
                         onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Region / State *</label>
-                      <input
-                        type="text"
-                        name="billing_address.state"
                         required
+                        className="h-12 text-base"
+                      />
+                      <Input
+                        name="billing_address.state"
+                        placeholder="State/Province *"
                         value={formData.billing_address.state}
                         onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
-                      <input
-                        type="text"
-                        name="billing_address.postal_code"
                         required
+                        className="h-12 text-base"
+                      />
+                      <Input
+                        name="billing_address.postal_code"
+                        placeholder="Postal Code *"
                         value={formData.billing_address.postal_code}
                         onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        required
+                        className="h-12 text-base"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
                       <select
                         name="billing_address.country"
                         value={formData.billing_address.country}
                         onChange={handleInputChange}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 rounded-sm border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        className="w-full h-12 px-3 border rounded-md text-base bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
                       >
                         <option value="Ghana">Ghana</option>
+                        <option value="Nigeria">Nigeria</option>
+                        <option value="Kenya">Kenya</option>
+                        <option value="South Africa">South Africa</option>
                       </select>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               )}
 
-              {/* Payment Method Selection */}
-              <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8">
-                <h2 className="text-2xl font-medium text-gray-900 mb-6">Payment Method</h2>
-                <RadioGroup
-                  value={formData.payment_method}
-                  onValueChange={(value: any) => setFormData(prev => ({ ...prev, payment_method: value }))}
-                  className="space-y-4"
-                >
-                  {/* Paystack Option */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <RadioGroupItem value="paystack" id="paystack" />
-                      <Label htmlFor="paystack" className="flex items-center gap-3 cursor-pointer">
-                        <CreditCard className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <p className="font-medium">Paystack</p>
+              {/* Shipping Options */}
+              {shippingOptions.length > 0 && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <Truck className="h-5 w-5" /> Shipping Options
+                    </h2>
+                    {isCalculatingShipping ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      </div>
+                    ) : (
+                      <RadioGroup value={selectedShippingId} onValueChange={handleShippingOptionChange} className="space-y-3">
+                        {shippingOptions.map((option) => (
+                          <div key={option.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <div className="flex items-center gap-3">
+                              <RadioGroupItem value={option.id} id={option.id} />
+                              <Label htmlFor={option.id} className="cursor-pointer">
+                                <div>
+                                  <p className="font-medium text-base">{option.name}</p>
+                                  <p className="text-sm text-gray-500">Estimated: {option.estimated_days}</p>
+                                </div>
+                              </Label>
+                            </div>
+                            <div className="text-right">
+                              {option.is_free ? (
+                                <Badge variant="outline" className="text-green-600 border-green-600 px-3 py-1">Free</Badge>
+                              ) : (
+                                <span className="font-medium text-base">${option.cost.toFixed(2)}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Payment Method */}
+              <Card>
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" /> Payment Method
+                  </h2>
+                  <RadioGroup value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))} className="space-y-3">
+                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value="paystack" id="paystack" />
+                        <Label htmlFor="paystack" className="cursor-pointer">
+                          <p className="font-medium text-base">Paystack</p>
                           <p className="text-sm text-gray-500">Pay with card, mobile money, or bank transfer</p>
-                        </div>
-                      </Label>
+                        </Label>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <img src="/paystack-badge.svg" alt="Paystack" className="h-8" />
-                    </div>
-                  </div>
-
-                  {/* Pay on Delivery Option */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <RadioGroupItem value="pod" id="pod" />
-                      <Label htmlFor="pod" className="flex items-center gap-3 cursor-pointer">
-                        <Truck className="h-5 w-5 text-green-600" />
-                        <div>
-                          <p className="font-medium">Pay on Delivery</p>
+                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value="pod" id="pod" />
+                        <Label htmlFor="pod" className="cursor-pointer">
+                          <p className="font-medium text-base">Pay on Delivery</p>
                           <p className="text-sm text-gray-500">Pay when your order arrives</p>
-                        </div>
-                      </Label>
+                        </Label>
+                      </div>
+                      <Badge variant="outline" className="text-green-600 border-green-600 px-3 py-1">No upfront payment</Badge>
                     </div>
-                    <Badge variant="outline" className="text-green-600 border-green-600">
-                      No upfront payment
-                    </Badge>
-                  </div>
-                </RadioGroup>
+                  </RadioGroup>
 
-                {/* Security Notice */}
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Lock className="h-4 w-4" />
-                    <span>Your payment information is secure. We use industry-standard encryption.</span>
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Lock className="h-4 w-4" />
+                      <span>Your payment information is secure. We use industry-standard encryption.</span>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Right: Order Summary */}
+            {/* Right Column - Order Summary */}
             <div className="lg:col-span-1">
-              <Card className="sticky top-32">
+              <Card className="sticky top-8">
                 <CardContent className="p-6">
                   <h2 className="text-xl font-bold mb-4">Order Summary</h2>
 
@@ -731,18 +748,12 @@ export default function CheckoutPage() {
                     {items.map((item) => (
                       <div key={item.id} className="flex gap-3">
                         <div className="relative w-16 h-16 flex-shrink-0 overflow-hidden rounded-md border">
-                          <Image
-                            width={64}
-                            height={64}
-                            src={item.imageUrl}
-                            alt={item.title}
-                            className="object-cover w-full h-full"
-                          />
+                          <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
                         </div>
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.title}</p>
                           <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                          <p className="text-xs font-medium">${item.price.toFixed(2)} each</p>
+                          <p className="text-xs text-gray-500">${item.price.toFixed(2)} each</p>
                         </div>
                         <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
                       </div>
@@ -751,50 +762,46 @@ export default function CheckoutPage() {
 
                   <div className="border-t pt-4 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Subtotal</span>
+                      <span>Subtotal</span>
                       <span>${subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Shipping</span>
-                      <span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Tax ({formData.tax_rate}%)</span>
-                      <span>${tax.toFixed(2)}</span>
+                      <span>Shipping</span>
+                      <span>{shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`}</span>
                     </div>
                     <div className="border-t pt-3 mt-3">
-                      <div className="flex justify-between font-bold">
+                      <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
                         <span>${total.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-6">
+                  <div className="mt-6 space-y-3">
+                    <Textarea
+                      name="customer_note"
+                      placeholder="Order notes (optional)"
+                      value={formData.customer_note}
+                      onChange={handleInputChange}
+                      rows={2}
+                      className="text-base"
+                    />
                     <Button
                       type="submit"
-                      className="w-full"
+                      className="w-full h-12 text-base"
                       size="lg"
-                      disabled={isLoading}
+                      disabled={isLoading || isCalculatingShipping || !selectedShippingId || isCreatingGuest}
                     >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
+                      {isLoading || isCreatingGuest ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isCreatingGuest ? 'Creating Guest Account...' : 'Processing...'}</>
                       ) : (
-                        formData.payment_method === 'pod' ? 'Place Order (Pay on Delivery)' : 'Proceed to Payment'
+                        !isAuthenticated ? 'Continue as Guest' : (formData.payment_method === 'pod' ? 'Place Order (Pay on Delivery)' : 'Proceed to Payment')
                       )}
                     </Button>
                   </div>
 
                   <div className="mt-4 text-center">
-                    <Link
-                      href="/cart"
-                      className="text-sm text-gray-500 hover:text-gray-700 underline"
-                    >
-                      ← Return to Cart
-                    </Link>
+                    <Link href="/cart" className="text-sm text-gray-500 hover:text-gray-700 underline">← Return to Cart</Link>
                   </div>
                 </CardContent>
               </Card>
@@ -805,6 +812,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-
-// Missing imports
-import { Badge } from '@/components/ui/badge';

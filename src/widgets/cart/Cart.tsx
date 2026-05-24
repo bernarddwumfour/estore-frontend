@@ -59,7 +59,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-40" />
-      <div ref={cartRef} className="absolute top-12 sm:right-0 -right-18 w-screen max-w-md border border-gray-200 bg-white px-4 py-6 sm:px-6 lg:px-8 z-50"
+      <div ref={cartRef} className="absolute top-12 sm:-right-0 -right-24 w-screen max-w-md border border-gray-200 bg-white px-4 py-6 sm:px-6 lg:px-8 z-50"
         aria-modal="true"
         role="dialog">
         {/* Close button */}

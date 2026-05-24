@@ -1,7 +1,8 @@
+// app/widgets/Customtable/DataTable.tsx
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { MoreVertical, Settings2, ChevronRight, Download, Inbox, ChevronDown, ChevronLeft, ChevronRight as ChevronRightIcon, X } from 'lucide-react';
+import { MoreVertical, Settings2, ChevronRight, Download, Inbox, ChevronDown, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,7 +23,6 @@ import { DataDisplay } from '../DataDisplay/DataDisplay';
 import { CustomDialog } from '../CustomDialog/CustomDialog';
 import { CustomSheet } from '../CustomSheet/CustomSheet';
 import MultiImagePreviewModal from '../ImagePreviewModal/ImagePreviewModal';
-
 
 type ColorOption = 'emerald' | 'orange' | 'zinc' | 'blue' | 'rose' | 'amber' | 'violet';
 type ViewType = 'dialog' | 'sheet';
@@ -49,13 +49,14 @@ interface DataTableProps<T> {
     badges?: Record<string, Record<string, ColorOption>>;
     icons?: Record<string, Record<string, React.ReactNode>>;
     links?: Record<string, (item: T) => string>;
-    images?: Record<string, (item: T) => string | string[]>; // Can be single URL or array of URLs
+    images?: Record<string, (item: T) => string | string[]>;
     actions?: {
         label: string | ((item: T) => string);
         icon: React.ReactNode | ((item: T) => React.ReactNode);
         variant?: 'default' | 'destructive' | 'outline' | ((item: T) => 'default' | 'destructive' | 'outline');
         onClick: (item: T) => void;
     }[];
+    renderActions?: (item: T) => React.ReactNode;
     bulkActions?: {
         label: string;
         onClick: (items: T[]) => void;
@@ -63,8 +64,13 @@ interface DataTableProps<T> {
         variant?: 'default' | 'destructive';
         color?: 'emerald' | 'orange' | 'blue' | 'rose' | 'violet' | 'amber';
     }[];
+    bulkActionsMessage?: string;
     onSelectionChange?: (selectedItems: T[]) => void;
     actionsFirst?: boolean;
+    arrays?: Record<string, {
+        maxItems?: number;
+    }>;
+    stickyActions?: boolean;
 }
 
 // Helper function to get button color classes
@@ -94,18 +100,16 @@ function MultiImageCell({ images, alt }: { images: string[]; alt: string }) {
 
     if (!images || images.length === 0) return <span className="text-muted-foreground">—</span>;
 
-    const currentImage = images[selectedIndex]; // FIXED: Use selectedIndex instead of always 0
+    const currentImage = images[selectedIndex];
     const hasMultiple = images.length > 1;
 
     const handlePrevImage = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Uncomment to prevent triggering parent click
-        console.log("Previous clicked", selectedIndex);
+        e.stopPropagation();
         setSelectedIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
     };
 
     const handleNextImage = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Uncomment to prevent triggering parent click
-        console.log("Next clicked", selectedIndex);
+        e.stopPropagation();
         setSelectedIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
     };
 
@@ -117,9 +121,8 @@ function MultiImageCell({ images, alt }: { images: string[]; alt: string }) {
     return (
         <>
             <div className="relative group inline-block">
-                {/* Main Image */}
                 <div
-                    className="relative w-10 h-10 rounded-md overflow-hidden cursor-pointer border border-zinc-200 dark:border-zinc-800 hover:ring-2 hover:ring-orange-500 transition-all"
+                    className="relative w-10 h-10 rounded-md overflow-hidden cursor-pointer border border-gray-200 dark:border-gray-800 hover:ring-2 hover:ring-gray-900 dark:hover:ring-white transition-all"
                     onClick={handleOpenPreview}
                 >
                     <img
@@ -146,7 +149,6 @@ function MultiImageCell({ images, alt }: { images: string[]; alt: string }) {
                     </div>
                 )}
 
-                {/* Image Count Badge */}
                 {hasMultiple && (
                     <div className="absolute -bottom-1 -right-1 bg-black/70 text-white text-[8px] font-bold rounded-full px-1 min-w-[16px] text-center">
                         {selectedIndex + 1}/{images.length}
@@ -165,6 +167,36 @@ function MultiImageCell({ images, alt }: { images: string[]; alt: string }) {
     );
 }
 
+// Array Cell Component for rendering arrays as pill badges
+function ArrayCell({ value, maxItems = 3 }: { value: any[]; maxItems?: number }) {
+    if (!value || value.length === 0) return <span className="text-xs font-bold tracking-tight text-gray-700 dark:text-gray-300">—</span>;
+
+    const displayItems = value.slice(0, maxItems);
+    const remaining = value.length - maxItems;
+
+    return (
+        <div className="flex flex-wrap gap-1.5">
+            {displayItems.map((item, idx) => (
+                <Badge
+                    key={idx}
+                    variant="secondary"
+                    className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full border-none"
+                >
+                    {typeof item === 'object' ? JSON.stringify(item) : String(item)}
+                </Badge>
+            ))}
+            {remaining > 0 && (
+                <Badge
+                    variant="secondary"
+                    className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full border-none"
+                >
+                    +{remaining}
+                </Badge>
+            )}
+        </div>
+    );
+}
+
 export function DataTable<T extends { id: string | number }>({
     data,
     emptyTitle = "Registry Empty",
@@ -177,9 +209,13 @@ export function DataTable<T extends { id: string | number }>({
     links = {},
     images = {},
     actions = [],
+    renderActions,
     bulkActions = [],
     onSelectionChange,
     actionsFirst = true,
+    arrays = {},
+    bulkActionsMessage = "Select Rows To Perform Bulk Actions On.",
+    stickyActions = true,
 }: DataTableProps<T>) {
     // --- State ---
     const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
@@ -238,12 +274,15 @@ export function DataTable<T extends { id: string | number }>({
     // --- Cell Renderer ---
     const renderCell = (item: T, key: string) => {
         const rawValue = (item as any)[key];
+
+        if (Array.isArray(rawValue) && arrays[key]) {
+            return <ArrayCell value={rawValue} maxItems={arrays[key]?.maxItems || 3} />;
+        }
+
         const stringValue = String(rawValue ?? '');
 
-        // Check if this column has an image configuration
         if (images[key]) {
             const imageValue = images[key](item);
-            // Handle both single URL and array of URLs
             const imageUrls = Array.isArray(imageValue) ? imageValue : (imageValue ? [imageValue] : []);
             return <MultiImageCell images={imageUrls} alt={stringValue} />;
         }
@@ -252,7 +291,7 @@ export function DataTable<T extends { id: string | number }>({
             return (
                 <div className="flex items-center gap-2">
                     {icons[key][stringValue]}
-                    <span className="text-xs font-bold tracking-tight text-zinc-700 dark:text-zinc-300">{stringValue}</span>
+                    <span className="text-xs font-bold tracking-tight text-gray-700 dark:text-gray-300">{stringValue}</span>
                 </div>
             );
         }
@@ -266,11 +305,11 @@ export function DataTable<T extends { id: string | number }>({
                         "bg-orange-600": color === 'orange',
                         "bg-blue-500": color === 'blue',
                         "bg-rose-500": color === 'rose',
-                        "bg-zinc-400": color === 'zinc',
+                        "bg-gray-400": color === 'zinc',
                         "bg-violet-500": color === 'violet',
                         "bg-amber-500": color === 'amber',
                     })} />
-                    <span className="text-[11px] font-bold uppercase tracking-tight text-zinc-600 dark:text-zinc-400">{stringValue}</span>
+                    <span className="text-[11px] font-bold uppercase tracking-tight text-gray-600 dark:text-gray-400">{stringValue}</span>
                 </div>
             );
         }
@@ -280,13 +319,13 @@ export function DataTable<T extends { id: string | number }>({
             return (
                 <Badge variant="secondary" className={cn(
                     "font-black text-[9px] uppercase tracking-[0.1em] px-2 py-0.5 rounded-lg border-none",
-                    color === 'blue' && "bg-blue-500/10 text-blue-600",
-                    color === 'orange' && "bg-orange-500/10 text-orange-600",
-                    color === 'violet' && "bg-violet-500/10 text-violet-600",
-                    color === 'emerald' && "bg-emerald-500/10 text-emerald-600",
-                    color === 'zinc' && "bg-zinc-100 dark:bg-zinc-800 text-zinc-600",
-                    color === 'rose' && "bg-rose-500/10 text-rose-600",
-                    color === 'amber' && "bg-amber-500/10 text-amber-600",
+                    color === 'blue' && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                    color === 'orange' && "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+                    color === 'violet' && "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+                    color === 'emerald' && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                    color === 'zinc' && "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
+                    color === 'rose' && "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+                    color === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
                 )}>
                     {stringValue}
                 </Badge>
@@ -295,33 +334,60 @@ export function DataTable<T extends { id: string | number }>({
 
         if (links[key]) {
             return (
-                <Link href={links[key](item)} className="text-zinc-900 text-sm dark:text-white hover:text-orange-600 font-bold flex items-center gap-1 group/link transition-all">
+                <Link href={links[key](item)} className="text-gray-900 text-sm dark:text-white hover:text-gray-600 dark:hover:text-gray-400 font-bold flex items-center gap-1 group/link transition-all">
                     {stringValue}
                     <ChevronRight size={12} className="opacity-0 group-hover/link:opacity-100 -translate-x-1 group-hover/link:translate-x-0 transition-all" />
                 </Link>
             );
         }
 
-        return <span className="text-xs font-bold tracking-tight text-zinc-700 dark:text-zinc-300">{stringValue || '-'}</span>;
+        return <span className="text-xs font-bold tracking-tight text-gray-700 dark:text-gray-300">{stringValue || '-'}</span>;
     };
 
-    // Split bulk actions - show first 3, rest in "More" dropdown
     const visibleBulkActions = bulkActions.slice(0, 3);
     const moreBulkActions = bulkActions.slice(3);
+
+    const hasActions = actions.length > 0 || renderActions;
+    const showCheckboxes = bulkActions.length > 0; // Changed: show checkboxes if there are any bulk actions
+
+    // Calculate sticky offsets based on what columns are shown
+    let checkboxOffset = 0;
+    let actionsOffset = 0;
+
+    if (stickyActions && actionsFirst) {
+        if (showCheckboxes) {
+            checkboxOffset = 40; // Checkbox column width
+            actionsOffset = 40; // Actions column starts after checkbox
+        } else if (hasActions) {
+            actionsOffset = 0; // Actions column starts at left edge
+        }
+    }
+
+    const stickyCheckboxClass = stickyActions && actionsFirst && showCheckboxes
+        ? "sticky left-0 bg-white dark:bg-black z-10 after:absolute after:right-0 after:top-0 after:h-full after:w-[1px] after:bg-gray-200 dark:after:bg-gray-800"
+        : "";
+
+    const stickyActionsLeftClass = stickyActions && actionsFirst && hasActions
+        ? `sticky ${showCheckboxes ? 'left-[40px]' : 'left-0'} bg-white dark:bg-black z-10 after:absolute after:right-0 after:top-0 after:h-full after:w-[1px] after:bg-gray-200 dark:after:bg-gray-800`
+        : "";
+
+    const stickyActionsRightClass = stickyActions && !actionsFirst && hasActions
+        ? "sticky right-0 bg-white dark:bg-black z-10 before:absolute before:left-0 before:top-0 before:h-full before:w-[1px] before:bg-gray-200 dark:before:bg-gray-800"
+        : "";
 
     // --- Empty State Render ---
     if (data.length === 0) {
         return (
-            <Card className="shadow-none border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#09090b] rounded-xl border-dashed">
+            <Card className="shadow-none border-gray-200 dark:border-gray-800 bg-white dark:bg-black rounded-xl border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-20 gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center border border-zinc-200 dark:border-zinc-800">
-                        <Inbox size={20} className="text-zinc-400" />
+                    <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center border border-gray-200 dark:border-gray-800">
+                        <Inbox size={20} className="text-gray-400 dark:text-gray-600" />
                     </div>
                     <div className="text-center space-y-1">
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-900 dark:text-white">
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-gray-900 dark:text-white">
                             {emptyTitle}
                         </h3>
-                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-relaxed">
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-relaxed">
                             {emptyDescription}
                         </p>
                     </div>
@@ -333,11 +399,12 @@ export function DataTable<T extends { id: string | number }>({
     // --- Main Table Render ---
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between px-1">
+            {/* Top Bar - Bulk Actions on left, Export/Columns on right */}
+            <div className="flex items-center justify-between gap-4 px-1">
                 <div className="flex items-center gap-2">
-                    {selectedIds.size > 0 && bulkActions.length > 0 && (
+                    {showCheckboxes && selectedIds.size > 0 && bulkActions.length > 0 && (
                         <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
-                            <span className="text-[10px] font-black uppercase text-orange-600 bg-orange-500/10 px-3 py-1.5 rounded-lg tracking-widest mr-2">
+                            <span className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg tracking-widest">
                                 {selectedIds.size} Selected
                             </span>
 
@@ -348,7 +415,7 @@ export function DataTable<T extends { id: string | number }>({
                                     size="sm"
                                     onClick={() => action.onClick(data.filter(d => selectedIds.has(d.id)))}
                                     className={cn(
-                                        "h-6 !py-5 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg",
+                                        "h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg",
                                         action.color && getButtonColorClasses(action.color)
                                     )}
                                 >
@@ -362,12 +429,12 @@ export function DataTable<T extends { id: string | number }>({
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="h-6 !py-5 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg"
+                                            className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700"
                                         >
                                             More Actions <ChevronDown size={12} />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-2xl">
+                                    <DropdownMenuContent align="start" className="w-48 rounded-xl shadow-2xl bg-white dark:bg-black border-gray-200 dark:border-gray-800">
                                         {moreBulkActions.map((action, i) => (
                                             <DropdownMenuItem
                                                 key={i}
@@ -376,8 +443,8 @@ export function DataTable<T extends { id: string | number }>({
                                                     setShowMoreBulkActions(false);
                                                 }}
                                                 className={cn(
-                                                    "font-bold text-xs gap-3 py-3 px-3 cursor-pointer",
-                                                    action.variant === 'destructive' && "text-rose-500"
+                                                    "font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg",
+                                                    action.variant === 'destructive' && "text-rose-600 dark:text-rose-400"
                                                 )}
                                             >
                                                 {action.icon}
@@ -389,27 +456,34 @@ export function DataTable<T extends { id: string | number }>({
                             )}
                         </div>
                     )}
+
+                    {showCheckboxes && selectedIds.size === 0 && (
+                        <p className='p-2 text-sm bg-gray-100 rounded-md text-gray-600 dark:text-gray-300 dark:bg-gray-900/90'>
+                            {bulkActionsMessage}
+                        </p>
+                    )}
                 </div>
 
-                <div className="flex items-center gap-2 ml-auto">
+                {/* Right side - Export and Columns buttons */}
+                <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={exportToCSV}
-                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg"
+                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50"
                     >
                         <Download size={14} /> Export
                     </Button>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg">
+                            <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50">
                                 <Settings2 size={14} /> Columns
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 rounded-xl border-zinc-200 dark:border-zinc-800 shadow-2xl">
-                            <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest text-zinc-400 p-3 text-center">Toggle Columns</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
+                        <DropdownMenuContent align="end" className="w-48 rounded-xl border-gray-200 dark:border-gray-800 shadow-2xl bg-white dark:bg-black">
+                            <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 p-3 text-center">Toggle Columns</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-800" />
                             {allKeys.map((key) => (
                                 <DropdownMenuCheckboxItem
                                     key={key}
@@ -417,7 +491,7 @@ export function DataTable<T extends { id: string | number }>({
                                     onCheckedChange={(checked) => {
                                         setVisibleColumns(prev => checked ? [...prev, key] : prev.filter(k => k !== key));
                                     }}
-                                    className="text-xs font-bold capitalize py-2 pr-3 pl-8 gap-0 cursor-pointer focus:bg-zinc-50 dark:focus:bg-zinc-900"
+                                    className="text-xs font-bold capitalize py-2 pr-3 pl-8 gap-0 cursor-pointer focus:bg-gray-100 dark:focus:bg-gray-900 rounded-lg"
                                 >
                                     {key.replace(/([A-Z])/g, ' $1')}
                                 </DropdownMenuCheckboxItem>
@@ -427,81 +501,93 @@ export function DataTable<T extends { id: string | number }>({
                 </div>
             </div>
 
-            <Card className="shadow-none border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-[#09090b] rounded-xl py-0">
+            {/* Main Table */}
+            <Card className="shadow-none border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-black rounded-xl py-0">
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-separate border-spacing-0">
-                            <thead className="bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
+                            <thead className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800">
                                 <tr>
-                                    <th className="p-4 w-10 border-b border-zinc-200 dark:border-zinc-800 align-middle">
-                                        <Checkbox checked={selectedIds.size === data.length} onCheckedChange={handleToggleAll} />
-                                    </th>
-                                    {actionsFirst && actions.length > 0 && (
-                                        <th className="p-4 text-[9px] font-black uppercase text-zinc-400 tracking-[0.25em] border-b border-zinc-200 dark:border-zinc-800 align-middle">
+                                    {showCheckboxes && (
+                                        <th className={cn("p-4 w-10 border-b border-gray-200 dark:border-gray-800 align-middle", stickyCheckboxClass)}>
+                                            <Checkbox checked={selectedIds.size === data.length} onCheckedChange={handleToggleAll} />
+                                        </th>
+                                    )}
+                                    {actionsFirst && hasActions && (
+                                        <th className={cn("p-4 text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-[0.25em] border-b border-gray-200 dark:border-gray-800 align-middle whitespace-nowrap", stickyActionsLeftClass)}>
                                             <span>Actions</span>
                                         </th>
                                     )}
                                     {visibleColumns.map(key => (
-                                        <th key={key} className="p-4 text-[9px] font-black uppercase text-zinc-400 tracking-[0.25em] border-b border-zinc-200 dark:border-zinc-800 align-middle">
+                                        <th key={key} className="p-4 text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-[0.25em] border-b border-gray-200 dark:border-gray-800 align-middle whitespace-nowrap">
                                             {key.replace(/([A-Z])/g, ' $1')}
                                         </th>
                                     ))}
-                                    {!actionsFirst && actions.length > 0 && (
-                                        <th className="p-4 text-[9px] font-black uppercase text-zinc-400 tracking-[0.25em] border-b border-zinc-200 dark:border-zinc-800 align-middle">
+                                    {!actionsFirst && hasActions && (
+                                        <th className={cn("p-4 text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-[0.25em] border-b border-gray-200 dark:border-gray-800 align-middle whitespace-nowrap", stickyActionsRightClass)}>
                                             <span>Actions</span>
                                         </th>
                                     )}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {data.map((item) => (
                                     <tr key={item.id} className={cn(
-                                        "hover:bg-zinc-50/30 dark:hover:bg-zinc-900/20 transition-colors group",
-                                        selectedIds.has(item.id) && "bg-orange-500/[0.02]"
+                                        "hover:bg-gray-50/30 dark:hover:bg-gray-900/20 transition-colors group",
+                                        showCheckboxes && selectedIds.has(item.id) && "bg-gray-500/[0.02]"
                                     )}>
-                                        <td className="p-4 w-10 h-px align-middle border-none">
-                                            <Checkbox checked={selectedIds.has(item.id)} onCheckedChange={() => handleToggleOne(item.id)} />
-                                        </td>
-                                        {actionsFirst && actions.length > 0 && (
-                                            <td className="p-4 py-3 text-left h-px align-middle border-none">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 transition-all">
-                                                            <MoreVertical size={14} />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-2xl border-zinc-200 dark:border-zinc-800">
-                                                        {displayConfigs.map((config) => (
-                                                            <DropdownMenuItem
-                                                                key={config.id}
-                                                                onClick={() => {
-                                                                    setActiveView({
-                                                                        data: config.getData(item),
-                                                                        config,
-                                                                        onClose: () => setActiveView(null)
-                                                                    });
-                                                                }}
-                                                                className="font-bold text-xs gap-3 py-3 px-3 cursor-pointer"
-                                                            >
-                                                                <div className="text-orange-600">{config.icon}</div>
-                                                                {config.label}
-                                                            </DropdownMenuItem>
-                                                        ))}
-                                                        {displayConfigs.length > 0 && <DropdownMenuSeparator />}
-                                                        {actions.map((a, i) => (
-                                                            <DropdownMenuItem
-                                                                key={i}
-                                                                onClick={() => a.onClick(item)}
-                                                                className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer",
-                                                                    typeof a.variant === 'function' ? a.variant(item) === 'destructive' && "text-rose-500" : a.variant === 'destructive' && "text-rose-500"
-                                                                )}
-                                                            >
-                                                                {typeof a.icon === 'function' ? a.icon(item) : a.icon}
-                                                                {typeof a.label === 'function' ? a.label(item) : a.label}
-                                                            </DropdownMenuItem>
-                                                        ))}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                        {showCheckboxes && (
+                                            <td className={cn("p-4 w-10 h-px align-middle border-none", stickyCheckboxClass)}>
+                                                <Checkbox checked={selectedIds.has(item.id)} onCheckedChange={() => handleToggleOne(item.id)} />
+                                            </td>
+                                        )}
+                                        {actionsFirst && hasActions && (
+                                            <td className={cn("p-4 py-3 text-left h-px align-middle border-none", stickyActionsLeftClass)}>
+                                                {renderActions ? (
+                                                    renderActions(item)
+                                                ) : (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 transition-all rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50">
+                                                                <MoreVertical size={14} className="text-gray-500 dark:text-gray-400" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-2xl border-gray-200 dark:border-gray-800 bg-white dark:bg-black p-1">
+                                                            {displayConfigs.map((config) => (
+                                                                <DropdownMenuItem
+                                                                    key={config.id}
+                                                                    onClick={() => {
+                                                                        setActiveView({
+                                                                            data: config.getData(item),
+                                                                            config,
+                                                                            onClose: () => setActiveView(null)
+                                                                        });
+                                                                    }}
+                                                                    className="font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
+                                                                >
+                                                                    <div className="text-gray-600 dark:text-gray-400">{config.icon}</div>
+                                                                    {config.label}
+                                                                </DropdownMenuItem>
+                                                            ))}
+                                                            {displayConfigs.length > 0 && actions.length > 0 && <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-800" />}
+                                                            {actions.map((a, i) => (
+                                                                <DropdownMenuItem
+                                                                    key={i}
+                                                                    onClick={() => a.onClick(item)}
+                                                                    className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg",
+                                                                        typeof a.variant === 'function'
+                                                                            ? a.variant(item) === 'destructive' && "text-rose-600 dark:text-rose-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                                            : a.variant === 'destructive' && "text-rose-600 dark:text-rose-400 hover:bg-red-50 dark:hover:bg-red-950/20",
+                                                                        "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
+                                                                    )}
+                                                                >
+                                                                    {typeof a.icon === 'function' ? a.icon(item) : a.icon}
+                                                                    {typeof a.label === 'function' ? a.label(item) : a.label}
+                                                                </DropdownMenuItem>
+                                                            ))}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                )}
                                             </td>
                                         )}
                                         {visibleColumns.map(key => (
@@ -509,46 +595,53 @@ export function DataTable<T extends { id: string | number }>({
                                                 {renderCell(item, key)}
                                             </td>
                                         ))}
-                                        {!actionsFirst && actions.length > 0 && (
-                                            <td className="p-4 py-3 text-right h-px align-middle border-none">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 transition-all">
-                                                            <MoreVertical size={14} />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-2xl border-zinc-200 dark:border-zinc-800">
-                                                        {displayConfigs.map((config) => (
-                                                            <DropdownMenuItem
-                                                                key={config.id}
-                                                                onClick={() => {
-                                                                    setActiveView({
-                                                                        data: config.getData(item),
-                                                                        config,
-                                                                        onClose: () => setActiveView(null)
-                                                                    });
-                                                                }}
-                                                                className="font-bold text-xs gap-3 py-3 px-3 cursor-pointer"
-                                                            >
-                                                                <div className="text-orange-600">{config.icon}</div>
-                                                                {config.label}
-                                                            </DropdownMenuItem>
-                                                        ))}
-                                                        {displayConfigs.length > 0 && <DropdownMenuSeparator />}
-                                                        {actions.map((a, i) => (
-                                                            <DropdownMenuItem
-                                                                key={i}
-                                                                onClick={() => a.onClick(item)}
-                                                                className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer",
-                                                                    typeof a.variant === 'function' ? a.variant(item) === 'destructive' && "text-rose-500" : a.variant === 'destructive' && "text-rose-500"
-                                                                )}
-                                                            >
-                                                                {typeof a.icon === 'function' ? a.icon(item) : a.icon}
-                                                                {typeof a.label === 'function' ? a.label(item) : a.label}
-                                                            </DropdownMenuItem>
-                                                        ))}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                        {!actionsFirst && hasActions && (
+                                            <td className={cn("p-4 py-3 text-right h-px align-middle border-none", stickyActionsRightClass)}>
+                                                {renderActions ? (
+                                                    renderActions(item)
+                                                ) : (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 transition-all rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50">
+                                                                <MoreVertical size={14} className="text-gray-500 dark:text-gray-400" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-2xl border-gray-200 dark:border-gray-800 bg-white dark:bg-black p-1">
+                                                            {displayConfigs.map((config) => (
+                                                                <DropdownMenuItem
+                                                                    key={config.id}
+                                                                    onClick={() => {
+                                                                        setActiveView({
+                                                                            data: config.getData(item),
+                                                                            config,
+                                                                            onClose: () => setActiveView(null)
+                                                                        });
+                                                                    }}
+                                                                    className="font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
+                                                                >
+                                                                    <div className="text-gray-600 dark:text-gray-400">{config.icon}</div>
+                                                                    {config.label}
+                                                                </DropdownMenuItem>
+                                                            ))}
+                                                            {displayConfigs.length > 0 && actions.length > 0 && <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-800" />}
+                                                            {actions.map((a, i) => (
+                                                                <DropdownMenuItem
+                                                                    key={i}
+                                                                    onClick={() => a.onClick(item)}
+                                                                    className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg",
+                                                                        typeof a.variant === 'function'
+                                                                            ? a.variant(item) === 'destructive' && "text-rose-600 dark:text-rose-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                                            : a.variant === 'destructive' && "text-rose-600 dark:text-rose-400 hover:bg-red-50 dark:hover:bg-red-950/20",
+                                                                        "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
+                                                                    )}
+                                                                >
+                                                                    {typeof a.icon === 'function' ? a.icon(item) : a.icon}
+                                                                    {typeof a.label === 'function' ? a.label(item) : a.label}
+                                                                </DropdownMenuItem>
+                                                            ))}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                )}
                                             </td>
                                         )}
                                     </tr>
@@ -587,6 +680,7 @@ export function DataTable<T extends { id: string | number }>({
                                 description=""
                                 open={!!activeView}
                                 onOpenChange={(open) => !open && onClose()}
+                                contentWidth="max-w-2xl"
                             >
                                 {config.component(viewData, onClose)}
                             </CustomDialog>
@@ -600,6 +694,7 @@ export function DataTable<T extends { id: string | number }>({
                         description=""
                         open={!!activeView}
                         onOpenChange={(open) => !open && onClose()}
+                        contentWidth="max-w-2xl"
                     >
                         <DataDisplay data={viewData} excludeKeys={config.excludeKeys} />
                     </CustomDialog>

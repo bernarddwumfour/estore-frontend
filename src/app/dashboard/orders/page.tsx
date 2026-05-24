@@ -20,6 +20,8 @@ import { DataTable } from '@/widgets/Customtable/DataTable';
 import OrderDetailCard from './OrderDetailCard';
 import OrderItemsList from './OrderItemsList';
 import ShippingAddressCard from './ShippingAddressCard';
+import { useRouter } from 'next/navigation';
+import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
 
 // Types
 interface Order {
@@ -102,9 +104,9 @@ function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSucc
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">Order Status</label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Order Status</label>
         <select
-          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+          className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
         >
@@ -115,8 +117,18 @@ function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSucc
         </select>
       </div>
       <div className="flex justify-end gap-2 pt-4">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={handleSubmit} disabled={isSubmitting || !selectedStatus}>
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting || !selectedStatus}
+          className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-lg"
+        >
           {isSubmitting ? "Updating..." : "Update Status"}
         </Button>
       </div>
@@ -165,9 +177,9 @@ function UpdatePaymentForm({ order, onSuccess, onCancel }: { order: Order; onSuc
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">Payment Status</label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Status</label>
         <select
-          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+          className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
         >
@@ -178,8 +190,18 @@ function UpdatePaymentForm({ order, onSuccess, onCancel }: { order: Order; onSuc
         </select>
       </div>
       <div className="flex justify-end gap-2 pt-4">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={handleSubmit} disabled={isSubmitting || !selectedStatus}>
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting || !selectedStatus}
+          className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-lg"
+        >
           {isSubmitting ? "Updating..." : "Update Payment"}
         </Button>
       </div>
@@ -189,6 +211,7 @@ function UpdatePaymentForm({ order, onSuccess, onCancel }: { order: Order; onSuc
 
 export default function OrdersPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   // State for sheets/dialogs
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
@@ -218,11 +241,23 @@ export default function OrdersPage() {
   });
 
   // Single action helpers
-  const handleDelete = (order: Order) => {
-    if (confirm(`Delete order "${order.order_number}"? This action cannot be undone.`)) {
-      bulkActionMutation.mutate({ action: 'delete', ids: [order.id] });
-    }
-  };
+  // const handleDelete = async (order: Order) => {
+  //   if (confirm(`Delete order "${order.order_number}"? This action cannot be undone.`)) {
+  //     try {
+  //       const response = await securityAxios.delete(
+  //         endpoints.orders.deleteOrder.replace(":id", order.id)
+  //       );
+  //       if (response.data.success) {
+  //         toast.success(`Order ${order.order_number} deleted successfully`);
+  //         queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+  //       } else {
+  //         toast.error(response.data.message || "Failed to delete order");
+  //       }
+  //     } catch (error: any) {
+  //       toast.error(error?.response?.data?.message || "Failed to delete order");
+  //     }
+  //   }
+  // };
 
   // Bulk actions
   const handleBulkConfirm = (selectedItems: Order[]) => {
@@ -268,42 +303,70 @@ export default function OrdersPage() {
     toast.success(`Exported ${selectedItems.length} orders`);
   };
 
-  // Row actions
-  const actions = [
-    {
-      label: 'View Details',
-      icon: <Eye size={14} />,
-      onClick: (order: Order) => setViewingOrder(order)
-    },
-    {
-      label: 'View Items',
-      icon: <ShoppingCart size={14} />,
-      onClick: (order: Order) => setViewingItemsFor(order)
-    },
-    {
-      label: 'Shipping Address',
-      icon: <MapPin size={14} />,
-      onClick: (order: Order) => setViewingAddressFor(order)
-    },
-    {
-      label: 'Update Status',
-      icon: <PackageCheck size={14} />,
-      onClick: (order: Order) => setUpdatingStatusFor(order)
-    },
-    {
-      label: 'Update Payment',
-      icon: <CreditCard size={14} />,
-      onClick: (order: Order) => setUpdatingPaymentFor(order)
-    },
-    {
-      label: 'Delete Order',
-      icon: <Trash2 size={14} />,
-      variant: 'destructive' as const,
-      onClick: handleDelete
-    },
-  ];
 
-  // Bulk actions
+  const getOrderActions = (order: Order): ActionItem[] => {
+    const actions: ActionItem[] = [];
+
+    actions.push({
+      label: 'View Details',
+      icon: <Eye />,
+      onClick: () => router.push(`/dashboard/orders/${order.id}`),
+      color: 'blue', // Add color for specific actions
+    });
+
+    if (order.items && order.items.length > 0) {
+      actions.push({
+        label: 'View Items',
+        icon: <ShoppingCart />,
+        onClick: () => setViewingItemsFor(order),
+        color: 'violet',
+      });
+    }
+
+
+    actions.push({
+      label: 'Update Status',
+      icon: <PackageCheck />,
+      onClick: () => setUpdatingStatusFor(order),
+      color: 'emerald',
+    });
+
+    actions.push({
+      label: 'Update Payment',
+      icon: <CreditCard />,
+      onClick: () => setUpdatingPaymentFor(order),
+      color: 'orange',
+    });
+
+    actions.push({
+      label: 'Edit Order',
+      icon: <Edit />,
+      onClick: () => router.push(`/dashboard/orders/${order.id}/edit`),
+      color: 'blue',
+    });
+
+    if (order.shipping_address) {
+      actions.push({
+        label: 'Shipping Address',
+        icon: <MapPin />,
+        onClick: () => setViewingAddressFor(order),
+        color: 'amber',
+      });
+    }
+
+
+    // actions.push({
+    //     label: 'Delete Order',
+    //     icon: <Trash2 />,
+    //     variant: 'destructive', // This will override color
+    //     onClick: () => handleDelete(order),
+    // });
+
+    return actions;
+  };
+
+
+  // Bulk actions array
   const bulkActions = [
     { label: 'Confirm Selected', icon: <CheckCircle size={14} />, onClick: handleBulkConfirm, color: 'emerald' as const },
     { label: 'Process Selected', icon: <RefreshCw size={14} />, onClick: handleBulkProcess, color: 'blue' as const },
@@ -316,7 +379,7 @@ export default function OrdersPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
       </div>
     );
   }
@@ -324,7 +387,7 @@ export default function OrdersPage() {
   if (isError) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-500">Error loading orders: {error?.message}</p>
+        <p className="text-red-600 dark:text-red-400">Error loading orders: {error?.message}</p>
       </div>
     );
   }
@@ -336,8 +399,8 @@ export default function OrdersPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
-          <p className="text-sm text-muted-foreground">Manage and track customer orders</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Orders</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage and track customer orders</p>
         </div>
       </div>
 
@@ -439,7 +502,14 @@ export default function OrdersPage() {
       {/* Data Table */}
       <DataTable
         data={orders}
-        actions={actions}
+        renderActions={(order: Order) => (
+          <ActionsDropdown
+            actions={getOrderActions(order)}
+            maxVisible={3}
+            showLabels={false}
+            buttonSize="sm"
+          />
+        )}
         bulkActions={bulkActions}
         excludeColumns={['id', 'items', 'shipping_address', 'timestamps', 'guest_info', 'admin_note']}
         dots={{

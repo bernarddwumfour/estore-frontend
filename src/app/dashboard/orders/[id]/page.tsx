@@ -2,18 +2,23 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import securityAxios from "@/axios-instances/SecurityAxios";
 import { endpoints } from "@/constants/endpoints/endpoints";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Calendar, Package, MapPin, CreditCard, Truck, CheckCircle, ArrowLeft, Loader2, DollarSign, Phone, Mail, User, Hash, Circle, CircleCheck, CircleDot, TruckIcon, PackageCheck, XCircle, Timer, ShoppingBag } from "lucide-react";
+import { Clock, Package, MapPin, CreditCard, Truck, CheckCircle, ArrowLeft, Loader2, DollarSign, Phone, Mail, User, Hash, PackageCheck, XCircle, Timer, ShoppingBag, Eye, ShoppingCart, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 import { DataTable } from '@/widgets/Customtable/DataTable';
+import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
 import { cn } from "@/lib/utils";
+import { Dispatch, SetStateAction, useState } from 'react';
+import { CustomSelect, selectField } from '@/widgets/custom-select/CustomSelect';
+import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
+
 
 interface OrderItem {
     id: string;
@@ -85,7 +90,6 @@ interface TimelineEvent {
     icon: React.ReactNode;
     status: 'completed' | 'current' | 'pending' | 'cancelled';
 }
-
 const fetchOrderById = async (orderId: string): Promise<OrderData> => {
     if (!orderId) throw new Error("Order ID is required");
 
@@ -163,36 +167,38 @@ function OrderTimeline({ order }: { order: OrderData }) {
             case 'completed':
                 return 'bg-green-500 border-green-500 dark:bg-green-600 dark:border-green-600';
             case 'current':
-                return 'bg-orange-500 border-orange-500 dark:bg-orange-600 dark:border-orange-600 ring-4 ring-orange-500/20 dark:ring-orange-600/30';
+                return 'bg-gray-900 border-gray-900 dark:bg-white dark:border-white ring-4 ring-gray-900/20 dark:ring-white/30';
             case 'cancelled':
                 return 'bg-red-500 border-red-500 dark:bg-red-600 dark:border-red-600';
             default:
-                return 'bg-gray-300 border-gray-300 dark:bg-gray-700 dark:border-gray-600';
+                return 'bg-gray-300 border-gray-300 dark:bg-gray-700 dark:border-gray-700';
         }
     };
 
     const getTextColor = (status: string) => {
         switch (status) {
             case 'completed': return 'text-green-600 dark:text-green-400';
-            case 'current': return 'text-orange-600 dark:text-orange-400';
+            case 'current': return 'text-gray-900 dark:text-white';
             case 'cancelled': return 'text-red-600 dark:text-red-400';
-            default: return 'text-muted-foreground';
+            default: return 'text-gray-500 dark:text-gray-400';
         }
     };
 
     return (
-        <Card>
+        <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black">
             <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white text-lg font-semibold">
+                    <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     Order Timeline
                 </CardTitle>
-                <CardDescription>Track your order status</CardDescription>
+                <CardDescription className="text-sm text-gray-500 dark:text-gray-400">
+                    Track your order status
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="relative">
                     {/* Vertical Line */}
-                    <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-200 dark:bg-gray-700" />
+                    <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-200 dark:bg-gray-800" />
 
                     <div className="space-y-6 relative">
                         {timelineEvents.map((event, index) => {
@@ -201,7 +207,7 @@ function OrderTimeline({ order }: { order: OrderData }) {
                                 <div key={event.label} className="relative flex gap-4">
                                     {/* Icon Circle */}
                                     <div className={cn(
-                                        "relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2 bg-white dark:bg-gray-900 transition-all shadow-sm",
+                                        "relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2 bg-white dark:bg-black transition-all shadow-sm",
                                         getStatusColor(event.status)
                                     )}>
                                         <div className={cn("text-white", getStatusColor(event.status))}>
@@ -213,14 +219,14 @@ function OrderTimeline({ order }: { order: OrderData }) {
                                     <div className="flex-1 pb-4">
                                         <div className="flex items-center justify-between flex-wrap gap-2">
                                             <h4 className={cn(
-                                                "font-semibold",
+                                                "font-semibold text-sm",
                                                 event.status === 'cancelled' && "line-through",
                                                 getTextColor(event.status)
                                             )}>
                                                 {event.label}
                                             </h4>
                                             {event.date && (
-                                                <time className="text-xs text-muted-foreground">
+                                                <time className="text-xs text-gray-500 dark:text-gray-400">
                                                     {new Date(event.date).toLocaleDateString('en-US', {
                                                         month: 'short',
                                                         day: 'numeric',
@@ -231,7 +237,7 @@ function OrderTimeline({ order }: { order: OrderData }) {
                                             )}
                                         </div>
                                         {event.status === 'current' && (
-                                            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">In progress...</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">In progress...</p>
                                         )}
                                         {event.status === 'cancelled' && event.label === 'Cancelled' && (
                                             <p className="text-sm text-red-600 dark:text-red-400 mt-1">Order has been cancelled</p>
@@ -247,10 +253,36 @@ function OrderTimeline({ order }: { order: OrderData }) {
     );
 }
 
+
 export default function OrderDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const queryClient = useQueryClient();
     const orderId = params?.id as string;
+
+    // State for dialogs
+    const [updatingStatus, setUpdatingStatus] = useState(false);
+    const [updatingPayment, setUpdatingPayment] = useState(false);
+    const [selectedStatus, setSelectedStatus] = useState<selectField | undefined>();
+    const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<selectField | undefined>();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Status options for CustomSelect
+    const statusOptions: selectField[] = [
+        { id: 'confirmed', label: 'Confirmed', value: 'confirmed' },
+        { id: 'processing', label: 'Processing', value: 'processing' },
+        { id: 'shipped', label: 'Shipped', value: 'shipped' },
+        { id: 'delivered', label: 'Delivered', value: 'delivered' },
+        { id: 'cancelled', label: 'Cancelled', value: 'cancelled' },
+    ];
+
+    // Payment status options for CustomSelect
+    const paymentStatusOptions: selectField[] = [
+        { id: 'pending', label: 'Pending', value: 'pending' },
+        { id: 'paid', label: 'Paid', value: 'paid' },
+        { id: 'failed', label: 'Failed', value: 'failed' },
+        { id: 'refunded', label: 'Refunded', value: 'refunded' },
+    ];
 
     const {
         data: order,
@@ -283,25 +315,142 @@ export default function OrderDetailPage() {
 
     const getStatusColor = (status: string) => {
         switch (status?.toLowerCase()) {
-            case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
-            case "confirmed": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
-            case "processing": return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
-            case "shipped": return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400";
-            case "delivered": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
-            case "cancelled": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-            case "refunded": return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
-            default: return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+            case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 border-yellow-200 dark:border-yellow-900";
+            case "confirmed": return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-900";
+            case "processing": return "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 border-purple-200 dark:border-purple-900";
+            case "shipped": return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900";
+            case "delivered": return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-900";
+            case "cancelled": return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-900";
+            case "refunded": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300 border-gray-200 dark:border-gray-800";
+            default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300 border-gray-200 dark:border-gray-800";
         }
     };
 
     const getPaymentStatusColor = (status: string) => {
         switch (status?.toLowerCase()) {
-            case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
-            case "paid": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
-            case "failed": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-            case "refunded": return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
-            default: return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+            case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 border-yellow-200 dark:border-yellow-900";
+            case "paid": return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-900";
+            case "failed": return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-900";
+            case "refunded": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300 border-gray-200 dark:border-gray-800";
+            default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300 border-gray-200 dark:border-gray-800";
         }
+    };
+
+    // Handle status update
+    const handleUpdateStatus = async () => {
+        if (!selectedStatus) {
+            toast.error("Please select a status");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const response = await securityAxios.put(
+                endpoints.orders.updateStatus.replace(":id", orderId),
+                { status: selectedStatus.value }
+            );
+
+            if (response.data.success) {
+                toast.success(`Order status updated to ${selectedStatus.label}`);
+                setUpdatingStatus(false);
+                setSelectedStatus(undefined);
+                queryClient.invalidateQueries({ queryKey: ["order-detail", orderId] });
+                queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+            } else {
+                toast.error(response.data.message || "Failed to update status");
+            }
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || "Failed to update status");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Handle payment status update
+    const handleUpdatePayment = async () => {
+        if (!selectedPaymentStatus) {
+            toast.error("Please select a payment status");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const response = await securityAxios.put(
+                endpoints.orders.updatePaymentStatus.replace(":id", orderId),
+                { payment_status: selectedPaymentStatus.value }
+            );
+
+            if (response.data.success) {
+                toast.success(`Payment status updated to ${selectedPaymentStatus.label}`);
+                setUpdatingPayment(false);
+                setSelectedPaymentStatus(undefined);
+                queryClient.invalidateQueries({ queryKey: ["order-detail", orderId] });
+                queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+            } else {
+                toast.error(response.data.message || "Failed to update payment");
+            }
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || "Failed to update payment");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+
+
+    // Define actions for this page
+    const getOrderActions = (orderData: OrderData): ActionItem[] => {
+        const actions: ActionItem[] = [];
+
+        // View Items - scroll to items section
+        actions.push({
+            label: 'View Items',
+            icon: <ShoppingCart />,
+            onClick: () => {
+                document.getElementById('order-items')?.scrollIntoView({ behavior: 'smooth' });
+            },
+            color: 'violet',
+        });
+
+        // Shipping Address - scroll to address section
+        if (orderData.shipping_address) {
+            actions.push({
+                label: 'Shipping Address',
+                icon: <MapPin />,
+                onClick: () => {
+                    document.getElementById('shipping-address')?.scrollIntoView({ behavior: 'smooth' });
+                },
+                color: 'amber',
+            });
+        }
+
+        // Update Status
+        actions.push({
+            label: 'Update Status',
+            icon: <PackageCheck />,
+            onClick: () => setUpdatingStatus(true),
+            color: 'emerald',
+        });
+
+        // Update Payment
+        actions.push({
+            label: 'Update Payment',
+            icon: <CreditCard />,
+            onClick: () => setUpdatingPayment(true),
+            color: 'orange',
+        });
+
+        // Edit Order
+        actions.push({
+            label: 'Edit Order',
+            icon: <Edit />,
+            onClick: () => router.push(`/dashboard/orders/${orderData.id}/edit`),
+            color: 'blue',
+        });
+
+
+
+        return actions;
     };
 
     // Actions for items table
@@ -317,9 +466,9 @@ export default function OrderDetailPage() {
 
     if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-orange-600 dark:text-orange-500" />
-                <p className="mt-4 text-muted-foreground">Loading order details...</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-900 dark:text-gray-100" />
+                <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading order details...</p>
             </div>
         );
     }
@@ -327,12 +476,12 @@ export default function OrderDetailPage() {
     if (isError || !order) {
         return (
             <div className="container mx-auto py-12 px-4">
-                <Card className="max-w-2xl mx-auto p-8 text-center">
+                <Card className="max-w-2xl mx-auto p-8 text-center border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black">
                     <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Order Not Found</h2>
-                    <p className="text-muted-foreground mb-6">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                         We couldn't find the order you're looking for.
                     </p>
-                    <Button asChild variant="outline">
+                    <Button asChild variant="outline" className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg">
                         <Link href="/dashboard/orders">
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back to Orders
@@ -344,10 +493,10 @@ export default function OrderDetailPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 px-4">
+        <div className="container mx-auto py-8 px-4 max-w-7xl">
             {/* Back Button */}
             <div className="mb-6">
-                <Button asChild variant="ghost" size="sm">
+                <Button asChild variant="ghost" size="sm" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg">
                     <Link href="/dashboard/orders">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Orders
@@ -357,78 +506,77 @@ export default function OrderDetailPage() {
 
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex justify-between items-start border-b pb-4 dark:border-gray-800">
+                <div className="flex justify-between items-start border-b border-gray-200 dark:border-gray-800 pb-4">
                     <div>
-                        <h1 className="text-3xl font-bold">Order #{order.order_number}</h1>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Order #{order.order_number}</h1>
                         <div className="flex items-center gap-2 mt-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground">Placed on {formatDate(order.created_at)}</p>
+                            <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Placed on {formatDate(order.created_at)}</p>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <Button asChild variant="outline" size="sm">
-                            <Link href={`/dashboard/orders/${order.id}/edit`}>
-                                Edit Order
-                            </Link>
-                        </Button>
-                    </div>
+                    <ActionsDropdown
+                        actions={getOrderActions(order)}
+                        maxVisible={4}
+                        showLabels={true}
+                        buttonSize="md"
+                    />
                 </div>
 
                 {/* Status Badges */}
                 <div className="flex flex-wrap gap-2">
-                    <Badge className={getStatusColor(order.status)}>
+                    <Badge className={`${getStatusColor(order.status)} rounded-lg px-3 py-1 text-xs font-medium`}>
                         {order.status_display}
                     </Badge>
-                    <Badge className={getPaymentStatusColor(order.payment_status)}>
+                    <Badge className={`${getPaymentStatusColor(order.payment_status)} rounded-lg px-3 py-1 text-xs font-medium`}>
                         Payment: {order.payment_status_display}
                     </Badge>
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg px-3 py-1 text-xs font-medium">
                         {order.payment_method_display}
                     </Badge>
                 </div>
 
-                <Separator className="dark:bg-gray-800" />
+                <Separator className="bg-gray-200 dark:bg-gray-800" />
 
                 {/* Customer & Order Summary */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card>
+                    <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black">
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                <User className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                 Customer Information
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-1">
-                            <p className="font-medium">{order.customer_name}</p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <p className="font-medium text-gray-900 dark:text-white">{order.customer_name}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                                 <Mail className="h-3 w-3" /> {order.customer_email}
                             </p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black">
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                <Hash className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                <Hash className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                 Order Summary
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-1">
-                            <p className="font-medium">{order.item_count} {order.item_count === 1 ? 'Item' : 'Items'}</p>
-                            <p className="text-sm text-muted-foreground">Shipping: {order.shipping_method || 'Standard'}</p>
-                            {order.carrier && <p className="text-sm text-muted-foreground">Carrier: {order.carrier}</p>}
+                            <p className="font-medium text-gray-900 dark:text-white">{order.item_count} {order.item_count === 1 ? 'Item' : 'Items'}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Shipping: {order.shipping_method || 'Standard'}</p>
+                            {order.carrier && <p className="text-sm text-gray-500 dark:text-gray-400">Carrier: {order.carrier}</p>}
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black">
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                <DollarSign className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                 Order Total
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-2xl font-bold">
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                 {order.currency} {order.total.toFixed(2)}
                             </p>
                         </CardContent>
@@ -436,45 +584,45 @@ export default function OrderDetailPage() {
                 </div>
 
                 {/* Financial Breakdown */}
-                <Card>
+                <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black">
                     <CardHeader>
-                        <CardTitle className="text-lg">Financial Breakdown</CardTitle>
-                        <CardDescription>Order cost details</CardDescription>
+                        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Financial Breakdown</CardTitle>
+                        <CardDescription className="text-sm text-gray-500 dark:text-gray-400">Order cost details</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-2">
                             <div className="flex justify-between py-2">
-                                <span className="text-muted-foreground">Subtotal</span>
-                                <span>{order.currency} {order.subtotal.toFixed(2)}</span>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">Subtotal</span>
+                                <span className="text-sm text-gray-900 dark:text-white">{order.currency} {order.subtotal.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between py-2">
-                                <span className="text-muted-foreground">Shipping</span>
-                                <span>{order.currency} {order.shipping_cost.toFixed(2)}</span>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">Shipping</span>
+                                <span className="text-sm text-gray-900 dark:text-white">{order.currency} {order.shipping_cost.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between py-2">
-                                <span className="text-muted-foreground">Tax</span>
-                                <span>{order.currency} {order.tax_amount.toFixed(2)}</span>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">Tax</span>
+                                <span className="text-sm text-gray-900 dark:text-white">{order.currency} {order.tax_amount.toFixed(2)}</span>
                             </div>
                             {order.discount_amount > 0 && (
                                 <div className="flex justify-between py-2 text-green-600 dark:text-green-400">
-                                    <span>Discount</span>
-                                    <span>-{order.currency} {order.discount_amount.toFixed(2)}</span>
+                                    <span className="text-sm">Discount</span>
+                                    <span className="text-sm">-{order.currency} {order.discount_amount.toFixed(2)}</span>
                                 </div>
                             )}
-                            <Separator className="my-2 dark:bg-gray-800" />
+                            <Separator className="my-2 bg-gray-200 dark:bg-gray-800" />
                             <div className="flex justify-between py-2 font-bold">
-                                <span>Total</span>
-                                <span>{order.currency} {order.total.toFixed(2)}</span>
+                                <span className="text-base text-gray-900 dark:text-white">Total</span>
+                                <span className="text-base text-gray-900 dark:text-white">{order.currency} {order.total.toFixed(2)}</span>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
                 {/* Items Table - Using DataTable */}
-                <Card>
+                <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black" id="order-items">
                     <CardHeader>
-                        <CardTitle className="text-lg">Order Items</CardTitle>
-                        <CardDescription>All items in this order</CardDescription>
+                        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Order Items</CardTitle>
+                        <CardDescription className="text-sm text-gray-500 dark:text-gray-400">All items in this order</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <DataTable
@@ -499,26 +647,26 @@ export default function OrderDetailPage() {
 
                 {/* Shipping Address */}
                 {order.shipping_address && (
-                    <Card>
+                    <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black" id="shipping-address">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4" />
+                            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white text-lg font-semibold">
+                                <MapPin className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                 Shipping Address
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-1">
-                            <p className="font-medium">{order.shipping_address.first_name} {order.shipping_address.last_name}</p>
-                            <p className="text-sm">{order.shipping_address.address_line1}</p>
-                            {order.shipping_address.address_line2 && <p className="text-sm">{order.shipping_address.address_line2}</p>}
-                            <p className="text-sm">
+                            <p className="font-medium text-gray-900 dark:text-white">{order.shipping_address.first_name} {order.shipping_address.last_name}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{order.shipping_address.address_line1}</p>
+                            {order.shipping_address.address_line2 && <p className="text-sm text-gray-600 dark:text-gray-400">{order.shipping_address.address_line2}</p>}
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
                                 {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.postal_code}
                             </p>
-                            <p className="text-sm">{order.shipping_address.country}</p>
-                            <div className="flex items-center gap-4 mt-2 pt-2 border-t dark:border-gray-800">
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{order.shipping_address.country}</p>
+                            <div className="flex items-center gap-4 mt-2 pt-2 border-t border-gray-200 dark:border-gray-800">
+                                <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                                     <Phone className="h-3 w-3" /> {order.shipping_address.phone}
                                 </p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                                     <Mail className="h-3 w-3" /> {order.shipping_address.email}
                                 </p>
                             </div>
@@ -528,26 +676,26 @@ export default function OrderDetailPage() {
 
                 {/* Billing Address (if different from shipping) */}
                 {order.billing_address && order.billing_address.id !== order.shipping_address?.id && (
-                    <Card>
+                    <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <CreditCard className="h-4 w-4" />
+                            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white text-lg font-semibold">
+                                <CreditCard className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                 Billing Address
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-1">
-                            <p className="font-medium">{order.billing_address.first_name} {order.billing_address.last_name}</p>
-                            <p className="text-sm">{order.billing_address.address_line1}</p>
-                            {order.billing_address.address_line2 && <p className="text-sm">{order.billing_address.address_line2}</p>}
-                            <p className="text-sm">
+                            <p className="font-medium text-gray-900 dark:text-white">{order.billing_address.first_name} {order.billing_address.last_name}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{order.billing_address.address_line1}</p>
+                            {order.billing_address.address_line2 && <p className="text-sm text-gray-600 dark:text-gray-400">{order.billing_address.address_line2}</p>}
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
                                 {order.billing_address.city}, {order.billing_address.state} {order.billing_address.postal_code}
                             </p>
-                            <p className="text-sm">{order.billing_address.country}</p>
-                            <div className="flex items-center gap-4 mt-2 pt-2 border-t dark:border-gray-800">
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{order.billing_address.country}</p>
+                            <div className="flex items-center gap-4 mt-2 pt-2 border-t border-gray-200 dark:border-gray-800">
+                                <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                                     <Phone className="h-3 w-3" /> {order.billing_address.phone}
                                 </p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                                     <Mail className="h-3 w-3" /> {order.billing_address.email}
                                 </p>
                             </div>
@@ -557,23 +705,23 @@ export default function OrderDetailPage() {
 
                 {/* Notes */}
                 {(order.customer_note || order.admin_note) && (
-                    <Card>
+                    <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black">
                         <CardHeader>
-                            <CardTitle className="text-lg">Notes</CardTitle>
+                            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Notes</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {order.customer_note && (
                                 <div>
-                                    <h4 className="text-sm font-medium mb-1">Customer Note</h4>
-                                    <p className="text-sm text-muted-foreground bg-muted/50 dark:bg-muted/30 p-3 rounded-md">
+                                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Customer Note</h4>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
                                         {order.customer_note}
                                     </p>
                                 </div>
                             )}
                             {order.admin_note && (
                                 <div>
-                                    <h4 className="text-sm font-medium mb-1">Admin Note</h4>
-                                    <p className="text-sm text-muted-foreground bg-muted/50 dark:bg-muted/30 p-3 rounded-md whitespace-pre-wrap">
+                                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admin Note</h4>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg whitespace-pre-wrap">
                                         {order.admin_note}
                                     </p>
                                 </div>
@@ -582,6 +730,74 @@ export default function OrderDetailPage() {
                     </Card>
                 )}
             </div>
+
+            {/* Update Status Dialog with CustomSelect */}
+            <CustomDialog
+                title="Update Order Status"
+                description={`Update status for order ${order.order_number}`}
+                open={updatingStatus}
+                onOpenChange={(open) => !open && setUpdatingStatus(false)}
+                contentWidth="max-w-md"
+            >
+                <div className="space-y-4">
+                    <CustomSelect
+                        selectField={selectedStatus}
+                        setSelectField={setSelectedStatus as Dispatch<SetStateAction<string | selectField | undefined>>}
+                        items={statusOptions}
+                        placeholder="Select status"
+                    />
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button
+                            variant="outline"
+                            onClick={() => setUpdatingStatus(false)}
+                            className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleUpdateStatus}
+                            disabled={isSubmitting || !selectedStatus}
+                            className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-lg"
+                        >
+                            {isSubmitting ? "Updating..." : "Update Status"}
+                        </Button>
+                    </div>
+                </div>
+            </CustomDialog>
+
+            {/* Update Payment Dialog with CustomSelect */}
+            <CustomDialog
+                title="Update Payment Status"
+                description={`Update payment for order ${order.order_number}`}
+                open={updatingPayment}
+                onOpenChange={(open) => !open && setUpdatingPayment(false)}
+                contentWidth="max-w-md"
+            >
+                <div className="space-y-4">
+                    <CustomSelect
+                        selectField={selectedPaymentStatus}
+                        setSelectField={setSelectedPaymentStatus as Dispatch<SetStateAction<string | selectField | undefined>>}
+                        items={paymentStatusOptions}
+                        placeholder="Select payment status"
+                    />
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button
+                            variant="outline"
+                            onClick={() => setUpdatingPayment(false)}
+                            className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleUpdatePayment}
+                            disabled={isSubmitting || !selectedPaymentStatus}
+                            className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-lg"
+                        >
+                            {isSubmitting ? "Updating..." : "Update Payment"}
+                        </Button>
+                    </div>
+                </div>
+            </CustomDialog>
         </div>
     );
 }

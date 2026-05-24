@@ -57,7 +57,7 @@ export default function Navbar() {
                     : "bg-transparent border-b border-transparent"
             )}
         >
-            <nav className="container mx-auto px-4 lg:px-8">
+            <nav className="container mx-auto px-4">
                 <div className="flex items-center justify-between h-20">
                     {/* Logo - iPlug Branding */}
                     <Link href="/" className="flex items-center gap-2 group" onClick={closeMobileMenu}>

@@ -44,7 +44,7 @@ async function getProducts(category?: string, endpoint?: string) {
       throw new Error(data.error || "Failed to load products")
     }
 
-    return data.data.items || []
+    return data.data.products || []
   } catch (error) {
     console.error("Error fetching products:", error)
     throw error

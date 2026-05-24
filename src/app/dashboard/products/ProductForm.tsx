@@ -346,7 +346,7 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
   if ((isUpdateMode && !isFormReady) || isLoadingProduct) {
     return (
       <div className="flex justify-center items-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-600 dark:text-gray-400" />
       </div>
     );
   }
@@ -358,12 +358,12 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Basic Information Section */}
-        <div className="space-y-6 p-6 border rounded-lg bg-card">
+        <div className="space-y-6 p-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black">
           <div>
-            <h3 className="text-lg font-semibold">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {isUpdateMode ? "Edit Product" : "Basic Information"}
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               {isUpdateMode ? "Update the product details" : "Enter the basic details for your new product"}
             </p>
           </div>
@@ -373,11 +373,18 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
             name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Product Title *</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Product Title *</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., Wireless Bluetooth Headphones" {...field} disabled={isSubmitting} />
+                  <Input
+                    placeholder="e.g., Wireless Bluetooth Headphones"
+                    {...field}
+                    disabled={isSubmitting}
+                    className="border-gray-200 dark:border-gray-800 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                  />
                 </FormControl>
-                <FormDescription>This will be displayed to customers and used to generate the URL slug</FormDescription>
+                <FormDescription className="text-gray-500 dark:text-gray-400">
+                  This will be displayed to customers and used to generate the URL slug
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -388,10 +395,10 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
             name="category_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Category *</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Category *</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingCategories || isSubmitting}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="border-gray-200 dark:border-gray-800 bg-white dark:bg-black text-gray-900 dark:text-white">
                       {isLoadingCategories ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -402,18 +409,20 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
                       )}
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
                     {categories?.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
+                      <SelectItem key={category.id} value={category.id} className="text-gray-900 dark:text-white focus:bg-gray-100 dark:focus:bg-gray-900">
                         <div className="flex flex-col">
                           <span>{category.name}</span>
-                          <span className="text-xs text-muted-foreground">{category.full_path}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{category.full_path}</span>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <FormDescription>Choose the category where this product belongs</FormDescription>
+                <FormDescription className="text-gray-500 dark:text-gray-400">
+                  Choose the category where this product belongs
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -424,11 +433,18 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description *</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Description *</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Describe your product in detail..." className="min-h-[150px]" {...field} disabled={isSubmitting} />
+                  <Textarea
+                    placeholder="Describe your product in detail..."
+                    className="min-h-[150px] border-gray-200 dark:border-gray-800 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                    {...field}
+                    disabled={isSubmitting}
+                  />
                 </FormControl>
-                <FormDescription>Provide detailed information about the product features and benefits</FormDescription>
+                <FormDescription className="text-gray-500 dark:text-gray-400">
+                  Provide detailed information about the product features and benefits
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -436,8 +452,8 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
 
           {/* Product Features */}
           <div>
-            <FormLabel>Product Features</FormLabel>
-            <div className="space-y-3">
+            <FormLabel className="text-gray-700 dark:text-gray-300">Product Features</FormLabel>
+            <div className="space-y-3 mt-2">
               <div className="flex gap-2">
                 <Input
                   value={newFeature}
@@ -445,20 +461,36 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
                   placeholder="Add a feature (e.g., 'Noise Cancelling')"
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFeature(); } }}
                   disabled={isSubmitting}
+                  className="border-gray-200 dark:border-gray-800 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                 />
-                <Button type="button" onClick={addFeature} variant="outline" size="sm" disabled={isSubmitting}>
+                <Button
+                  type="button"
+                  onClick={addFeature}
+                  variant="outline"
+                  size="sm"
+                  disabled={isSubmitting}
+                  className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100  dark:bg-gray-800 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
 
               <div className="flex flex-wrap gap-2 min-h-[40px]">
                 {features.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No features added yet</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No features added yet</p>
                 ) : (
                   features.map((feature, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-800"
+                    >
                       {feature}
-                      <button type="button" onClick={() => removeFeature(index)} className="ml-1 hover:text-destructive">
+                      <button
+                        type="button"
+                        onClick={() => removeFeature(index)}
+                        className="ml-1 hover:text-red-600 dark:hover:text-red-400"
+                      >
                         <X className="h-3 w-3" />
                       </button>
                     </Badge>
@@ -466,15 +498,17 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
                 )}
               </div>
             </div>
-            <FormDescription>Add key features of your product (optional)</FormDescription>
+            <FormDescription className="text-gray-500 dark:text-gray-400 mt-2">
+              Add key features of your product (optional)
+            </FormDescription>
           </div>
         </div>
 
         {/* Product Options Section */}
-        <div className="space-y-6 p-6 border rounded-lg bg-card">
+        <div className="space-y-6 p-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black">
           <div>
-            <h3 className="text-lg font-semibold">Product Options</h3>
-            <p className="text-sm text-muted-foreground">Define options for product variants (e.g., color, size, brand)</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Product Options</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Define options for product variants (e.g., color, size, brand)</p>
           </div>
 
           <div className="space-y-3">
@@ -485,24 +519,41 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
                 placeholder="Option name (e.g., 'color', 'size', 'brand')"
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption(); } }}
                 disabled={isSubmitting}
+                className="border-gray-200 dark:border-gray-800 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
               />
-              <Button type="button" onClick={addOption} variant="outline" size="sm" disabled={isSubmitting}>
+              <Button
+                type="button"
+                onClick={addOption}
+                variant="outline"
+                size="sm"
+                disabled={isSubmitting}
+                className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100  dark:bg-gray-800 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            <FormDescription>Create options that customers can choose from when selecting variants</FormDescription>
+            <FormDescription className="text-gray-500 dark:text-gray-400">
+              Create options that customers can choose from when selecting variants
+            </FormDescription>
           </div>
 
           {Object.keys(options).length > 0 && (
             <div className="space-y-4">
               {Object.entries(options).map(([optionKey, values]) => (
-                <div key={optionKey} className="p-4 border rounded-lg space-y-3">
+                <div key={optionKey} className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg space-y-3 bg-gray-50 dark:bg-gray-900/30">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium capitalize">{optionKey.replace(/_/g, ' ')}</h4>
-                      <p className="text-xs text-muted-foreground">{optionKey}</p>
+                      <h4 className="font-medium text-gray-900 dark:text-white capitalize">{optionKey.replace(/_/g, ' ')}</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{optionKey}</p>
                     </div>
-                    <Button type="button" onClick={() => removeOption(optionKey)} variant="ghost" size="sm" className="h-8 w-8 p-0" disabled={isSubmitting}>
+                    <Button
+                      type="button"
+                      onClick={() => removeOption(optionKey)}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      disabled={isSubmitting}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -515,8 +566,16 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
                         placeholder="Add a value (e.g., 'Red', 'Large', 'Sony')"
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOptionValue(); } }}
                         disabled={isSubmitting}
+                        className="border-gray-200 dark:border-gray-800 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                       />
-                      <Button type="button" onClick={addOptionValue} variant="outline" size="sm" disabled={isSubmitting}>
+                      <Button
+                        type="button"
+                        onClick={addOptionValue}
+                        variant="outline"
+                        size="sm"
+                        disabled={isSubmitting}
+                        className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                      >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
@@ -526,20 +585,35 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
                     {Array.isArray(values) && values.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {values.map((value, index) => (
-                          <Badge key={index} variant="outline" className="flex items-center gap-1">
+                          <Badge
+                            key={index}
+                            variant="outline"
+                            className="flex items-center gap-1 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                          >
                             {value}
-                            <button type="button" onClick={() => removeOptionValue(optionKey, index)} className="ml-1 hover:text-destructive">
+                            <button
+                              type="button"
+                              onClick={() => removeOptionValue(optionKey, index)}
+                              className="ml-1 hover:text-red-600 dark:hover:text-red-400"
+                            >
                               <X className="h-3 w-3" />
                             </button>
                           </Badge>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No values added yet. Click below to add values.</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No values added yet. Click below to add values.</p>
                     )}
                   </div>
 
-                  <Button type="button" onClick={() => setCurrentOptionKey(currentOptionKey === optionKey ? null : optionKey)} variant="ghost" size="sm" disabled={isSubmitting}>
+                  <Button
+                    type="button"
+                    onClick={() => setCurrentOptionKey(currentOptionKey === optionKey ? null : optionKey)}
+                    variant="ghost"
+                    size="sm"
+                    disabled={isSubmitting}
+                    className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
                     {currentOptionKey === optionKey ? 'Done' : 'Manage Values'}
                   </Button>
                 </div>
@@ -548,16 +622,16 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
           )}
 
           {Object.keys(options).length === 0 && (
-            <div className="text-center p-4 border rounded-lg">
-              <p className="text-sm text-muted-foreground">No options defined. Add options to create product variants.</p>
+            <div className="text-center p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
+              <p className="text-sm text-gray-500 dark:text-gray-400">No options defined. Add options to create product variants.</p>
             </div>
           )}
         </div>
 
         {/* Status and Flags Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4 p-6 border rounded-lg bg-card">
-            <h4 className="font-semibold">Product Status</h4>
+          <div className="space-y-4 p-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black">
+            <h4 className="font-semibold text-gray-900 dark:text-white">Product Status</h4>
             <FormField
               control={form.control}
               name="status"
@@ -565,17 +639,17 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
                 <FormItem>
                   <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="border-gray-200 dark:border-gray-800 bg-white dark:bg-black text-gray-900 dark:text-white">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                      <SelectItem value="archived">Archived</SelectItem>
+                    <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
+                      <SelectItem value="draft" className="text-gray-900 dark:text-white focus:bg-gray-100 dark:focus:bg-gray-900">Draft</SelectItem>
+                      <SelectItem value="published" className="text-gray-900 dark:text-white focus:bg-gray-100 dark:focus:bg-gray-900">Published</SelectItem>
+                      <SelectItem value="archived" className="text-gray-900 dark:text-white focus:bg-gray-100 dark:focus:bg-gray-900">Archived</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormDescription>
+                  <FormDescription className="text-gray-500 dark:text-gray-400">
                     Draft: Not visible to customers<br />
                     Published: Visible on store<br />
                     Archived: Hidden from store
@@ -586,20 +660,25 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
             />
           </div>
 
-          <div className="space-y-4 p-6 border rounded-lg bg-card">
-            <h4 className="font-semibold">Product Flags</h4>
+          <div className="space-y-4 p-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black">
+            <h4 className="font-semibold text-gray-900 dark:text-white">Product Flags</h4>
 
             <FormField
               control={form.control}
               name="is_featured"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 p-3">
                   <div className="space-y-0.5">
-                    <FormLabel>Featured</FormLabel>
-                    <FormDescription>Display in featured products section</FormDescription>
+                    <FormLabel className="text-gray-700 dark:text-gray-300">Featured</FormLabel>
+                    <FormDescription className="text-gray-500 dark:text-gray-400">Display in featured products section</FormDescription>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isSubmitting}
+                      className="data-[state=checked]:bg-gray-900 dark:data-[state=checked]:bg-gray-700"
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -609,13 +688,18 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
               control={form.control}
               name="is_bestseller"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 p-3">
                   <div className="space-y-0.5">
-                    <FormLabel>Bestseller</FormLabel>
-                    <FormDescription>Mark as a best-selling product</FormDescription>
+                    <FormLabel className="text-gray-700 dark:text-gray-300">Bestseller</FormLabel>
+                    <FormDescription className="text-gray-500 dark:text-gray-400">Mark as a best-selling product</FormDescription>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isSubmitting}
+                      className="data-[state=checked]:bg-gray-900 dark:data-[state=checked]:bg-gray-700"
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -625,13 +709,18 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
               control={form.control}
               name="is_new"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 p-3">
                   <div className="space-y-0.5">
-                    <FormLabel>New Arrival</FormLabel>
-                    <FormDescription>Mark as a new product</FormDescription>
+                    <FormLabel className="text-gray-700 dark:text-gray-300">New Arrival</FormLabel>
+                    <FormDescription className="text-gray-500 dark:text-gray-400">Mark as a new product</FormDescription>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isSubmitting}
+                      className="data-[state=checked]:bg-gray-900 dark:data-[state=checked]:bg-gray-700"
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -640,10 +729,10 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
         </div>
 
         {/* SEO Section */}
-        <div className="space-y-6 p-6 border rounded-lg bg-card">
+        <div className="space-y-6 p-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black">
           <div>
-            <h3 className="text-lg font-semibold">SEO Settings</h3>
-            <p className="text-sm text-muted-foreground">Optimize your product for search engines</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">SEO Settings</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Optimize your product for search engines</p>
           </div>
 
           <div className="space-y-4">
@@ -652,11 +741,19 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
               name="meta_title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Meta Title</FormLabel>
+                  <FormLabel className="text-gray-700 dark:text-gray-300">Meta Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="SEO-optimized title for search engines" {...field} value={field.value || ""} disabled={isSubmitting} />
+                    <Input
+                      placeholder="SEO-optimized title for search engines"
+                      {...field}
+                      value={field.value || ""}
+                      disabled={isSubmitting}
+                      className="border-gray-200 dark:border-gray-800 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                    />
                   </FormControl>
-                  <FormDescription>Custom title for search engine results pages (optional)</FormDescription>
+                  <FormDescription className="text-gray-500 dark:text-gray-400">
+                    Custom title for search engine results pages (optional)
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -667,11 +764,19 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
               name="meta_description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Meta Description</FormLabel>
+                  <FormLabel className="text-gray-700 dark:text-gray-300">Meta Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Brief description for search engine results" className="min-h-[80px]" {...field} value={field.value || ""} disabled={isSubmitting} />
+                    <Textarea
+                      placeholder="Brief description for search engine results"
+                      className="min-h-[80px] border-gray-200 dark:border-gray-800 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                      {...field}
+                      value={field.value || ""}
+                      disabled={isSubmitting}
+                    />
                   </FormControl>
-                  <FormDescription>Appears in search results below the title (optional)</FormDescription>
+                  <FormDescription className="text-gray-500 dark:text-gray-400">
+                    Appears in search results below the title (optional)
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -679,22 +784,39 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
           </div>
         </div>
 
-        {/* Submit Button */}
+        {/* Submit Buttons */}
         <div className="flex justify-end gap-4 pt-6">
           {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isSubmitting}
+              className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white"
+            >
               Cancel
             </Button>
           )}
-          <Button type="button" variant="outline" onClick={() => {
-            form.reset();
-            setNewOptionName("");
-            setNewOptionValue("");
-            setCurrentOptionKey(null);
-          }} disabled={isSubmitting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              form.reset();
+              setNewOptionName("");
+              setNewOptionValue("");
+              setCurrentOptionKey(null);
+            }}
+            disabled={isSubmitting}
+            className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white"
+          >
             Reset Form
           </Button>
-          <Button type="submit" size="lg" className="min-w-[200px]" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            size="lg"
+            className="min-w-[200px] bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+            disabled={isSubmitting}
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
