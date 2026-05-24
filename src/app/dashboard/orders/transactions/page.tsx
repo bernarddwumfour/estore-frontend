@@ -2,10 +2,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     DollarSign, CreditCard, RefreshCw, Search, X,
-    Eye, ArrowUpRight, ArrowDownRight
+    Eye, ArrowUpRight, ArrowDownRight, Filter, Calendar,
+    Download, TrendingUp, TrendingDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -17,12 +18,17 @@ import { CustomSheet } from '@/widgets/CustomSheet/CustomSheet';
 import { DataTable } from '@/widgets/Customtable/DataTable';
 import { DataDisplay } from '@/widgets/DataDisplay/DataDisplay';
 import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
+import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
+import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
+import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
+import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
 import { useRouter } from 'next/navigation';
 
 // Types
 interface Transaction {
     id: string;
     order_number?: string;
+    order_id?: string;
     transaction_type: string;
     transaction_type_display: string;
     transaction_id: string;
@@ -43,42 +49,239 @@ interface Transaction {
     metadata?: Record<string, any>;
 }
 
-// Fetch transactions
-const fetchTransactions = async (params?: any): Promise<{ data: { transactions: Transaction[]; total: number } }> => {
+// Fetch transactions with pagination and filters
+const fetchTransactions = async (params?: any): Promise<{
+    data: {
+        transactions: Transaction[];
+        total: number;
+        pagination: PaginationMeta;
+        stats: {
+            total_charges: number;
+            total_refunds: number;
+            net_revenue: number;
+            successful_count: number;
+            failed_count: number;
+            pending_count: number;
+        };
+    }
+}> => {
     const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page);
-    if (params?.limit) queryParams.append('limit', params.limit);
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search && params.search !== '') queryParams.append('search', params.search);
     if (params?.type && params.type !== '') queryParams.append('type', params.type);
     if (params?.status && params.status !== '') queryParams.append('status', params.status);
-    if (params?.search) queryParams.append('search', params.search);
+    if (params?.payment_method && params.payment_method !== '') queryParams.append('payment_method', params.payment_method);
+    if (params?.date_from) queryParams.append('date_from', params.date_from);
+    if (params?.date_to) queryParams.append('date_to', params.date_to);
+    if (params?.min_amount) queryParams.append('min_amount', params.min_amount);
+    if (params?.max_amount) queryParams.append('max_amount', params.max_amount);
+    if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
 
-    const url = `${endpoints.orders.adminTransactions}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `/orders/admin/transactions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await securityAxios.get(url);
     return response.data;
 };
 
+// Filter configuration
+const filterConfig: FilterConfig = {
+    fields: [
+        {
+            name: 'type',
+            type: 'select',
+            placeholder: 'Transaction Type',
+            options: [
+                { value: 'charge', label: 'Charge' },
+                { value: 'refund', label: 'Refund' },
+                { value: 'authorization', label: 'Authorization' },
+                { value: 'shipping', label: 'Shipping' },
+            ],
+            defaultValue: '',
+            width: '150px',
+        },
+        {
+            name: 'status',
+            type: 'select',
+            placeholder: 'Status',
+            options: [
+                { value: 'pending', label: 'Pending' },
+                { value: 'success', label: 'Success' },
+                { value: 'failed', label: 'Failed' },
+                { value: 'refunded', label: 'Refunded' },
+            ],
+            defaultValue: '',
+            width: '120px',
+        },
+        {
+            name: 'payment_method',
+            type: 'select',
+            placeholder: 'Payment Method',
+            options: [
+                { value: 'paystack', label: 'Paystack' },
+                { value: 'card', label: 'Card' },
+                { value: 'bank', label: 'Bank Transfer' },
+                { value: 'mobile', label: 'Mobile Money' },
+            ],
+            defaultValue: '',
+            width: '150px',
+        },
+    ],
+    searchPlaceholder: 'Search by transaction ID, reference, or order number...',
+    showSearch: true,
+};
+
+// Sort configuration
+const sortConfig: SortConfig = {
+    options: [
+        { value: 'created_at', label: 'Created Date' },
+        { value: 'amount', label: 'Amount' },
+        { value: 'status', label: 'Status' },
+        { value: 'transaction_type', label: 'Type' },
+        { value: 'completed_at', label: 'Completed Date' },
+    ],
+    defaultSortBy: 'created_at',
+    defaultSortOrder: 'desc',
+};
+
 export default function TransactionsPage() {
+    const queryClient = useQueryClient();
     const router = useRouter();
     const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null);
+
+    // Filter and pagination state
     const [filters, setFilters] = useState({
-        search: '',
-        type: '',
-        status: '',
         page: 1,
         limit: 20,
     });
 
-    const { data, isLoading, isError, error, refetch } = useQuery({
-        queryKey: ['admin-transactions', filters],
-        queryFn: () => fetchTransactions(filters),
+    // Track applied filters
+    const [appliedFilters, setAppliedFilters] = useState({
+        search: '',
+        type: '',
+        status: '',
+        payment_method: '',
+        date_from: '',
+        date_to: '',
+        min_amount: '',
+        max_amount: '',
+        sort_by: 'created_at',
+        sort_order: 'desc',
     });
 
+    // Query for transactions
+    const { data, isLoading, isError, error, refetch } = useQuery({
+        queryKey: ['admin-transactions', filters.page, filters.limit, appliedFilters],
+        queryFn: () => fetchTransactions({
+            page: filters.page,
+            limit: filters.limit,
+            ...appliedFilters,
+        }),
+    });
+
+    // Pagination handlers
+    const handlePageChange = (page: number) => {
+        setFilters({ ...filters, page });
+    };
+
+    const handleLimitChange = (limit: number) => {
+        setFilters({ page: 1, limit });
+    };
+
+    // Handle filter changes
+    const handleFilterChange = (newFilters: Record<string, any>) => {
+        setAppliedFilters({
+            ...appliedFilters,
+            search: newFilters.search || '',
+            type: newFilters.type || '',
+            status: newFilters.status || '',
+            payment_method: newFilters.payment_method || '',
+        });
+        setFilters({ ...filters, page: 1 });
+    };
+
+    // Handle date filter changes
+    const handleDateChange = (field: string, value: string) => {
+        setAppliedFilters({
+            ...appliedFilters,
+            [field]: value,
+        });
+        setFilters({ ...filters, page: 1 });
+    };
+
+    // Handle amount filter changes
+    const handleAmountChange = (field: string, value: string) => {
+        setAppliedFilters({
+            ...appliedFilters,
+            [field]: value,
+        });
+        setFilters({ ...filters, page: 1 });
+    };
+
+    // Handle sort changes
+    const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
+        setAppliedFilters({
+            ...appliedFilters,
+            sort_by: sortBy,
+            sort_order: sortOrder,
+        });
+        setFilters({ ...filters, page: 1 });
+    };
+
+    // Refresh handler
+    const handleRefresh = () => {
+        refetch();
+        toast.success('Transactions refreshed');
+    };
+
+    // Reset all filters
+    const handleResetFilters = () => {
+        setAppliedFilters({
+            search: '',
+            type: '',
+            status: '',
+            payment_method: '',
+            date_from: '',
+            date_to: '',
+            min_amount: '',
+            max_amount: '',
+            sort_by: 'created_at',
+            sort_order: 'desc',
+        });
+        setFilters({ page: 1, limit: filters.limit });
+    };
+
+    // Export transactions
+    const handleExport = (selectedItems: Transaction[]) => {
+        const exportData = selectedItems.map(item => ({
+            transaction_id: item.transaction_id,
+            reference: item.reference,
+            order_number: item.order_number,
+            type: item.transaction_type,
+            status: item.status,
+            amount: item.amount,
+            currency: item.currency,
+            payment_method: item.payment_method,
+            created_at: item.created_at,
+            completed_at: item.completed_at,
+        }));
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `transactions_export_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success(`Exported ${selectedItems.length} transactions`);
+    };
+
+    // Row actions
     const getTransactionActions = (transaction: Transaction): ActionItem[] => {
         const actions: ActionItem[] = [];
 
         actions.push({
             label: 'View Details',
-            icon: <Eye />,
+            icon: <Eye size={14} />,
             onClick: () => setViewingTransaction(transaction),
             color: 'blue',
         });
@@ -86,7 +289,7 @@ export default function TransactionsPage() {
         if (transaction.order_number) {
             actions.push({
                 label: 'View Order',
-                icon: <DollarSign />,
+                icon: <DollarSign size={14} />,
                 onClick: () => router.push(`/dashboard/orders/${transaction.order_number}`),
                 color: 'violet',
             });
@@ -95,7 +298,7 @@ export default function TransactionsPage() {
         if (transaction.receipt_url) {
             actions.push({
                 label: 'View Receipt',
-                icon: <Eye />,
+                icon: <Eye size={14} />,
                 onClick: () => window.open(transaction.receipt_url, '_blank'),
                 color: 'emerald',
             });
@@ -104,10 +307,17 @@ export default function TransactionsPage() {
         return actions;
     };
 
+    // Bulk actions
+    const bulkActions = [
+        { label: 'Export Selected', icon: <Download size={14} />, onClick: handleExport, color: 'blue' as const },
+    ];
+
     const transactions = data?.data?.transactions || [];
+    const pagination = data?.data?.pagination;
+    const stats = data?.data?.stats;
     const total = data?.data?.total || 0;
 
-    if (isLoading) {
+    if (isLoading && !transactions.length) {
         return (
             <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
@@ -126,60 +336,138 @@ export default function TransactionsPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Transactions</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">View and manage all payment transactions</p>
+            <div>
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Transactions</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">View and manage all payment transactions</p>
+            </div>
+
+            {/* Stats Cards */}
+            {stats && (
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Total Charges</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    ${stats.total_charges.toFixed(2)}
+                                </p>
+                            </div>
+                            <TrendingUp className="h-8 w-8 text-emerald-500" />
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Total Refunds</p>
+                                <p className="text-2xl font-bold text-rose-600">
+                                    ${stats.total_refunds.toFixed(2)}
+                                </p>
+                            </div>
+                            <TrendingDown className="h-8 w-8 text-rose-500" />
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Net Revenue</p>
+                                <p className="text-2xl font-bold text-blue-600">
+                                    ${stats.net_revenue.toFixed(2)}
+                                </p>
+                            </div>
+                            <DollarSign className="h-8 w-8 text-blue-500" />
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Successful</p>
+                                <p className="text-2xl font-bold text-emerald-600">{stats.successful_count}</p>
+                            </div>
+                            <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 border-emerald-200">
+                                Success
+                            </Badge>
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Failed</p>
+                                <p className="text-2xl font-bold text-rose-600">{stats.failed_count}</p>
+                            </div>
+                            <Badge variant="outline" className="bg-rose-50 dark:bg-rose-950/20 text-rose-600 border-rose-200">
+                                Failed
+                            </Badge>
+                        </div>
+                    </div>
                 </div>
-                <Button variant="outline" onClick={() => refetch()} className="gap-2 border-gray-300 dark:border-gray-700">
-                    <RefreshCw size={14} />
+            )}
+
+            {/* Refresh Button */}
+            <div className="flex justify-end">
+                <Button variant="outline" onClick={handleRefresh} className="gap-2">
+                    <RefreshCw size={16} />
                     Refresh
                 </Button>
             </div>
 
-            {/* Filters Bar */}
-            <div className="flex flex-wrap gap-4 items-center justify-between">
-                <div className="flex flex-wrap gap-2 items-center">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search by transaction ID, reference..."
-                            value={filters.search}
-                            onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
-                            className="pl-9 w-64 border-gray-200 dark:border-gray-800"
-                        />
-                    </div>
-                    <select
-                        className="px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white"
-                        value={filters.type}
-                        onChange={(e) => setFilters({ ...filters, type: e.target.value, page: 1 })}
-                    >
-                        <option value="">All Types</option>
-                        <option value="charge">Charge</option>
-                        <option value="refund">Refund</option>
-                        <option value="shipping">Shipping</option>
-                    </select>
-                    <select
-                        className="px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white"
-                        value={filters.status}
-                        onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
-                    >
-                        <option value="">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="success">Success</option>
-                        <option value="failed">Failed</option>
-                        <option value="refunded">Refunded</option>
-                    </select>
-                    {(filters.search || filters.type || filters.status) && (
-                        <Button variant="ghost" size="sm" onClick={() => {
-                            setFilters({ search: '', type: '', status: '', page: 1, limit: 20 });
-                        }}>
-                            <X size={14} className="mr-1" /> Reset
-                        </Button>
-                    )}
+            {/* Filters and Sort Row */}
+            <div className="flex flex-wrap gap-4 items-start justify-between">
+                <div className="flex-1">
+                    <CustomFilter
+                        config={filterConfig}
+                        filters={{
+                            search: appliedFilters.search,
+                            type: appliedFilters.type,
+                            status: appliedFilters.status,
+                            payment_method: appliedFilters.payment_method,
+                        }}
+                        onFilterChange={handleFilterChange}
+                        onReset={handleResetFilters}
+                    />
                 </div>
-                <div className="text-sm text-muted-foreground">
-                    Total: {total} transactions
+                <CustomSort
+                    config={sortConfig}
+                    onSortChange={handleSortChange}
+                />
+            </div>
+
+            {/* Additional Filters - Date Range and Amount */}
+            <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Date:</span>
+                    <Input
+                        type="date"
+                        placeholder="From"
+                        value={appliedFilters.date_from}
+                        onChange={(e) => handleDateChange('date_from', e.target.value)}
+                        className="w-36 h-9 border-gray-300 dark:border-gray-700"
+                    />
+                    <span className="text-gray-500">to</span>
+                    <Input
+                        type="date"
+                        placeholder="To"
+                        value={appliedFilters.date_to}
+                        onChange={(e) => handleDateChange('date_to', e.target.value)}
+                        className="w-36 h-9 border-gray-300 dark:border-gray-700"
+                    />
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Amount:</span>
+                    <Input
+                        type="number"
+                        placeholder="Min"
+                        value={appliedFilters.min_amount}
+                        onChange={(e) => handleAmountChange('min_amount', e.target.value)}
+                        className="w-28 h-9 border-gray-300 dark:border-gray-700"
+                    />
+                    <span className="text-gray-500">-</span>
+                    <Input
+                        type="number"
+                        placeholder="Max"
+                        value={appliedFilters.max_amount}
+                        onChange={(e) => handleAmountChange('max_amount', e.target.value)}
+                        className="w-28 h-9 border-gray-300 dark:border-gray-700"
+                    />
                 </div>
             </div>
 
@@ -194,12 +482,15 @@ export default function TransactionsPage() {
                         buttonSize="sm"
                     />
                 )}
+                bulkActions={bulkActions}
+                bulkActionsMessage="Select transactions to export"
                 excludeColumns={['id', 'card_last4', 'card_brand', 'notes', 'refund_reason', 'parent_transaction_id', 'receipt_url', 'metadata']}
-                badges={{
+                dots={{
                     transaction_type: {
                         charge: 'emerald',
                         refund: 'rose',
                         shipping: 'blue',
+                        authorization: 'amber',
                     },
                     status: {
                         pending: 'amber',
@@ -208,11 +499,12 @@ export default function TransactionsPage() {
                         refunded: 'zinc',
                     },
                 }}
-                dots={{
+                badges={{
                     transaction_type: {
                         charge: 'emerald',
                         refund: 'rose',
                         shipping: 'blue',
+                        authorization: 'amber',
                     },
                     status: {
                         pending: 'amber',
@@ -223,36 +515,49 @@ export default function TransactionsPage() {
                 }}
                 links={{
                     transaction_id: (transaction: Transaction) => `/dashboard/transactions/${transaction.transaction_id}`,
-                    order_number: (transaction: Transaction) => `/dashboard/orders/${transaction.order_number}`,
+                    order_number: (transaction: Transaction) => transaction.order_number ? `/dashboard/orders/${transaction.order_number}` : "",
                 }}
+
                 emptyTitle="No Transactions Found"
                 emptyDescription="Transactions will appear here once orders are placed."
+                onSelectionChange={(selected) => console.log('Selected transactions:', selected.length)}
             />
+
+            {/* Pagination */}
+            {pagination && pagination.total_pages > 1 && (
+                <CustomPagination
+                    pagination={pagination}
+                    onPageChange={handlePageChange}
+                    onLimitChange={handleLimitChange}
+                    showLimitSelector={true}
+                    limitOptions={[10, 20, 50, 100]}
+                />
+            )}
 
             {/* Transaction Detail Sheet */}
             <CustomSheet
                 title="Transaction Details"
-                description={`Transaction ${viewingTransaction?.transaction_id}`}
+                description={`Transaction ${viewingTransaction?.transaction_id || ''}`}
                 side="right"
                 size="lg"
                 open={!!viewingTransaction}
                 onOpenChange={(open) => !open && setViewingTransaction(null)}
             >
                 {viewingTransaction && (
-                    <div className="space-y-6">
+                    <div className="space-y-6 p-4">
                         {/* Amount */}
-                        <div className="text-center">
-                            <div className="text-3xl font-bold">
-                                {viewingTransaction.transaction_type === 'refund' ? '-' : ''}
+                        <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                            <div className={`text-3xl font-bold ${viewingTransaction.transaction_type === 'refund' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {viewingTransaction.transaction_type === 'refund' ? '-' : '+'}
                                 ${viewingTransaction.amount.toFixed(2)} {viewingTransaction.currency}
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                 {new Date(viewingTransaction.created_at).toLocaleString()}
                             </p>
                         </div>
 
                         {/* Transaction details using DataDisplay */}
-                        <div className="border-t pt-4">
+                        <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
                             <DataDisplay
                                 data={{
                                     "Transaction ID": viewingTransaction.transaction_id,
@@ -269,14 +574,15 @@ export default function TransactionsPage() {
                                         : '—',
                                 }}
                                 excludeKeys={[]}
+                                className="text-sm"
                             />
                         </div>
 
                         {/* Notes */}
                         {viewingTransaction.notes && (
-                            <div className="border-t pt-4">
-                                <h4 className="text-sm font-medium mb-2">Notes</h4>
-                                <p className="text-sm text-muted-foreground bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
+                            <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
                                     {viewingTransaction.notes}
                                 </p>
                             </div>
@@ -284,22 +590,23 @@ export default function TransactionsPage() {
 
                         {/* Refund Reason */}
                         {viewingTransaction.refund_reason && (
-                            <div className="border-t pt-4">
-                                <h4 className="text-sm font-medium mb-2">Refund Reason</h4>
-                                <p className="text-sm text-muted-foreground bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
+                            <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Refund Reason</h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
                                     {viewingTransaction.refund_reason}
                                 </p>
                             </div>
                         )}
 
-                        {/* Metadata - Using DataDisplay for object */}
+                        {/* Metadata */}
                         {viewingTransaction.metadata && Object.keys(viewingTransaction.metadata).length > 0 && (
-                            <div className="border-t pt-4">
-                                <h4 className="text-sm font-medium mb-2">Metadata</h4>
+                            <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Metadata</h4>
                                 <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
                                     <DataDisplay
                                         data={viewingTransaction.metadata}
                                         excludeKeys={[]}
+                                        className="text-sm"
                                     />
                                 </div>
                             </div>

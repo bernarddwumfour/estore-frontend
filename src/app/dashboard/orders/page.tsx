@@ -8,20 +8,26 @@ import {
   CheckCircle, XCircle, Truck, PackageCheck,
   Package, Archive, FileText, Upload, ShoppingCart,
   MapPin, Calendar, CreditCard, RefreshCw, Ban,
-  CircleDollarSign, AlertCircle
+  CircleDollarSign, AlertCircle, Download, Filter
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
 import { CustomSheet } from '@/widgets/CustomSheet/CustomSheet';
 import { DataTable } from '@/widgets/Customtable/DataTable';
+import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
+import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
+import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
+import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
 import OrderDetailCard from './OrderDetailCard';
 import OrderItemsList from './OrderItemsList';
 import ShippingAddressCard from './ShippingAddressCard';
 import { useRouter } from 'next/navigation';
 import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
+import Link from 'next/link';
 
 // Types
 interface Order {
@@ -47,52 +53,137 @@ interface Order {
   created_at: string;
 }
 
-// Fetch orders
-const fetchOrders = async (): Promise<{ data: { orders: Order[]; total: number } }> => {
-  const response = await securityAxios.get(endpoints.orders.listOrders);
+// Fetch orders with pagination and filters
+const fetchOrders = async (params?: any): Promise<{
+  data: {
+    orders: Order[];
+    total: number;
+    pagination: PaginationMeta;
+  }
+}> => {
+  const queryParams = new URLSearchParams();
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  if (params?.search && params.search !== '') queryParams.append('search', params.search);
+  if (params?.status && params.status !== '') queryParams.append('status', params.status);
+  if (params?.payment_status && params.payment_status !== '') queryParams.append('payment_status', params.payment_status);
+  if (params?.payment_method && params.payment_method !== '') queryParams.append('payment_method', params.payment_method);
+  if (params?.date_from) queryParams.append('date_from', params.date_from);
+  if (params?.date_to) queryParams.append('date_to', params.date_to);
+  if (params?.min_total) queryParams.append('min_total', params.min_total);
+  if (params?.max_total) queryParams.append('max_total', params.max_total);
+  if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
+  if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
+
+  const url = `/orders/admin/orders${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  const response = await securityAxios.get(url);
   return response.data;
 };
 
 // Bulk action mutation
 const bulkOrderAction = async (action: string, orderIds: string[]) => {
-  const response = await securityAxios.post(endpoints.orders.bulkOrderAction, {
+  const response = await securityAxios.post('/orders/admin/orders/bulk-action', {
     action,
     order_ids: orderIds,
   });
   return response.data;
 };
 
+// Update Status
+const updateOrderStatus = async (orderId: string, status: string) => {
+  const response = await securityAxios.put(`/orders/admin/orders/${orderId}/status`, { status });
+  return response.data;
+};
+
+// Update Payment Status
+const updatePaymentStatus = async (orderId: string, payment_status: string) => {
+  const response = await securityAxios.put(`/orders/admin/orders/${orderId}/payment-status`, { payment_status });
+  return response.data;
+};
+
+// Filter configuration
+const filterConfig: FilterConfig = {
+  fields: [
+    {
+      name: 'status',
+      type: 'select',
+      placeholder: 'Order Status',
+      options: [
+        { value: 'pending', label: 'Pending' },
+        { value: 'confirmed', label: 'Confirmed' },
+        { value: 'processing', label: 'Processing' },
+        { value: 'shipped', label: 'Shipped' },
+        { value: 'delivered', label: 'Delivered' },
+        { value: 'cancelled', label: 'Cancelled' },
+        { value: 'refunded', label: 'Refunded' },
+      ],
+      defaultValue: '',
+      width: '140px',
+    },
+    {
+      name: 'payment_status',
+      type: 'select',
+      placeholder: 'Payment Status',
+      options: [
+        { value: 'pending', label: 'Pending' },
+        { value: 'paid', label: 'Paid' },
+        { value: 'failed', label: 'Failed' },
+        { value: 'refunded', label: 'Refunded' },
+      ],
+      defaultValue: '',
+      width: '140px',
+    },
+    {
+      name: 'payment_method',
+      type: 'select',
+      placeholder: 'Payment Method',
+      options: [
+        { value: 'paystack', label: 'Paystack' },
+        { value: 'pod', label: 'Pay on Delivery' },
+      ],
+      defaultValue: '',
+      width: '150px',
+    },
+  ],
+  searchPlaceholder: 'Search by order number, customer name, or email...',
+  showSearch: true,
+};
+
+// Sort configuration
+const sortConfig: SortConfig = {
+  options: [
+    { value: 'created_at', label: 'Created Date' },
+    { value: 'total', label: 'Total Amount' },
+    { value: 'status', label: 'Status' },
+    { value: 'payment_status', label: 'Payment Status' },
+  ],
+  defaultSortBy: 'created_at',
+  defaultSortOrder: 'desc',
+};
+
 // Update Status Form Component
 function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSuccess: () => void; onCancel: () => void }) {
-  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState(order.status);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const statusOptions = [
-    { value: "confirmed", label: "Confirmed", icon: <CheckCircle size={14} /> },
-    { value: "processing", label: "Processing", icon: <RefreshCw size={14} /> },
-    { value: "shipped", label: "Shipped", icon: <Truck size={14} /> },
-    { value: "delivered", label: "Delivered", icon: <PackageCheck size={14} /> },
-    { value: "cancelled", label: "Cancelled", icon: <Ban size={14} /> },
+    { value: "confirmed", label: "Confirmed", color: "emerald" },
+    { value: "processing", label: "Processing", color: "blue" },
+    { value: "shipped", label: "Shipped", color: "violet" },
+    { value: "delivered", label: "Delivered", color: "emerald" },
+    { value: "cancelled", label: "Cancelled", color: "rose" },
   ];
 
   const handleSubmit = async () => {
-    if (!selectedStatus) {
-      toast.error("Please select a status");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      const response = await securityAxios.put(
-        endpoints.orders.updateStatus.replace(":id", order.id),
-        { status: selectedStatus }
-      );
+      const response = await updateOrderStatus(order.id, selectedStatus);
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success(`Order status updated to ${selectedStatus}`);
         onSuccess();
       } else {
-        toast.error(response.data.message || "Failed to update status");
+        toast.error(response.message || "Failed to update status");
       }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to update status");
@@ -110,25 +201,14 @@ function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSucc
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
         >
-          <option value="">Select status</option>
           {statusOptions.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
       </div>
       <div className="flex justify-end gap-2 pt-4">
-        <Button
-          variant="outline"
-          onClick={onCancel}
-          className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={isSubmitting || !selectedStatus}
-          className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-lg"
-        >
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? "Updating..." : "Update Status"}
         </Button>
       </div>
@@ -138,7 +218,7 @@ function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSucc
 
 // Update Payment Form Component
 function UpdatePaymentForm({ order, onSuccess, onCancel }: { order: Order; onSuccess: () => void; onCancel: () => void }) {
-  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState(order.payment_status);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const paymentOptions = [
@@ -149,23 +229,15 @@ function UpdatePaymentForm({ order, onSuccess, onCancel }: { order: Order; onSuc
   ];
 
   const handleSubmit = async () => {
-    if (!selectedStatus) {
-      toast.error("Please select a payment status");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      const response = await securityAxios.put(
-        endpoints.orders.updatePaymentStatus.replace(":id", order.id),
-        { payment_status: selectedStatus }
-      );
+      const response = await updatePaymentStatus(order.id, selectedStatus);
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success(`Payment status updated to ${selectedStatus}`);
         onSuccess();
       } else {
-        toast.error(response.data.message || "Failed to update payment");
+        toast.error(response.message || "Failed to update payment");
       }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to update payment");
@@ -183,25 +255,14 @@ function UpdatePaymentForm({ order, onSuccess, onCancel }: { order: Order; onSuc
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
         >
-          <option value="">Select payment status</option>
           {paymentOptions.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
       </div>
       <div className="flex justify-end gap-2 pt-4">
-        <Button
-          variant="outline"
-          onClick={onCancel}
-          className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={isSubmitting || !selectedStatus}
-          className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-lg"
-        >
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? "Updating..." : "Update Payment"}
         </Button>
       </div>
@@ -220,10 +281,50 @@ export default function OrdersPage() {
   const [updatingStatusFor, setUpdatingStatusFor] = useState<Order | null>(null);
   const [updatingPaymentFor, setUpdatingPaymentFor] = useState<Order | null>(null);
 
+  // Filter and pagination state
+  const [filters, setFilters] = useState({
+    page: 1,
+    limit: 20,
+  });
+
+  // Track applied filters
+  const [appliedFilters, setAppliedFilters] = useState({
+    search: '',
+    status: '',
+    payment_status: '',
+    payment_method: '',
+    date_from: '',
+    date_to: '',
+    min_total: '',
+    max_total: '',
+    sort_by: 'created_at',
+    sort_order: 'desc',
+  });
+
+  // Confirmation dialog states
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    variant: 'info' | 'success' | 'error';
+    onConfirm: () => void;
+    itemName?: string;
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    variant: 'error',
+    onConfirm: () => { },
+  });
+
   // Query for orders
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['admin-orders'],
-    queryFn: fetchOrders,
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['admin-orders', filters.page, filters.limit, appliedFilters],
+    queryFn: () => fetchOrders({
+      page: filters.page,
+      limit: filters.limit,
+      ...appliedFilters,
+    }),
   });
 
   // Bulk action mutation
@@ -235,62 +336,169 @@ export default function OrdersPage() {
       const { success_count, failed_count } = data;
       if (success_count > 0) toast.success(message || `Processed ${success_count} orders`);
       if (failed_count > 0) toast.error(`${failed_count} failed`);
+      refetch();
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
     },
     onError: (error: any) => toast.error(error?.response?.data?.message || 'Bulk action failed'),
   });
 
-  // Single action helpers
-  // const handleDelete = async (order: Order) => {
-  //   if (confirm(`Delete order "${order.order_number}"? This action cannot be undone.`)) {
-  //     try {
-  //       const response = await securityAxios.delete(
-  //         endpoints.orders.deleteOrder.replace(":id", order.id)
-  //       );
-  //       if (response.data.success) {
-  //         toast.success(`Order ${order.order_number} deleted successfully`);
-  //         queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-  //       } else {
-  //         toast.error(response.data.message || "Failed to delete order");
-  //       }
-  //     } catch (error: any) {
-  //       toast.error(error?.response?.data?.message || "Failed to delete order");
-  //     }
-  //   }
-  // };
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setFilters({ ...filters, page });
+  };
 
-  // Bulk actions
+  const handleLimitChange = (limit: number) => {
+    setFilters({ page: 1, limit });
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (newFilters: Record<string, any>) => {
+    setAppliedFilters({
+      ...appliedFilters,
+      search: newFilters.search || '',
+      status: newFilters.status || '',
+      payment_status: newFilters.payment_status || '',
+      payment_method: newFilters.payment_method || '',
+    });
+    setFilters({ ...filters, page: 1 });
+  };
+
+  // Handle date filter changes
+  const handleDateChange = (field: string, value: string) => {
+    setAppliedFilters({
+      ...appliedFilters,
+      [field]: value,
+    });
+    setFilters({ ...filters, page: 1 });
+  };
+
+  // Handle amount filter changes
+  const handleAmountChange = (field: string, value: string) => {
+    setAppliedFilters({
+      ...appliedFilters,
+      [field]: value,
+    });
+    setFilters({ ...filters, page: 1 });
+  };
+
+  // Handle sort changes
+  const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
+    setAppliedFilters({
+      ...appliedFilters,
+      sort_by: sortBy,
+      sort_order: sortOrder,
+    });
+    setFilters({ ...filters, page: 1 });
+  };
+
+  // Refresh handler
+  const handleRefresh = () => {
+    refetch();
+    toast.success('Orders refreshed');
+  };
+
+  // Reset all filters
+  const handleResetFilters = () => {
+    setAppliedFilters({
+      search: '',
+      status: '',
+      payment_status: '',
+      payment_method: '',
+      date_from: '',
+      date_to: '',
+      min_total: '',
+      max_total: '',
+      sort_by: 'created_at',
+      sort_order: 'desc',
+    });
+    setFilters({ page: 1, limit: filters.limit });
+  };
+
+  // Bulk actions with confirmation
   const handleBulkConfirm = (selectedItems: Order[]) => {
-    const ids = selectedItems.map(i => i.id);
-    if (confirm(`Confirm ${selectedItems.length} orders?`)) bulkActionMutation.mutate({ action: 'confirm', ids });
+    setConfirmDialog({
+      open: true,
+      title: 'Bulk Confirm Orders',
+      message: `Are you sure you want to confirm ${selectedItems.length} selected order${selectedItems.length !== 1 ? 's' : ''}?`,
+      variant: 'info',
+      onConfirm: () => {
+        const ids = selectedItems.map(i => i.id);
+        bulkActionMutation.mutate({ action: 'confirm', ids });
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
   };
 
   const handleBulkProcess = (selectedItems: Order[]) => {
-    const ids = selectedItems.map(i => i.id);
-    if (confirm(`Process ${selectedItems.length} orders?`)) bulkActionMutation.mutate({ action: 'process', ids });
+    setConfirmDialog({
+      open: true,
+      title: 'Bulk Process Orders',
+      message: `Are you sure you want to process ${selectedItems.length} selected order${selectedItems.length !== 1 ? 's' : ''}?`,
+      variant: 'info',
+      onConfirm: () => {
+        const ids = selectedItems.map(i => i.id);
+        bulkActionMutation.mutate({ action: 'process', ids });
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
   };
 
   const handleBulkShip = (selectedItems: Order[]) => {
-    const ids = selectedItems.map(i => i.id);
-    if (confirm(`Ship ${selectedItems.length} orders?`)) bulkActionMutation.mutate({ action: 'ship', ids });
+    setConfirmDialog({
+      open: true,
+      title: 'Bulk Ship Orders',
+      message: `Are you sure you want to mark ${selectedItems.length} selected order${selectedItems.length !== 1 ? 's' : ''} as shipped?`,
+      variant: 'info',
+      onConfirm: () => {
+        const ids = selectedItems.map(i => i.id);
+        bulkActionMutation.mutate({ action: 'ship', ids });
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
   };
 
   const handleBulkDeliver = (selectedItems: Order[]) => {
-    const ids = selectedItems.map(i => i.id);
-    if (confirm(`Mark ${selectedItems.length} orders as delivered?`)) bulkActionMutation.mutate({ action: 'deliver', ids });
+    setConfirmDialog({
+      open: true,
+      title: 'Bulk Deliver Orders',
+      message: `Are you sure you want to mark ${selectedItems.length} selected order${selectedItems.length !== 1 ? 's' : ''} as delivered?`,
+      variant: 'info',
+      onConfirm: () => {
+        const ids = selectedItems.map(i => i.id);
+        bulkActionMutation.mutate({ action: 'deliver', ids });
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
   };
 
   const handleBulkCancel = (selectedItems: Order[]) => {
-    const ids = selectedItems.map(i => i.id);
-    if (confirm(`Cancel ${selectedItems.length} orders?`)) bulkActionMutation.mutate({ action: 'cancel', ids });
+    setConfirmDialog({
+      open: true,
+      title: 'Bulk Cancel Orders',
+      message: `Are you sure you want to cancel ${selectedItems.length} selected order${selectedItems.length !== 1 ? 's' : ''}?`,
+      variant: 'error',
+      onConfirm: () => {
+        const ids = selectedItems.map(i => i.id);
+        bulkActionMutation.mutate({ action: 'cancel', ids });
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
   };
 
   const handleBulkExport = (selectedItems: Order[]) => {
     const exportData = selectedItems.map(item => ({
       order_number: item.order_number,
       customer_name: item.customer_name,
-      total: item.total,
+      customer_email: item.customer_email,
       status: item.status,
+      payment_status: item.payment_status,
+      payment_method: item.payment_method,
+      subtotal: item.subtotal,
+      shipping_cost: item.shipping_cost,
+      tax_amount: item.tax_amount,
+      discount_amount: item.discount_amount,
+      total: item.total,
+      item_count: item.item_count,
       created_at: item.created_at,
     }));
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -303,70 +511,53 @@ export default function OrdersPage() {
     toast.success(`Exported ${selectedItems.length} orders`);
   };
 
-
+  // Row actions
   const getOrderActions = (order: Order): ActionItem[] => {
     const actions: ActionItem[] = [];
 
     actions.push({
       label: 'View Details',
-      icon: <Eye />,
-      onClick: () => router.push(`/dashboard/orders/${order.id}`),
-      color: 'blue', // Add color for specific actions
+      icon: <Eye size={14} />,
+      onClick: () => setViewingOrder(order),
+      color: 'blue',
     });
 
     if (order.items && order.items.length > 0) {
       actions.push({
         label: 'View Items',
-        icon: <ShoppingCart />,
+        icon: <ShoppingCart size={14} />,
         onClick: () => setViewingItemsFor(order),
         color: 'violet',
       });
     }
 
-
     actions.push({
       label: 'Update Status',
-      icon: <PackageCheck />,
+      icon: <PackageCheck size={14} />,
       onClick: () => setUpdatingStatusFor(order),
       color: 'emerald',
     });
 
     actions.push({
       label: 'Update Payment',
-      icon: <CreditCard />,
+      icon: <CreditCard size={14} />,
       onClick: () => setUpdatingPaymentFor(order),
       color: 'orange',
-    });
-
-    actions.push({
-      label: 'Edit Order',
-      icon: <Edit />,
-      onClick: () => router.push(`/dashboard/orders/${order.id}/edit`),
-      color: 'blue',
     });
 
     if (order.shipping_address) {
       actions.push({
         label: 'Shipping Address',
-        icon: <MapPin />,
+        icon: <MapPin size={14} />,
         onClick: () => setViewingAddressFor(order),
         color: 'amber',
       });
     }
 
-
-    // actions.push({
-    //     label: 'Delete Order',
-    //     icon: <Trash2 />,
-    //     variant: 'destructive', // This will override color
-    //     onClick: () => handleDelete(order),
-    // });
-
     return actions;
   };
 
-
-  // Bulk actions array
+  // Bulk actions
   const bulkActions = [
     { label: 'Confirm Selected', icon: <CheckCircle size={14} />, onClick: handleBulkConfirm, color: 'emerald' as const },
     { label: 'Process Selected', icon: <RefreshCw size={14} />, onClick: handleBulkProcess, color: 'blue' as const },
@@ -376,7 +567,10 @@ export default function OrdersPage() {
     { label: 'Export Selected', icon: <Upload size={14} />, onClick: handleBulkExport, color: 'blue' as const },
   ];
 
-  if (isLoading) {
+  const orders = data?.data?.orders || [];
+  const pagination = data?.data?.pagination;
+
+  if (isLoading && !orders.length) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
@@ -392,19 +586,95 @@ export default function OrdersPage() {
     );
   }
 
-  const orders = data?.data?.orders || [];
-
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Orders</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Manage and track customer orders</p>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Orders</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Manage and track customer orders</p>
+      </div>
+
+      {/* Refresh Button */}
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={handleRefresh} className="gap-2">
+          <RefreshCw size={16} />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Filters and Sort Row */}
+      <div className="flex flex-wrap gap-4 items-start justify-between">
+        <div className="flex-1">
+          <CustomFilter
+            config={filterConfig}
+            filters={{
+              search: appliedFilters.search,
+              status: appliedFilters.status,
+              payment_status: appliedFilters.payment_status,
+              payment_method: appliedFilters.payment_method,
+            }}
+            onFilterChange={handleFilterChange}
+            onReset={handleResetFilters}
+          />
+        </div>
+        <CustomSort
+          config={sortConfig}
+          onSortChange={handleSortChange}
+        />
+      </div>
+
+      {/* Additional Filters - Date Range and Amount */}
+      <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400">Date Range:</span>
+          <Input
+            type="date"
+            placeholder="From"
+            value={appliedFilters.date_from}
+            onChange={(e) => handleDateChange('date_from', e.target.value)}
+            className="w-36 h-9 border-gray-300 dark:border-gray-700"
+          />
+          <span className="text-gray-500">to</span>
+          <Input
+            type="date"
+            placeholder="To"
+            value={appliedFilters.date_to}
+            onChange={(e) => handleDateChange('date_to', e.target.value)}
+            className="w-36 h-9 border-gray-300 dark:border-gray-700"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400">Total Amount:</span>
+          <Input
+            type="number"
+            placeholder="Min"
+            value={appliedFilters.min_total}
+            onChange={(e) => handleAmountChange('min_total', e.target.value)}
+            className="w-28 h-9 border-gray-300 dark:border-gray-700"
+          />
+          <span className="text-gray-500">-</span>
+          <Input
+            type="number"
+            placeholder="Max"
+            value={appliedFilters.max_total}
+            onChange={(e) => handleAmountChange('max_total', e.target.value)}
+            className="w-28 h-9 border-gray-300 dark:border-gray-700"
+          />
         </div>
       </div>
 
-      {/* ==================== SHEETS ==================== */}
+      {/* Confirmation Dialog */}
+      <InfoDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        title={confirmDialog.title}
+        infoMessage={confirmDialog.message}
+        variant={confirmDialog.variant}
+        primaryButtonText="Confirm"
+        secondaryButtonText="Cancel"
+        primaryAction={confirmDialog.onConfirm}
+        secondaryAction={() => setConfirmDialog({ ...confirmDialog, open: false })}
+      />
 
       {/* Order Details Sheet */}
       <CustomSheet
@@ -457,8 +727,6 @@ export default function OrdersPage() {
         )}
       </CustomSheet>
 
-      {/* ==================== DIALOGS ==================== */}
-
       {/* Update Status Dialog */}
       <CustomDialog
         title="Update Order Status"
@@ -472,6 +740,7 @@ export default function OrdersPage() {
             order={updatingStatusFor}
             onSuccess={() => {
               setUpdatingStatusFor(null);
+              refetch();
               queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
             }}
             onCancel={() => setUpdatingStatusFor(null)}
@@ -492,6 +761,7 @@ export default function OrdersPage() {
             order={updatingPaymentFor}
             onSuccess={() => {
               setUpdatingPaymentFor(null);
+              refetch();
               queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
             }}
             onCancel={() => setUpdatingPaymentFor(null)}
@@ -511,7 +781,8 @@ export default function OrdersPage() {
           />
         )}
         bulkActions={bulkActions}
-        excludeColumns={['id', 'items', 'shipping_address', 'timestamps', 'guest_info', 'admin_note']}
+        bulkActionsMessage="Select orders to confirm, process, ship, deliver, cancel, or export"
+        excludeColumns={['id', 'items', 'shipping_address', 'tax_amount', 'discount_amount', 'currency']}
         dots={{
           status: {
             pending: 'amber',
@@ -530,33 +801,29 @@ export default function OrdersPage() {
           },
         }}
         badges={{
-          status: {
-            "pending": 'amber',
-            "confirmed": 'emerald',
-            "processing": 'blue',
-            "shipped": 'violet',
-            "delivered": 'emerald',
-            "cancelled": 'rose',
-            "refunded": 'zinc'
-          },
-          payment_status: {
-            "pending": 'amber',
-            "paid": 'emerald',
-            "failed": 'rose',
-            "refunded": 'zinc'
-          },
           payment_method: {
-            "paystack": 'blue',
-            "pod": 'orange'
+            paystack: 'blue',
+            pod: 'orange'
           },
         }}
         links={{
-          order_number: (order: Order) => `/dashboard/orders/${order.id}`
+          order_number: (order: Order) => `/dashboard/orders/${order.id}`,
         }}
         emptyTitle="No Orders Found"
         emptyDescription="Orders will appear here once customers place them."
         onSelectionChange={(selected) => console.log('Selected orders:', selected.length)}
       />
+
+      {/* Pagination */}
+      {pagination && pagination.total_pages > 1 && (
+        <CustomPagination
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
+          showLimitSelector={true}
+          limitOptions={[10, 20, 50, 100]}
+        />
+      )}
     </div>
   );
 }
