@@ -51,33 +51,48 @@ export function CustomFilter({
     const [tempFilters, setTempFilters] = useState(filters);
     const [tempSearch, setTempSearch] = useState(filters.search || '');
     const [hasChanges, setHasChanges] = useState(false);
+    const [appliedFilters, setAppliedFilters] = useState(filters);
+    const [appliedSearch, setAppliedSearch] = useState(filters.search || '');
 
-    // Update temp filters when props change (e.g., after apply)
+    // Update temp filters when props change (e.g., after apply from parent)
     useEffect(() => {
         setTempFilters(filters);
         setTempSearch(filters.search || '');
+        setAppliedFilters(filters);
+        setAppliedSearch(filters.search || '');
         setHasChanges(false);
     }, [filters]);
+
+    // Check if current temp values differ from applied values
+    useEffect(() => {
+        const filtersChanged = JSON.stringify(tempFilters) !== JSON.stringify(appliedFilters);
+        const searchChanged = tempSearch !== appliedSearch;
+        setHasChanges(filtersChanged || searchChanged);
+    }, [tempFilters, tempSearch, appliedFilters, appliedSearch]);
 
     const handleFieldChange = (fieldName: string, value: any) => {
         // Convert 'all' to empty string for storage (so placeholder shows)
         const newValue = value === 'all' ? '' : value;
         const newFilters = { ...tempFilters, [fieldName]: newValue };
         setTempFilters(newFilters);
-        setHasChanges(true);
     };
 
     const handleSearchChange = (value: string) => {
         setTempSearch(value);
-        setHasChanges(true);
     };
 
     const handleApplyFilters = () => {
-        const appliedFilters = { ...tempFilters };
+        const appliedFiltersData = { ...tempFilters };
+        const appliedSearchData = tempSearch;
+
+        setAppliedFilters(appliedFiltersData);
+        setAppliedSearch(appliedSearchData);
+
+        const finalFilters = { ...appliedFiltersData };
         if (config.showSearch !== false) {
-            appliedFilters.search = tempSearch;
+            finalFilters.search = appliedSearchData;
         }
-        onFilterChange(appliedFilters);
+        onFilterChange(finalFilters);
         setHasChanges(false);
     };
 
@@ -86,22 +101,26 @@ export function CustomFilter({
         config.fields.forEach(field => {
             resetFilters[field.name] = field.defaultValue !== undefined ? field.defaultValue : '';
         });
-        if (config.showSearch !== false) {
-            resetFilters.search = '';
-        }
+        const resetSearch = '';
+
         setTempFilters(resetFilters);
-        setTempSearch('');
-        setHasChanges(true);
+        setTempSearch(resetSearch);
+        setAppliedFilters(resetFilters);
+        setAppliedSearch(resetSearch);
 
         // Apply immediately on reset
-        onFilterChange(resetFilters);
+        const finalFilters = { ...resetFilters };
+        if (config.showSearch !== false) {
+            finalFilters.search = resetSearch;
+        }
+        onFilterChange(finalFilters);
         if (onReset) onReset();
         setHasChanges(false);
     };
 
     const hasActiveFilters = () => {
-        return Object.keys(filters).some(key => {
-            const value = filters[key];
+        return Object.keys(appliedFilters).some(key => {
+            const value = appliedFilters[key];
             if (key === 'search' && !config.showSearch) return false;
             if (Array.isArray(value)) return value.length > 0;
             if (typeof value === 'boolean') return value === true;
@@ -111,8 +130,8 @@ export function CustomFilter({
 
     const getActiveFilterCount = () => {
         let count = 0;
-        Object.keys(filters).forEach(key => {
-            const value = filters[key];
+        Object.keys(appliedFilters).forEach(key => {
+            const value = appliedFilters[key];
             if (key === 'search' && !config.showSearch) return;
             if (Array.isArray(value) && value.length > 0) count++;
             else if (typeof value === 'boolean' && value === true) count++;
