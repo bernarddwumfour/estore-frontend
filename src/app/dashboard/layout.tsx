@@ -15,10 +15,8 @@ import {
   LogOut,
   Search,
   Bell,
-  TrendingUp,
   Tag,
   Layers,
-  Archive,
   Truck,
   DollarSign,
   Menu,
@@ -27,16 +25,11 @@ import {
   Moon,
   ChevronDown,
   ChevronRight,
-  BarChart3,
   ShieldCheck,
-  CreditCard,
   Gift,
-  MessageSquare,
-  FileText,
   Store,
   Megaphone,
   Mail,
-  Smartphone,
   LucideIcon
 } from 'lucide-react';
 
@@ -114,7 +107,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // --- States ---
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [openMenus, setOpenMenus] = useState<string[]>(['Products', 'Orders']);
+  const [openMenus, setOpenMenus] = useState<string[]>(['Products', 'Orders', 'Users', 'Marketing', 'Store Settings']);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
 
@@ -217,7 +210,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     className={cn(
                       "w-full flex items-center text-sm font-bold rounded-lg transition-all group py-2.5",
                       isOpen && !isCollapsed
-                        ? 'bg-gray-100 dark:bg-gray-900 text-black dark:text-white'
+                        ? 'bg-gray-50 dark:bg-gray-900/50 text-black dark:text-white'
                         : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900/50',
                       isCollapsed ? "justify-center px-0" : "justify-between px-4"
                     )}

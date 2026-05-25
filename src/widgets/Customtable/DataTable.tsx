@@ -434,7 +434,7 @@ export function DataTable<T extends { id: string | number }>({
                                             More Actions <ChevronDown size={12} />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-48 rounded-xl shadow-2xl bg-white dark:bg-black border-gray-200 dark:border-gray-800">
+                                    <DropdownMenuContent align="start" className="w-48 rounded-xl shadow-2xl bg-white dark:bg-black border-gray-200 dark:text-gray-300 dark:border-gray-800">
                                         {moreBulkActions.map((action, i) => (
                                             <DropdownMenuItem
                                                 key={i}
@@ -443,8 +443,8 @@ export function DataTable<T extends { id: string | number }>({
                                                     setShowMoreBulkActions(false);
                                                 }}
                                                 className={cn(
-                                                    "font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg",
-                                                    action.variant === 'destructive' && "text-rose-600 dark:text-rose-400"
+                                                    "font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg  dark:hover:bg-gray-800/90 dark:hover:text-gray-300 ",
+                                                    action.variant === 'destructive' && "text-rose-600 dark:text-rose-400 dark:hover:text-rose-400"
                                                 )}
                                             >
                                                 {action.icon}
