@@ -4,25 +4,22 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
-    Package, Truck, Clock, CheckCircle, XCircle, Search, Filter, X,
-    Eye, RefreshCw, MapPin, Calendar, Upload, ChevronRight,
-    AlertCircle, TrendingUp, TrendingDown, Download
+    Eye, RefreshCw, Package, Truck, CheckCircle, XCircle,
+    MapPin, Calendar, Clock, Upload, Download, Filter
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
 import { CustomSheet } from '@/widgets/CustomSheet/CustomSheet';
 import { DataTable } from '@/widgets/Customtable/DataTable';
-import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
+import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
 import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
-import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
+import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 // Types
@@ -66,12 +63,10 @@ interface ShipmentDetail {
         location: string;
         description: string;
         created_at: string;
-        created_by?: string;
     }>;
     shipping_address: {
         first_name: string;
         last_name: string;
-        company: string;
         address_line1: string;
         address_line2: string;
         city: string;
@@ -80,7 +75,6 @@ interface ShipmentDetail {
         country: string;
         phone: string;
         email: string;
-        instructions: string;
     };
     order_items: Array<{
         id: string;
@@ -89,7 +83,6 @@ interface ShipmentDetail {
         quantity: number;
         unit_price: number;
         total_price: number;
-        image?: string;
     }>;
     order_summary: {
         subtotal: number;
@@ -118,8 +111,8 @@ const fetchShipments = async (params?: any): Promise<{
     if (params?.search && params.search !== '') queryParams.append('search', params.search);
     if (params?.status && params.status !== '') queryParams.append('status', params.status);
     if (params?.carrier && params.carrier !== '') queryParams.append('carrier', params.carrier);
-    if (params?.date_from) queryParams.append('date_from', params.date_from);
-    if (params?.date_to) queryParams.append('date_to', params.date_to);
+    if (params?.date_range?.from) queryParams.append('date_from', params.date_range.from);
+    if (params?.date_range?.to) queryParams.append('date_to', params.date_range.to);
     if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
 
@@ -154,6 +147,7 @@ const filterConfig: FilterConfig = {
             type: 'select',
             placeholder: 'Shipment Status',
             options: [
+                { value: 'pending', label: 'Pending' },
                 { value: 'shipped', label: 'Shipped' },
                 { value: 'delivered', label: 'Delivered' },
                 { value: 'cancelled', label: 'Cancelled' },
@@ -175,6 +169,13 @@ const filterConfig: FilterConfig = {
             ],
             defaultValue: '',
             width: '120px',
+        },
+        {
+            name: 'date_range',
+            type: 'date_range',
+            placeholder: 'Date Range',
+            defaultValue: undefined,
+            width: '260px',
         },
     ],
     searchPlaceholder: 'Search by order number, tracking number, or customer...',
@@ -203,9 +204,9 @@ function UpdateShipmentStatusForm({ shipment, onSuccess, onCancel }: { shipment:
     const [description, setDescription] = useState("");
 
     const statusOptions = [
-        { value: "delivered", label: "Delivered", icon: <CheckCircle size={14} /> },
-        { value: "cancelled", label: "Cancelled", icon: <XCircle size={14} /> },
-        { value: "returned", label: "Returned", icon: <Package size={14} /> },
+        { value: "delivered", label: "Delivered" },
+        { value: "cancelled", label: "Cancelled" },
+        { value: "returned", label: "Returned" },
     ];
 
     const handleSubmit = async () => {
@@ -256,50 +257,199 @@ function UpdateShipmentStatusForm({ shipment, onSuccess, onCancel }: { shipment:
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tracking Number</label>
-                    <Input
-                        placeholder="Enter tracking number"
+                    <input
+                        type="text"
                         value={trackingNumber}
                         onChange={(e) => setTrackingNumber(e.target.value)}
-                        className="border-gray-200 dark:border-gray-800"
+                        placeholder="Enter tracking number"
+                        className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
                     />
                 </div>
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Carrier</label>
-                    <Input
-                        placeholder="e.g., FedEx, DHL, UPS"
+                    <input
+                        type="text"
                         value={carrier}
                         onChange={(e) => setCarrier(e.target.value)}
-                        className="border-gray-200 dark:border-gray-800"
+                        placeholder="e.g., FedEx, DHL, UPS"
+                        className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
                     />
                 </div>
             </div>
 
             <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Location (Optional)</label>
-                <Input
-                    placeholder="Current location"
+                <input
+                    type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="border-gray-200 dark:border-gray-800"
+                    placeholder="Current location"
+                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
                 />
             </div>
 
             <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</label>
-                <Input
-                    placeholder="Additional details"
+                <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="border-gray-200 dark:border-gray-800"
+                    placeholder="Additional details"
+                    rows={2}
+                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
                 />
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={onCancel}>Cancel</Button>
-                <Button onClick={handleSubmit} disabled={isSubmitting || !selectedStatus}>
+                <Button onClick={handleSubmit} disabled={isSubmitting}>
                     {isSubmitting ? "Updating..." : "Update Status"}
                 </Button>
             </div>
+        </div>
+    );
+}
+
+// Shipment Detail View Component
+function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClose: () => void }) {
+    const [shipment, setShipment] = useState<ShipmentDetail | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    React.useEffect(() => {
+        const fetchDetail = async () => {
+            try {
+                const data = await fetchShipmentDetail(shipmentId);
+                setShipment(data);
+            } catch (error) {
+                console.error('Error fetching shipment details:', error);
+                toast.error('Failed to load shipment details');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchDetail();
+    }, [shipmentId]);
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
+            </div>
+        );
+    }
+
+    if (!shipment) return null;
+
+    const getStatusColor = (status: string) => {
+        const colors: Record<string, string> = {
+            pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+            shipped: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+            delivered: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+            cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+            returned: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+        };
+        return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    };
+
+    return (
+        <div className="space-y-6 p-4">
+            {/* Status Badge */}
+            <div className="flex justify-between items-center">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(shipment.status)}`}>
+                    {shipment.status_display}
+                </span>
+                {shipment.tracking_url && (
+                    <Button variant="outline" size="sm" asChild>
+                        <a href={shipment.tracking_url} target="_blank" rel="noopener noreferrer">
+                            Track Order
+                        </a>
+                    </Button>
+                )}
+            </div>
+
+            {/* Tracking Info */}
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Tracking Number</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{shipment.tracking_number || '—'}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Carrier</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{shipment.carrier || '—'}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Shipping Method</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{shipment.shipping_method || '—'}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Shipping Cost</p>
+                    <p className="font-medium text-gray-900 dark:text-white">${shipment.shipping_cost.toFixed(2)}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Shipped Date</p>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                        {shipment.shipped_at ? new Date(shipment.shipped_at).toLocaleDateString() : '—'}
+                    </p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Delivered Date</p>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                        {shipment.delivered_at ? new Date(shipment.delivered_at).toLocaleDateString() : '—'}
+                    </p>
+                </div>
+            </div>
+
+            {/* Tracking History */}
+            {shipment.tracking_history && shipment.tracking_history.length > 0 && (
+                <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Tracking History</h3>
+                    <div className="space-y-4">
+                        {shipment.tracking_history.map((event, index) => (
+                            <div key={index} className="flex gap-3">
+                                <div className="relative">
+                                    <div className="w-3 h-3 rounded-full bg-orange-500 mt-1.5" />
+                                    {index !== shipment.tracking_history.length - 1 && (
+                                        <div className="absolute top-5 left-1.5 w-0.5 h-full bg-gray-200 dark:bg-gray-700" />
+                                    )}
+                                </div>
+                                <div className="flex-1 pb-4">
+                                    <p className="font-medium text-gray-900 dark:text-white">{event.status_display}</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">{event.description}</p>
+                                    {event.location && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-1 mt-1">
+                                            <MapPin className="h-3 w-3" /> {event.location}
+                                        </p>
+                                    )}
+                                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                        {new Date(event.created_at).toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Shipping Address */}
+            {shipment.shipping_address && (
+                <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Shipping Address</h3>
+                    <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg space-y-1">
+                        <p className="font-medium text-gray-900 dark:text-white">
+                            {shipment.shipping_address.first_name} {shipment.shipping_address.last_name}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{shipment.shipping_address.address_line1}</p>
+                        {shipment.shipping_address.address_line2 && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{shipment.shipping_address.address_line2}</p>
+                        )}
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {shipment.shipping_address.city}, {shipment.shipping_address.state} {shipment.shipping_address.postal_code}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{shipment.shipping_address.country}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500">Phone: {shipment.shipping_address.phone}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500">Email: {shipment.shipping_address.email}</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -323,8 +473,7 @@ export default function ShipmentsPage() {
         search: '',
         status: '',
         carrier: '',
-        date_from: '',
-        date_to: '',
+        date_range: undefined,
         sort_by: 'created_at',
         sort_order: 'desc',
     });
@@ -380,27 +529,19 @@ export default function ShipmentsPage() {
         setFilters({ page: 1, limit });
     };
 
-    // Handle filter changes
+    // Handle filter changes from CustomFilter
     const handleFilterChange = (newFilters: Record<string, any>) => {
         setAppliedFilters({
             ...appliedFilters,
             search: newFilters.search || '',
             status: newFilters.status || '',
             carrier: newFilters.carrier || '',
+            date_range: newFilters.date_range,
         });
         setFilters({ ...filters, page: 1 });
     };
 
-    // Handle date filter changes
-    const handleDateChange = (field: string, value: string) => {
-        setAppliedFilters({
-            ...appliedFilters,
-            [field]: value,
-        });
-        setFilters({ ...filters, page: 1 });
-    };
-
-    // Handle sort changes
+    // Handle sort changes from CustomSort
     const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
         setAppliedFilters({
             ...appliedFilters,
@@ -422,8 +563,7 @@ export default function ShipmentsPage() {
             search: '',
             status: '',
             carrier: '',
-            date_from: '',
-            date_to: '',
+            date_range: undefined,
             sort_by: 'created_at',
             sort_order: 'desc',
         });
@@ -521,12 +661,11 @@ export default function ShipmentsPage() {
     const bulkActions = [
         { label: 'Mark as Delivered', icon: <CheckCircle size={14} />, onClick: handleBulkDeliver, color: 'emerald' as const },
         { label: 'Cancel Selected', icon: <XCircle size={14} />, onClick: handleBulkCancel, color: 'rose' as const, variant: 'destructive' as const },
-        { label: 'Export Selected', icon: <Download size={14} />, onClick: handleBulkExport, color: 'blue' as const },
+        { label: 'Export Selected', icon: <Upload size={14} />, onClick: handleBulkExport, color: 'blue' as const },
     ];
 
     const shipments = data?.data?.shipments || [];
     const pagination = data?.data?.pagination;
-    const total = data?.data?.total || 0;
 
     if (isLoading && !shipments.length) {
         return (
@@ -552,52 +691,6 @@ export default function ShipmentsPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Track and manage all order shipments</p>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Shipments</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{total}</p>
-                        </div>
-                        <Package className="h-8 w-8 text-purple-500" />
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Shipped</p>
-                            <p className="text-2xl font-bold text-indigo-600">
-                                {shipments.filter(s => s.status === 'shipped').length}
-                            </p>
-                        </div>
-                        <Truck className="h-8 w-8 text-indigo-500" />
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Delivered</p>
-                            <p className="text-2xl font-bold text-emerald-600">
-                                {shipments.filter(s => s.status === 'delivered').length}
-                            </p>
-                        </div>
-                        <CheckCircle className="h-8 w-8 text-emerald-500" />
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">In Transit</p>
-                            <p className="text-2xl font-bold text-amber-600">
-                                {shipments.filter(s => s.status === 'pending').length}
-                            </p>
-                        </div>
-                        <Clock className="h-8 w-8 text-amber-500" />
-                    </div>
-                </div>
-            </div>
-
             {/* Refresh Button */}
             <div className="flex justify-end">
                 <Button variant="outline" onClick={handleRefresh} className="gap-2">
@@ -615,6 +708,7 @@ export default function ShipmentsPage() {
                             search: appliedFilters.search,
                             status: appliedFilters.status,
                             carrier: appliedFilters.carrier,
+                            date_range: appliedFilters.date_range,
                         }}
                         onFilterChange={handleFilterChange}
                         onReset={handleResetFilters}
@@ -624,28 +718,6 @@ export default function ShipmentsPage() {
                     config={sortConfig}
                     onSortChange={handleSortChange}
                 />
-            </div>
-
-            {/* Date Range Filter */}
-            <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Date Range:</span>
-                    <Input
-                        type="date"
-                        placeholder="From"
-                        value={appliedFilters.date_from}
-                        onChange={(e) => handleDateChange('date_from', e.target.value)}
-                        className="w-36 h-9 border-gray-300 dark:border-gray-700"
-                    />
-                    <span className="text-gray-500">to</span>
-                    <Input
-                        type="date"
-                        placeholder="To"
-                        value={appliedFilters.date_to}
-                        onChange={(e) => handleDateChange('date_to', e.target.value)}
-                        className="w-36 h-9 border-gray-300 dark:border-gray-700"
-                    />
-                </div>
             </div>
 
             {/* Confirmation Dialog */}
@@ -661,58 +733,6 @@ export default function ShipmentsPage() {
                 secondaryAction={() => setConfirmDialog({ ...confirmDialog, open: false })}
             />
 
-            {/* Data Table */}
-            <DataTable
-                data={shipments}
-                renderActions={(shipment: Shipment) => (
-                    <ActionsDropdown
-                        actions={getShipmentActions(shipment)}
-                        maxVisible={3}
-                        showLabels={false}
-                        buttonSize="sm"
-                    />
-                )}
-                bulkActions={bulkActions}
-                bulkActionsMessage="Select shipments to mark as delivered, cancel, or export"
-                excludeColumns={['id', 'created_at', 'shipped_at', 'delivered_at', 'estimated_delivery']}
-                dots={{
-                    status: {
-                        pending: 'amber',
-                        shipped: 'violet',
-                        delivered: 'emerald',
-                        cancelled: 'rose',
-                        returned: 'zinc',
-                    },
-                }}
-                // badges={{
-                //     carrier: {
-                //         fedex: 'purple',
-                //         dhl: 'yellow',
-                //         ups: 'brown',
-                //         usps: 'blue',
-                //         internal: 'gray',
-                //     },
-                // }}
-                links={{
-                    order_number: (shipment: Shipment) => `/dashboard/orders/${shipment.order_number}`,
-                    tracking_number: (shipment: Shipment) => shipment.tracking_number ? `https://tracking.example.com/${shipment.tracking_number}` : "",
-                }}
-                emptyTitle="No Shipments Found"
-                emptyDescription="Shipments will appear here once orders are shipped."
-                onSelectionChange={(selected) => console.log('Selected shipments:', selected.length)}
-            />
-
-            {/* Pagination */}
-            {pagination && pagination.total_pages > 1 && (
-                <CustomPagination
-                    pagination={pagination}
-                    onPageChange={handlePageChange}
-                    onLimitChange={handleLimitChange}
-                    showLimitSelector={true}
-                    limitOptions={[10, 20, 50, 100]}
-                />
-            )}
-
             {/* Update Status Dialog */}
             <CustomDialog
                 title="Update Shipment Status"
@@ -727,232 +747,89 @@ export default function ShipmentsPage() {
                         onSuccess={() => {
                             setUpdatingStatusFor(null);
                             refetch();
+                            queryClient.invalidateQueries({ queryKey: ['admin-shipments'] });
                             queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
                         }}
                         onCancel={() => setUpdatingStatusFor(null)}
                     />
                 )}
             </CustomDialog>
-        </div>
-    );
-}
 
-// Shipment Detail View Component (can be moved to separate file)
-function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClose: () => void }) {
-    const [shipment, setShipment] = useState<ShipmentDetail | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    React.useEffect(() => {
-        const fetchDetail = async () => {
-            try {
-                const data = await fetchShipmentDetail(shipmentId);
-                setShipment(data);
-            } catch (error) {
-                console.error('Error fetching shipment details:', error);
-                toast.error('Failed to load shipment details');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchDetail();
-    }, [shipmentId]);
-
-    if (isLoading) {
-        return (
-            <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
-            </div>
-        );
-    }
-
-    if (!shipment) return null;
-
-    const getStatusColor = (status: string) => {
-        const colors: Record<string, string> = {
-            pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-            shipped: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
-            delivered: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-            cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-            returned: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-        };
-        return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-    };
-
-    return (
-        <div className="space-y-6 p-4">
-            {/* Status Badge */}
-            <div className="flex justify-between items-center">
-                <Badge className={getStatusColor(shipment.status)}>
-                    {shipment.status_display}
-                </Badge>
-                {shipment.tracking_url && (
-                    <Button variant="outline" size="sm" asChild>
-                        <a href={shipment.tracking_url} target="_blank" rel="noopener noreferrer">
-                            Track Order <ChevronRight className="h-4 w-4 ml-1" />
-                        </a>
-                    </Button>
+            {/* Data Table */}
+            <DataTable
+                data={shipments}
+                renderActions={(shipment: Shipment) => (
+                    <ActionsDropdown
+                        actions={getShipmentActions(shipment)}
+                        maxVisible={3}
+                        showLabels={false}
+                        buttonSize="sm"
+                    />
                 )}
-            </div>
+                bulkActions={bulkActions}
+                bulkActionsMessage="Select shipments to mark as delivered, cancel, or export"
+                excludeColumns={['id', 'customer_email', 'created_at', 'shipped_at', 'delivered_at', 'estimated_delivery']}
+                dots={{
+                    status: {
+                        pending: 'amber',
+                        shipped: 'violet',
+                        delivered: 'emerald',
+                        cancelled: 'rose',
+                        returned: 'zinc'
+                    },
+                }}
+                // badges={{
+                //   carrier: {
+                //     fedex: 'purple',
+                //     dhl: 'yellow',
+                //     ups: 'brown',
+                //     usps: 'blue',
+                //     internal: 'gray',
+                //   },
+                // }}
+                links={{
+                    order_number: (shipment: Shipment) => `/dashboard/orders/${shipment.order_number}`,
+                }}
+                // columnMaxWidth={{
+                //   order_number: '120px',
+                //   customer_name: '180px',
+                //   status: '100px',
+                //   tracking_number: '150px',
+                //   carrier: '100px',
+                //   created_at: '120px',
+                // }}
+                emptyTitle="No Shipments Found"
+                emptyDescription="Shipments will appear here once orders are shipped."
+                onSelectionChange={(selected) => console.log('Selected shipments:', selected.length)}
+            />
 
-            {/* Tracking Info */}
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Tracking Number</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{shipment.tracking_number || '—'}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Carrier</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{shipment.carrier || '—'}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Shipping Method</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{shipment.shipping_method || '—'}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Shipping Cost</p>
-                    <p className="font-medium text-gray-900 dark:text-white">${shipment.shipping_cost.toFixed(2)}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Weight</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{shipment.weight ? `${shipment.weight} kg` : '—'}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Estimated Delivery</p>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                        {shipment.estimated_delivery ? new Date(shipment.estimated_delivery).toLocaleDateString() : '—'}
-                    </p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Shipped Date</p>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                        {shipment.shipped_at ? new Date(shipment.shipped_at).toLocaleDateString() : '—'}
-                    </p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Delivered Date</p>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                        {shipment.delivered_at ? new Date(shipment.delivered_at).toLocaleDateString() : '—'}
-                    </p>
-                </div>
-            </div>
+            {/* View Shipment Details Sheet */}
+            <CustomSheet
+                title="Shipment Details"
+                description={`Shipment for order ${viewingShipment?.order_number || ''}`}
+                side="bottom"
+                size="lg"
+                open={!!viewingShipment}
+                onOpenChange={(open) => !open && setViewingShipment(null)}
+            >
+                {viewingShipment && (
+                    <ShipmentDetailView
+                        shipmentId={viewingShipment.id}
+                        onClose={() => setViewingShipment(null)}
+                    />
+                )}
+            </CustomSheet>
 
-            {/* Notes */}
-            {shipment.notes && (
-                <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Notes</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
-                        {shipment.notes}
-                    </p>
-                </div>
+            {/* Pagination */}
+            {pagination && pagination.total_pages > 1 && (
+                <CustomPagination
+                    pagination={pagination}
+                    onPageChange={handlePageChange}
+                    onLimitChange={handleLimitChange}
+                    showLimitSelector={true}
+                    limitOptions={[10, 20, 50, 100]}
+                />
             )}
-
-            {/* Tracking Timeline */}
-            {shipment.tracking_history && shipment.tracking_history.length > 0 && (
-                <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Tracking History</h3>
-                    <div className="space-y-4">
-                        {shipment.tracking_history.map((event, index) => (
-                            <div key={index} className="flex gap-3">
-                                <div className="relative">
-                                    <div className="w-3 h-3 rounded-full bg-orange-500 mt-1.5" />
-                                    {index !== shipment.tracking_history.length - 1 && (
-                                        <div className="absolute top-5 left-1.5 w-0.5 h-full bg-gray-200 dark:bg-gray-700" />
-                                    )}
-                                </div>
-                                <div className="flex-1 pb-4">
-                                    <p className="font-medium text-gray-900 dark:text-white">{event.status_display}</p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">{event.description}</p>
-                                    {event.location && (
-                                        <p className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-1 mt-1">
-                                            <MapPin className="h-3 w-3" /> {event.location}
-                                        </p>
-                                    )}
-                                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                        {new Date(event.created_at).toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Shipping Address */}
-            {shipment.shipping_address && (
-                <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Shipping Address</h3>
-                    <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg space-y-1">
-                        <p className="font-medium text-gray-900 dark:text-white">
-                            {shipment.shipping_address.first_name} {shipment.shipping_address.last_name}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{shipment.shipping_address.address_line1}</p>
-                        {shipment.shipping_address.address_line2 && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{shipment.shipping_address.address_line2}</p>
-                        )}
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {shipment.shipping_address.city}, {shipment.shipping_address.state} {shipment.shipping_address.postal_code}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{shipment.shipping_address.country}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-500">Phone: {shipment.shipping_address.phone}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-500">Email: {shipment.shipping_address.email}</p>
-                        {shipment.shipping_address.instructions && (
-                            <p className="text-sm text-gray-500 dark:text-gray-500">Instructions: {shipment.shipping_address.instructions}</p>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Order Summary */}
-            <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Order Summary</h3>
-                <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg space-y-2">
-                    <div className="flex justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Subtotal</span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            ${shipment.order_summary.subtotal.toFixed(2)}
-                        </span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Shipping</span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            ${shipment.order_summary.shipping_cost.toFixed(2)}
-                        </span>
-                    </div>
-                    {shipment.order_summary.tax_amount > 0 && (
-                        <div className="flex justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Tax</span>
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                ${shipment.order_summary.tax_amount.toFixed(2)}
-                            </span>
-                        </div>
-                    )}
-                    {shipment.order_summary.discount_amount > 0 && (
-                        <div className="flex justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Discount</span>
-                            <span className="text-sm font-medium text-red-600">
-                                -${shipment.order_summary.discount_amount.toFixed(2)}
-                            </span>
-                        </div>
-                    )}
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between">
-                        <span className="font-semibold text-gray-900 dark:text-white">Total</span>
-                        <span className="font-bold text-gray-900 dark:text-white">
-                            ${shipment.order_summary.total.toFixed(2)} {shipment.order_summary.currency}
-                        </span>
-                    </div>
-                    <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                        <p className="text-sm text-gray-500 dark:text-gray-500">
-                            Payment Status: <span className="font-medium capitalize">{shipment.order_summary.payment_status}</span>
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-500">
-                            Payment Method: <span className="font-medium">{shipment.order_summary.payment_method}</span>
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-500">
-                            Items: {shipment.order_summary.item_count}
-                        </p>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 }

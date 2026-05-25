@@ -5,13 +5,10 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
     Eye, RefreshCw, TrendingUp, DollarSign, Users,
-    CheckCircle, XCircle, Star, Trophy, Award,
-    Calendar, Mail, Phone, Upload, Link as LinkIcon,
-    CreditCard, Wallet, BarChart3, UserPlus, UserMinus
+    CheckCircle, XCircle, Upload, UserPlus, UserMinus, BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { ActionsDropdown, type ActionItem } from '@/widgets/ActionsDropdown/ActionsDropdown';
@@ -22,7 +19,6 @@ import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
 import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
-import Link from 'next/link';
 
 // Types
 interface Affiliate {
@@ -61,9 +57,9 @@ const fetchAffiliates = async (params?: any): Promise<{
     if (params?.is_active && params.is_active !== '') queryParams.append('is_active', params.is_active);
     if (params?.email_verified && params.email_verified !== '') queryParams.append('email_verified', params.email_verified);
     if (params?.affiliate_level && params.affiliate_level !== '') queryParams.append('affiliate_level', params.affiliate_level);
-    if (params?.min_earnings) queryParams.append('min_earnings', params.min_earnings);
-    if (params?.max_earnings) queryParams.append('max_earnings', params.max_earnings);
-    if (params?.min_referrals) queryParams.append('min_referrals', params.min_referrals);
+    if (params?.earnings_range?.min && params.earnings_range.min !== '') queryParams.append('min_earnings', params.earnings_range.min);
+    if (params?.earnings_range?.max && params.earnings_range.max !== '') queryParams.append('max_earnings', params.earnings_range.max);
+    if (params?.min_referrals && params.min_referrals !== '') queryParams.append('min_referrals', params.min_referrals);
     if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
 
@@ -84,7 +80,7 @@ const removeAffiliate = async (userId: string) => {
     return response.data;
 };
 
-// Filter configuration
+// Filter configuration - ALL filters now in CustomFilter
 const filterConfig: FilterConfig = {
     fields: [
         {
@@ -122,6 +118,24 @@ const filterConfig: FilterConfig = {
             defaultValue: '',
             width: '110px',
         },
+        {
+            name: 'earnings_range',
+            type: 'number_range',
+            placeholder: 'Earnings',
+            defaultValue: { min: '', max: '' },
+            width: '220px',
+            min: 0,
+            step: 0.01,
+        },
+        {
+            name: 'min_referrals',
+            type: 'number',
+            placeholder: 'Min Referrals',
+            defaultValue: '',
+            width: '130px',
+            min: 0,
+            step: 1,
+        },
     ],
     searchPlaceholder: 'Search by name, email, or phone...',
     showSearch: true,
@@ -153,14 +167,13 @@ export default function AffiliatesPage() {
         limit: 20,
     });
 
-    // Track applied filters
+    // Track applied filters - matches the filterConfig structure
     const [appliedFilters, setAppliedFilters] = useState({
         search: '',
         is_active: '',
         email_verified: '',
         affiliate_level: '',
-        min_earnings: '',
-        max_earnings: '',
+        earnings_range: { min: '', max: '' },
         min_referrals: '',
         sort_by: 'total_earnings',
         sort_order: 'desc',
@@ -221,7 +234,7 @@ export default function AffiliatesPage() {
 
     // Activate/Deactivate mutation
     const toggleStatusMutation = useMutation({
-        mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
+        mutationFn: async ({ userId }: { userId: string; isActive: boolean }) => {
             const response = await securityAxios.post(endpoints.users.activateOrDeactivate.replace(':id', userId));
             return response.data;
         },
@@ -244,7 +257,7 @@ export default function AffiliatesPage() {
         setFilters({ page: 1, limit });
     };
 
-    // Handle filter changes
+    // Handle filter changes from CustomFilter
     const handleFilterChange = (newFilters: Record<string, any>) => {
         setAppliedFilters({
             ...appliedFilters,
@@ -252,29 +265,13 @@ export default function AffiliatesPage() {
             is_active: newFilters.is_active || '',
             email_verified: newFilters.email_verified || '',
             affiliate_level: newFilters.affiliate_level || '',
+            earnings_range: newFilters.earnings_range || { min: '', max: '' },
+            min_referrals: newFilters.min_referrals || '',
         });
         setFilters({ ...filters, page: 1 });
     };
 
-    // Handle earnings filter changes
-    const handleEarningsChange = (field: string, value: string) => {
-        setAppliedFilters({
-            ...appliedFilters,
-            [field]: value,
-        });
-        setFilters({ ...filters, page: 1 });
-    };
-
-    // Handle referrals filter changes
-    const handleReferralsChange = (value: string) => {
-        setAppliedFilters({
-            ...appliedFilters,
-            min_referrals: value,
-        });
-        setFilters({ ...filters, page: 1 });
-    };
-
-    // Handle sort changes
+    // Handle sort changes from CustomSort
     const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
         setAppliedFilters({
             ...appliedFilters,
@@ -284,12 +281,6 @@ export default function AffiliatesPage() {
         setFilters({ ...filters, page: 1 });
     };
 
-    // Refresh handler
-    const handleRefresh = () => {
-        refetch();
-        toast.success('Affiliate list refreshed');
-    };
-
     // Reset all filters
     const handleResetFilters = () => {
         setAppliedFilters({
@@ -297,13 +288,18 @@ export default function AffiliatesPage() {
             is_active: '',
             email_verified: '',
             affiliate_level: '',
-            min_earnings: '',
-            max_earnings: '',
+            earnings_range: { min: '', max: '' },
             min_referrals: '',
             sort_by: 'total_earnings',
             sort_order: 'desc',
         });
         setFilters({ page: 1, limit: filters.limit });
+    };
+
+    // Refresh handler
+    const handleRefresh = () => {
+        refetch();
+        toast.success('Affiliate list refreshed');
     };
 
     // Single action helpers with confirmation
@@ -412,16 +408,6 @@ export default function AffiliatesPage() {
     const totalReferrals = affiliates.reduce((sum, a) => sum + (a.total_referrals || 0), 0);
     const activeCount = affiliates.filter(a => a.is_active).length;
 
-    // Affiliate level colors
-    const getLevelColor = (level?: string) => {
-        switch (level) {
-            case 'platinum': return 'purple';
-            case 'gold': return 'amber';
-            case 'silver': return 'gray';
-            default: return 'zinc';
-        }
-    };
-
     if (isLoading && !affiliates.length) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -512,7 +498,7 @@ export default function AffiliatesPage() {
                 </Button>
             </div>
 
-            {/* Filters and Sort Row */}
+            {/* Filters and Sort Row - All filters now in CustomFilter */}
             <div className="flex flex-wrap gap-4 items-start justify-between">
                 <div className="flex-1">
                     <CustomFilter
@@ -522,6 +508,8 @@ export default function AffiliatesPage() {
                             is_active: appliedFilters.is_active,
                             email_verified: appliedFilters.email_verified,
                             affiliate_level: appliedFilters.affiliate_level,
+                            earnings_range: appliedFilters.earnings_range,
+                            min_referrals: appliedFilters.min_referrals,
                         }}
                         onFilterChange={handleFilterChange}
                         onReset={handleResetFilters}
@@ -531,38 +519,6 @@ export default function AffiliatesPage() {
                     config={sortConfig}
                     onSortChange={handleSortChange}
                 />
-            </div>
-
-            {/* Additional Filters - Earnings and Referrals */}
-            <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Earnings:</span>
-                    <Input
-                        type="number"
-                        placeholder="Min"
-                        value={appliedFilters.min_earnings}
-                        onChange={(e) => handleEarningsChange('min_earnings', e.target.value)}
-                        className="w-28 h-9 border-gray-300 dark:border-gray-700"
-                    />
-                    <span className="text-gray-500">-</span>
-                    <Input
-                        type="number"
-                        placeholder="Max"
-                        value={appliedFilters.max_earnings}
-                        onChange={(e) => handleEarningsChange('max_earnings', e.target.value)}
-                        className="w-28 h-9 border-gray-300 dark:border-gray-700"
-                    />
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Min Referrals:</span>
-                    <Input
-                        type="number"
-                        placeholder="Min referrals"
-                        value={appliedFilters.min_referrals}
-                        onChange={(e) => handleReferralsChange(e.target.value)}
-                        className="w-28 h-9 border-gray-300 dark:border-gray-700"
-                    />
-                </div>
             </div>
 
             {/* Confirmation Dialog */}
@@ -589,8 +545,10 @@ export default function AffiliatesPage() {
                 <div className="space-y-4">
                     <div>
                         <label className="text-sm font-medium mb-1 block">User Email</label>
-                        <Input
+                        <input
+                            type="text"
                             placeholder="Search by email..."
+                            className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
                             onChange={(e) => {
                                 // Search for user by email
                                 const searchEmail = e.target.value;
@@ -711,7 +669,6 @@ export default function AffiliatesPage() {
                 links={{
                     email: (affiliate: Affiliate) => `/dashboard/users/${affiliate.id}`,
                 }}
-
                 emptyTitle="No Affiliates Found"
                 emptyDescription="No affiliate marketers yet. Make your first affiliate to get started."
                 onSelectionChange={(selected) => console.log('Selected affiliates:', selected.length)}

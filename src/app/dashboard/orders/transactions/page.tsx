@@ -4,13 +4,10 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-    DollarSign, CreditCard, RefreshCw, Search, X,
-    Eye, ArrowUpRight, ArrowDownRight, Filter, Calendar,
-    Download, TrendingUp, TrendingDown
+    DollarSign, RefreshCw, Eye, TrendingUp, TrendingDown, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
@@ -21,7 +18,6 @@ import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDr
 import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
-import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
 import { useRouter } from 'next/navigation';
 
 // Types
@@ -72,10 +68,10 @@ const fetchTransactions = async (params?: any): Promise<{
     if (params?.type && params.type !== '') queryParams.append('type', params.type);
     if (params?.status && params.status !== '') queryParams.append('status', params.status);
     if (params?.payment_method && params.payment_method !== '') queryParams.append('payment_method', params.payment_method);
-    if (params?.date_from) queryParams.append('date_from', params.date_from);
-    if (params?.date_to) queryParams.append('date_to', params.date_to);
-    if (params?.min_amount) queryParams.append('min_amount', params.min_amount);
-    if (params?.max_amount) queryParams.append('max_amount', params.max_amount);
+    if (params?.date_range?.from) queryParams.append('date_from', params.date_range.from);
+    if (params?.date_range?.to) queryParams.append('date_to', params.date_range.to);
+    if (params?.amount_range?.min && params.amount_range.min !== '') queryParams.append('min_amount', params.amount_range.min);
+    if (params?.amount_range?.max && params.amount_range.max !== '') queryParams.append('max_amount', params.amount_range.max);
     if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
 
@@ -84,7 +80,7 @@ const fetchTransactions = async (params?: any): Promise<{
     return response.data;
 };
 
-// Filter configuration
+// Filter configuration - ALL filters now in CustomFilter
 const filterConfig: FilterConfig = {
     fields: [
         {
@@ -126,6 +122,22 @@ const filterConfig: FilterConfig = {
             defaultValue: '',
             width: '150px',
         },
+        {
+            name: 'date_range',
+            type: 'date_range',
+            placeholder: 'Date Range',
+            defaultValue: undefined,
+            width: '260px',
+        },
+        {
+            name: 'amount_range',
+            type: 'number_range',
+            placeholder: 'Amount',
+            defaultValue: { min: '', max: '' },
+            width: '220px',
+            min: 0,
+            step: 0.01,
+        },
     ],
     searchPlaceholder: 'Search by transaction ID, reference, or order number...',
     showSearch: true,
@@ -155,16 +167,14 @@ export default function TransactionsPage() {
         limit: 20,
     });
 
-    // Track applied filters
+    // Track applied filters - matches the filterConfig structure
     const [appliedFilters, setAppliedFilters] = useState({
         search: '',
         type: '',
         status: '',
         payment_method: '',
-        date_from: '',
-        date_to: '',
-        min_amount: '',
-        max_amount: '',
+        date_range: undefined,
+        amount_range: { min: '', max: '' },
         sort_by: 'created_at',
         sort_order: 'desc',
     });
@@ -188,7 +198,7 @@ export default function TransactionsPage() {
         setFilters({ page: 1, limit });
     };
 
-    // Handle filter changes
+    // Handle filter changes from CustomFilter
     const handleFilterChange = (newFilters: Record<string, any>) => {
         setAppliedFilters({
             ...appliedFilters,
@@ -196,29 +206,13 @@ export default function TransactionsPage() {
             type: newFilters.type || '',
             status: newFilters.status || '',
             payment_method: newFilters.payment_method || '',
+            date_range: newFilters.date_range,
+            amount_range: newFilters.amount_range || { min: '', max: '' },
         });
         setFilters({ ...filters, page: 1 });
     };
 
-    // Handle date filter changes
-    const handleDateChange = (field: string, value: string) => {
-        setAppliedFilters({
-            ...appliedFilters,
-            [field]: value,
-        });
-        setFilters({ ...filters, page: 1 });
-    };
-
-    // Handle amount filter changes
-    const handleAmountChange = (field: string, value: string) => {
-        setAppliedFilters({
-            ...appliedFilters,
-            [field]: value,
-        });
-        setFilters({ ...filters, page: 1 });
-    };
-
-    // Handle sort changes
+    // Handle sort changes from CustomSort
     const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
         setAppliedFilters({
             ...appliedFilters,
@@ -228,12 +222,6 @@ export default function TransactionsPage() {
         setFilters({ ...filters, page: 1 });
     };
 
-    // Refresh handler
-    const handleRefresh = () => {
-        refetch();
-        toast.success('Transactions refreshed');
-    };
-
     // Reset all filters
     const handleResetFilters = () => {
         setAppliedFilters({
@@ -241,14 +229,18 @@ export default function TransactionsPage() {
             type: '',
             status: '',
             payment_method: '',
-            date_from: '',
-            date_to: '',
-            min_amount: '',
-            max_amount: '',
+            date_range: undefined,
+            amount_range: { min: '', max: '' },
             sort_by: 'created_at',
             sort_order: 'desc',
         });
         setFilters({ page: 1, limit: filters.limit });
+    };
+
+    // Refresh handler
+    const handleRefresh = () => {
+        refetch();
+        toast.success('Transactions refreshed');
     };
 
     // Export transactions
@@ -315,7 +307,6 @@ export default function TransactionsPage() {
     const transactions = data?.data?.transactions || [];
     const pagination = data?.data?.pagination;
     const stats = data?.data?.stats;
-    const total = data?.data?.total || 0;
 
     if (isLoading && !transactions.length) {
         return (
@@ -410,7 +401,7 @@ export default function TransactionsPage() {
                 </Button>
             </div>
 
-            {/* Filters and Sort Row */}
+            {/* Filters and Sort Row - All filters now in CustomFilter */}
             <div className="flex flex-wrap gap-4 items-start justify-between">
                 <div className="flex-1">
                     <CustomFilter
@@ -420,6 +411,8 @@ export default function TransactionsPage() {
                             type: appliedFilters.type,
                             status: appliedFilters.status,
                             payment_method: appliedFilters.payment_method,
+                            date_range: appliedFilters.date_range,
+                            amount_range: appliedFilters.amount_range,
                         }}
                         onFilterChange={handleFilterChange}
                         onReset={handleResetFilters}
@@ -429,46 +422,6 @@ export default function TransactionsPage() {
                     config={sortConfig}
                     onSortChange={handleSortChange}
                 />
-            </div>
-
-            {/* Additional Filters - Date Range and Amount */}
-            <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Date:</span>
-                    <Input
-                        type="date"
-                        placeholder="From"
-                        value={appliedFilters.date_from}
-                        onChange={(e) => handleDateChange('date_from', e.target.value)}
-                        className="w-36 h-9 border-gray-300 dark:border-gray-700"
-                    />
-                    <span className="text-gray-500">to</span>
-                    <Input
-                        type="date"
-                        placeholder="To"
-                        value={appliedFilters.date_to}
-                        onChange={(e) => handleDateChange('date_to', e.target.value)}
-                        className="w-36 h-9 border-gray-300 dark:border-gray-700"
-                    />
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Amount:</span>
-                    <Input
-                        type="number"
-                        placeholder="Min"
-                        value={appliedFilters.min_amount}
-                        onChange={(e) => handleAmountChange('min_amount', e.target.value)}
-                        className="w-28 h-9 border-gray-300 dark:border-gray-700"
-                    />
-                    <span className="text-gray-500">-</span>
-                    <Input
-                        type="number"
-                        placeholder="Max"
-                        value={appliedFilters.max_amount}
-                        onChange={(e) => handleAmountChange('max_amount', e.target.value)}
-                        className="w-28 h-9 border-gray-300 dark:border-gray-700"
-                    />
-                </div>
             </div>
 
             {/* Data Table */}
@@ -517,7 +470,6 @@ export default function TransactionsPage() {
                     transaction_id: (transaction: Transaction) => `/dashboard/transactions/${transaction.transaction_id}`,
                     order_number: (transaction: Transaction) => transaction.order_number ? `/dashboard/orders/${transaction.order_number}` : "",
                 }}
-
                 emptyTitle="No Transactions Found"
                 emptyDescription="Transactions will appear here once orders are placed."
                 onSelectionChange={(selected) => console.log('Selected transactions:', selected.length)}

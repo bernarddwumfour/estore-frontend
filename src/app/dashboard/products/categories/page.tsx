@@ -48,11 +48,13 @@ const fetchCategories = async (params?: any): Promise<{
   }
 }> => {
   const queryParams = new URLSearchParams();
-  if (params?.search) queryParams.append('search', params.search);
-  if (params?.status && params?.status !== '') queryParams.append('is_active', params.status);
-  if (params?.visibility && params?.visibility !== '') queryParams.append('is_hidden', params.visibility);
-  if (params?.has_parent === true) queryParams.append('parent_id', 'not_null');
-  if (params?.created_after) queryParams.append('created_after', params.created_after);
+  if (params?.search && params.search !== '') queryParams.append('search', params.search);
+  if (params?.status && params.status !== '') queryParams.append('is_active', params.status);
+  if (params?.visibility && params.visibility !== '') queryParams.append('is_hidden', params.visibility);
+  // Handle has_parent filter - convert to API parameter
+  if (params?.has_parent === 'true') queryParams.append('parent_id', 'not_null');
+  if (params?.has_parent === 'false') queryParams.append('parent_id', 'null');
+  if (params?.created_after && params.created_after !== '') queryParams.append('created_after', params.created_after);
   if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
   if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
   if (params?.page) queryParams.append('page', params.page.toString());
@@ -72,7 +74,7 @@ const bulkCategoryAction = async (action: string, categoryIds: string[]) => {
   return response.data;
 };
 
-// Filter configuration
+// Filter configuration - has_parent changed to select dropdown
 const filterConfig: FilterConfig = {
   fields: [
     {
@@ -99,9 +101,13 @@ const filterConfig: FilterConfig = {
     },
     {
       name: 'has_parent',
-      type: 'checkbox',
+      type: 'select',
       placeholder: 'Has Parent',
-      defaultValue: false,
+      options: [
+        { value: 'true', label: 'Yes' },
+        { value: 'false', label: 'No' },
+      ],
+      defaultValue: '',
       width: '110px',
     },
     {
@@ -112,7 +118,7 @@ const filterConfig: FilterConfig = {
       width: '140px',
     },
   ],
-  searchPlaceholder: 'Search categories...',
+  searchPlaceholder: 'Search categories by name, slug, or description...',
   showSearch: true,
 };
 
@@ -136,15 +142,19 @@ export default function CategoriesPage() {
 
   // Filter and pagination state
   const [filters, setFilters] = useState({
+    page: 1,
+    limit: 20,
+  });
+
+  // Track applied filters
+  const [appliedFilters, setAppliedFilters] = useState({
     search: '',
     status: '',
     visibility: '',
-    has_parent: false,
+    has_parent: '',
     created_after: '',
     sort_by: 'name',
     sort_order: 'asc',
-    page: 1,
-    limit: 20,
   });
 
   // State for confirmation dialogs
@@ -165,8 +175,12 @@ export default function CategoriesPage() {
 
   // Query for categories
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['admin-categories', filters],
-    queryFn: () => fetchCategories(filters),
+    queryKey: ['admin-categories', filters.page, filters.limit, appliedFilters],
+    queryFn: () => fetchCategories({
+      page: filters.page,
+      limit: filters.limit,
+      ...appliedFilters,
+    }),
   });
 
   // Bulk action mutation
@@ -190,26 +204,30 @@ export default function CategoriesPage() {
   };
 
   const handleLimitChange = (limit: number) => {
-    setFilters({ ...filters, limit, page: 1 });
+    setFilters({ page: 1, limit });
   };
 
-  // Handle filter changes
+  // Handle filter changes from CustomFilter
   const handleFilterChange = (newFilters: Record<string, any>) => {
-    setFilters({
-      ...filters,
-      ...newFilters,
-      page: 1,
+    setAppliedFilters({
+      ...appliedFilters,
+      search: newFilters.search || '',
+      status: newFilters.status || '',
+      visibility: newFilters.visibility || '',
+      has_parent: newFilters.has_parent || '',
+      created_after: newFilters.created_after || '',
     });
+    setFilters({ ...filters, page: 1 });
   };
 
-  // Handle sort changes
+  // Handle sort changes from CustomSort
   const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
-    setFilters({
-      ...filters,
+    setAppliedFilters({
+      ...appliedFilters,
       sort_by: sortBy,
       sort_order: sortOrder,
-      page: 1,
     });
+    setFilters({ ...filters, page: 1 });
   };
 
   // Refresh handler
@@ -220,17 +238,16 @@ export default function CategoriesPage() {
 
   // Reset all filters and sort
   const handleReset = () => {
-    setFilters({
+    setAppliedFilters({
       search: '',
       status: '',
       visibility: '',
-      has_parent: false,
+      has_parent: '',
       created_after: '',
       sort_by: 'name',
       sort_order: 'asc',
-      page: 1,
-      limit: 20,
     });
+    setFilters({ page: 1, limit: filters.limit });
   };
 
   // Single action helpers with InfoDialog
@@ -452,7 +469,7 @@ export default function CategoriesPage() {
   const categories = data?.data?.categories || [];
   const pagination = data?.data?.pagination;
 
-  if (isLoading) {
+  if (isLoading && !categories.length) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
@@ -493,16 +510,16 @@ export default function CategoriesPage() {
       </div>
 
       {/* Filters and Sort Row */}
-      <div className="flex flex-wrap gap-16 items-start justify-between">
+      <div className="flex flex-wrap gap-4 items-start justify-between">
         <div className="flex-1">
           <CustomFilter
             config={filterConfig}
             filters={{
-              search: filters.search,
-              status: filters.status,
-              visibility: filters.visibility,
-              has_parent: filters.has_parent,
-              created_after: filters.created_after,
+              search: appliedFilters.search,
+              status: appliedFilters.status,
+              visibility: appliedFilters.visibility,
+              has_parent: appliedFilters.has_parent,
+              created_after: appliedFilters.created_after,
             }}
             onFilterChange={handleFilterChange}
             onReset={handleReset}

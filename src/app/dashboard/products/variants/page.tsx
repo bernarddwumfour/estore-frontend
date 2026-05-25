@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { ActionsDropdown, type ActionItem } from '@/widgets/ActionsDropdown/ActionsDropdown';
@@ -70,8 +69,13 @@ const fetchVariants = async (params?: any): Promise<{
     if (params?.is_active && params.is_active !== '') queryParams.append('is_active', params.is_active);
     if (params?.is_default && params.is_default !== '') queryParams.append('is_default', params.is_default);
     if (params?.in_stock && params.in_stock !== '') queryParams.append('in_stock', params.in_stock);
-    if (params?.min_price && params.min_price !== '') queryParams.append('min_price', params.min_price);
-    if (params?.max_price && params.max_price !== '') queryParams.append('max_price', params.max_price);
+
+    // Handle price range from the filter object
+    if (params?.price_range) {
+        if (params.price_range.min) queryParams.append('min_price', params.price_range.min);
+        if (params.price_range.max) queryParams.append('max_price', params.price_range.max);
+    }
+
     if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
 
@@ -89,7 +93,7 @@ const bulkVariantAction = async (action: string, variantIds: string[]) => {
     return response.data;
 };
 
-// Filter configuration
+// Filter configuration with number_range for price
 const filterConfig: FilterConfig = {
     fields: [
         {
@@ -125,6 +129,15 @@ const filterConfig: FilterConfig = {
             defaultValue: '',
             width: '110px',
         },
+        {
+            name: 'price_range',
+            type: 'number_range',
+            placeholder: 'Price',
+            defaultValue: { min: '', max: '' },
+            width: '220px',
+            min: 0,
+            step: 0.01,
+        },
     ],
     searchPlaceholder: 'Search by SKU or product title...',
     showSearch: true,
@@ -151,7 +164,7 @@ export default function VariantsPage() {
     const [viewingVariant, setViewingVariant] = useState<Variant | null>(null);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-    // Filter and pagination state - NO filters on initial load
+    // Filter and pagination state
     const [filters, setFilters] = useState({
         page: 1,
         limit: 20,
@@ -163,8 +176,7 @@ export default function VariantsPage() {
         is_active: '',
         is_default: '',
         in_stock: '',
-        min_price: '',
-        max_price: '',
+        price_range: { min: '', max: '' },
         sort_by: 'created_at',
         sort_order: 'desc',
     });
@@ -245,15 +257,7 @@ export default function VariantsPage() {
             is_active: newFilters.is_active || '',
             is_default: newFilters.is_default || '',
             in_stock: newFilters.in_stock || '',
-        });
-        setFilters({ ...filters, page: 1 });
-    };
-
-    // Handle price filter changes
-    const handlePriceChange = (field: string, value: string) => {
-        setAppliedFilters({
-            ...appliedFilters,
-            [field]: value,
+            price_range: newFilters.price_range || { min: '', max: '' },
         });
         setFilters({ ...filters, page: 1 });
     };
@@ -281,8 +285,7 @@ export default function VariantsPage() {
             is_active: '',
             is_default: '',
             in_stock: '',
-            min_price: '',
-            max_price: '',
+            price_range: { min: '', max: '' },
             sort_by: 'created_at',
             sort_order: 'desc',
         });
@@ -503,9 +506,8 @@ export default function VariantsPage() {
             </div>
 
             {/* Filters and Sort Row - All on one line */}
-            <div className="flex flex-wrap gap-4 items-start justify-between">
-                <div className="flex flex-wrap gap-4 items-center flex-1">
-                    {/* Custom Filter Component */}
+            <div className="flex flex-wrap gap-64 items-start justify-between">
+                <div className="flex-1">
                     <CustomFilter
                         config={filterConfig}
                         filters={{
@@ -513,33 +515,12 @@ export default function VariantsPage() {
                             is_active: appliedFilters.is_active,
                             is_default: appliedFilters.is_default,
                             in_stock: appliedFilters.in_stock,
+                            price_range: appliedFilters.price_range,
                         }}
                         onFilterChange={handleFilterChange}
                         onReset={handleResetFilters}
                     />
-
-                    {/* Price Range */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Price:</span>
-                        <Input
-                            type="number"
-                            placeholder="Min"
-                            value={appliedFilters.min_price}
-                            onChange={(e) => handlePriceChange('min_price', e.target.value)}
-                            className="w-28 h-9 border-gray-300 dark:border-gray-700"
-                        />
-                        <span className="text-gray-500">-</span>
-                        <Input
-                            type="number"
-                            placeholder="Max"
-                            value={appliedFilters.max_price}
-                            onChange={(e) => handlePriceChange('max_price', e.target.value)}
-                            className="w-28 h-9 border-gray-300 dark:border-gray-700"
-                        />
-                    </div>
                 </div>
-
-                {/* Sort Component */}
                 <CustomSort
                     config={sortConfig}
                     onSortChange={handleSortChange}
@@ -675,10 +656,7 @@ export default function VariantsPage() {
 
             {/* Data Table */}
             <DataTable
-                data={variants.map(v => {
-                    const { sku, images, ...rest } = v;
-                    return { sku: v.sku, product_name: v.product.title, images: v.images, ...rest };
-                })}
+                data={variants}
                 renderActions={(variant: Variant) => (
                     <ActionsDropdown
                         actions={getVariantActions(variant)}
@@ -722,7 +700,6 @@ export default function VariantsPage() {
                     sku: (variant: Variant) => `/dashboard/products/variants/${variant.id}`,
                     product_name: (variant: Variant) => `/dashboard/products/${variant.product.slug}`,
                 }}
-
                 arrays={{
                     attributes: { maxItems: 3 }
                 }}

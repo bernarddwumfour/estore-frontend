@@ -1,7 +1,7 @@
 // app/components/ui/CustomFilter.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, X, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,20 +15,27 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { DateRangePicker } from '../DatePicker/DateRangePicker';
+import { DatePicker } from '../DatePicker/DatePicker';
 
 export interface FilterField {
     name: string;
-    type: 'text' | 'select' | 'multiselect' | 'checkbox' | 'date' | 'number';
+    type: 'text' | 'select' | 'multiselect' | 'checkbox' | 'date' | 'date_range' | 'number' | 'number_range';
     placeholder?: string;
     options?: Array<{ value: string; label: string }>;
     defaultValue?: any;
     width?: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    debounceMs?: number;
 }
 
 export interface FilterConfig {
     fields: FilterField[];
     searchPlaceholder?: string;
     showSearch?: boolean;
+    searchDebounceMs?: number;
 }
 
 interface CustomFilterProps {
@@ -54,7 +61,9 @@ export function CustomFilter({
     const [appliedFilters, setAppliedFilters] = useState(filters);
     const [appliedSearch, setAppliedSearch] = useState(filters.search || '');
 
-    // Update temp filters when props change (e.g., after apply from parent)
+    const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
+    const searchDebounceTimer = useRef<NodeJS.Timeout>(undefined);
+
     useEffect(() => {
         setTempFilters(filters);
         setTempSearch(filters.search || '');
@@ -63,7 +72,6 @@ export function CustomFilter({
         setHasChanges(false);
     }, [filters]);
 
-    // Check if current temp values differ from applied values
     useEffect(() => {
         const filtersChanged = JSON.stringify(tempFilters) !== JSON.stringify(appliedFilters);
         const searchChanged = tempSearch !== appliedSearch;
@@ -71,17 +79,63 @@ export function CustomFilter({
     }, [tempFilters, tempSearch, appliedFilters, appliedSearch]);
 
     const handleFieldChange = (fieldName: string, value: any) => {
-        // Convert 'all' to empty string for storage (so placeholder shows)
         const newValue = value === 'all' ? '' : value;
         const newFilters = { ...tempFilters, [fieldName]: newValue };
         setTempFilters(newFilters);
     };
 
-    const handleSearchChange = (value: string) => {
+    const handleDebouncedFieldChange = (fieldName: string, value: any, debounceMs: number = 500) => {
+        if (debounceTimers.current[fieldName]) {
+            clearTimeout(debounceTimers.current[fieldName]);
+        }
+
+        debounceTimers.current[fieldName] = setTimeout(() => {
+            const newValue = value === 'all' ? '' : value;
+            const newFilters = { ...tempFilters, [fieldName]: newValue };
+            setTempFilters(newFilters);
+            delete debounceTimers.current[fieldName];
+        }, debounceMs);
+
+        const newFilters = { ...tempFilters, [fieldName]: value };
+        setTempFilters(newFilters);
+    };
+
+    const handleNumberRangeChange = (fieldName: string, type: 'min' | 'max', value: string, debounceMs: number = 500) => {
+        const currentRange = tempFilters[fieldName] || { min: '', max: '' };
+        const newRange = { ...currentRange, [type]: value };
+
+        if (debounceTimers.current[fieldName]) {
+            clearTimeout(debounceTimers.current[fieldName]);
+        }
+
+        debounceTimers.current[fieldName] = setTimeout(() => {
+            const newFilters = { ...tempFilters, [fieldName]: newRange };
+            setTempFilters(newFilters);
+            delete debounceTimers.current[fieldName];
+        }, debounceMs);
+
+        const newFilters = { ...tempFilters, [fieldName]: newRange };
+        setTempFilters(newFilters);
+    };
+
+    const handleSearchChange = (value: string, debounceMs: number = config.searchDebounceMs || 500) => {
         setTempSearch(value);
+
+        if (searchDebounceTimer.current) {
+            clearTimeout(searchDebounceTimer.current);
+        }
+
+        searchDebounceTimer.current = setTimeout(() => {
+            if (onSearchChange) {
+                onSearchChange(value);
+            }
+        }, debounceMs);
     };
 
     const handleApplyFilters = () => {
+        Object.values(debounceTimers.current).forEach(timer => clearTimeout(timer));
+        if (searchDebounceTimer.current) clearTimeout(searchDebounceTimer.current);
+
         const appliedFiltersData = { ...tempFilters };
         const appliedSearchData = tempSearch;
 
@@ -97,6 +151,9 @@ export function CustomFilter({
     };
 
     const handleReset = () => {
+        Object.values(debounceTimers.current).forEach(timer => clearTimeout(timer));
+        if (searchDebounceTimer.current) clearTimeout(searchDebounceTimer.current);
+
         const resetFilters: Record<string, any> = {};
         config.fields.forEach(field => {
             resetFilters[field.name] = field.defaultValue !== undefined ? field.defaultValue : '';
@@ -108,7 +165,6 @@ export function CustomFilter({
         setAppliedFilters(resetFilters);
         setAppliedSearch(resetSearch);
 
-        // Apply immediately on reset
         const finalFilters = { ...resetFilters };
         if (config.showSearch !== false) {
             finalFilters.search = resetSearch;
@@ -118,29 +174,46 @@ export function CustomFilter({
         setHasChanges(false);
     };
 
+    // Helper function to check if a value is actually a non-empty filter
+    const isNonEmptyValue = (value: any): boolean => {
+        if (value === undefined || value === null) return false;
+        if (typeof value === 'string') return value !== '' && value !== 'all';
+        if (typeof value === 'boolean') return value === true;
+        if (Array.isArray(value)) return value.length > 0;
+        if (typeof value === 'object') {
+            // Check for date range - only count if from or to is set
+            if (value.from || value.to) return true;
+            // Check for number range - only count if min or max has a non-empty value
+            if (value.min !== undefined || value.max !== undefined) {
+                const hasMin = value.min !== '' && value.min !== null && value.min !== undefined;
+                const hasMax = value.max !== '' && value.max !== null && value.max !== undefined;
+                if (hasMin || hasMax) return true;
+            }
+            // Check for other objects with keys - but ensure they have actual values
+            return Object.keys(value).length > 0 && Object.values(value).some(v => v !== '' && v !== null && v !== undefined);
+        }
+        return true;
+    };
+
     const hasActiveFilters = () => {
-        return Object.keys(appliedFilters).some(key => {
+        for (const key of Object.keys(appliedFilters)) {
             const value = appliedFilters[key];
-            if (key === 'search' && !config.showSearch) return false;
-            if (Array.isArray(value)) return value.length > 0;
-            if (typeof value === 'boolean') return value === true;
-            return value && value !== '' && value !== null && value !== undefined;
-        });
+            if (key === 'search' && !config.showSearch) continue;
+            if (isNonEmptyValue(value)) return true;
+        }
+        return false;
     };
 
     const getActiveFilterCount = () => {
         let count = 0;
-        Object.keys(appliedFilters).forEach(key => {
+        for (const key of Object.keys(appliedFilters)) {
             const value = appliedFilters[key];
-            if (key === 'search' && !config.showSearch) return;
-            if (Array.isArray(value) && value.length > 0) count++;
-            else if (typeof value === 'boolean' && value === true) count++;
-            else if (value && value !== '' && value !== null && value !== undefined) count++;
-        });
+            if (key === 'search' && !config.showSearch) continue;
+            if (isNonEmptyValue(value)) count++;
+        }
         return count;
     };
 
-    // Helper function to get display text with label prefix
     const getDisplayValue = (field: FilterField, value: string) => {
         if (!value || value === '') return null;
         const option = field.options?.find(opt => opt.value === value);
@@ -153,10 +226,10 @@ export function CustomFilter({
     const renderField = (field: FilterField) => {
         const value = tempFilters[field.name] !== undefined ? tempFilters[field.name] : (field.defaultValue !== undefined ? field.defaultValue : '');
         const displayValue = getDisplayValue(field, value);
+        const debounceMs = field.debounceMs || 500;
 
         switch (field.type) {
             case 'select':
-                // Calculate increased width (1.5x of original)
                 const baseWidth = field.width ? parseInt(field.width) : 140;
                 const increasedWidth = Math.round(baseWidth * 1.5);
 
@@ -191,6 +264,81 @@ export function CustomFilter({
                             ))}
                         </SelectContent>
                     </Select>
+                );
+
+            case 'number':
+                return (
+                    <Input
+                        type="number"
+                        placeholder={field.placeholder}
+                        value={value}
+                        onChange={(e) => handleDebouncedFieldChange(field.name, e.target.value, debounceMs)}
+                        min={field.min}
+                        max={field.max}
+                        step={field.step || 1}
+                        className="h-9 w-full border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
+                    />
+                );
+
+            case 'number_range':
+                const rangeValue = value as { min?: string; max?: string } || { min: '', max: '' };
+                const rangeWidth = field.width ? parseInt(field.width) : 200;
+                return (
+                    <div className="flex items-center gap-1" style={{ width: `${rangeWidth}px` }}>
+                        <Input
+                            type="number"
+                            placeholder={`Min ${field.placeholder}`}
+                            value={rangeValue.min || ''}
+                            onChange={(e) => handleNumberRangeChange(field.name, 'min', e.target.value, debounceMs)}
+                            min={field.min}
+                            max={field.max}
+                            step={field.step || 1}
+                            className="h-9 w-full border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                        />
+                        <span className="text-gray-500">-</span>
+                        <Input
+                            type="number"
+                            placeholder={`Max ${field.placeholder}`}
+                            value={rangeValue.max || ''}
+                            onChange={(e) => handleNumberRangeChange(field.name, 'max', e.target.value, debounceMs)}
+                            min={field.min}
+                            max={field.max}
+                            step={field.step || 1}
+                            className="h-9 w-full border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                        />
+                    </div>
+                );
+
+            case 'text':
+                return (
+                    <Input
+                        type="text"
+                        placeholder={field.placeholder}
+                        value={value}
+                        onChange={(e) => handleDebouncedFieldChange(field.name, e.target.value, debounceMs)}
+                        className="h-9 w-full border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
+                    />
+                );
+
+            case 'date':
+                return (
+                    <DatePicker
+                        date={value || undefined}
+                        setDate={(date: any) => handleFieldChange(field.name, date)}
+                        placeholder={field.placeholder || 'Select date'}
+                        className="w-full"
+                    />
+                );
+
+            case 'date_range':
+                const dateRangeValue = value as { from?: Date; to?: Date } || undefined;
+                return (
+                    <DateRangePicker
+                        date={dateRangeValue as any}
+                        setDate={(range: any) => handleFieldChange(field.name, range)}
+                        placeholder={field.placeholder || 'Select date range'}
+                        className="w-full"
+                    />
                 );
 
             case 'multiselect':
@@ -268,34 +416,13 @@ export function CustomFilter({
                     </div>
                 );
 
-            case 'number':
-                return (
-                    <Input
-                        type="number"
-                        placeholder={field.placeholder}
-                        value={value}
-                        onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                        className="h-9 w-full border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
-                    />
-                );
-
-            case 'date':
-                return (
-                    <Input
-                        type="date"
-                        value={value}
-                        onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                        className="h-9 w-full border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900/50 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
-                    />
-                );
-
             default:
                 return (
                     <Input
                         type="text"
                         placeholder={field.placeholder}
                         value={value}
-                        onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                        onChange={(e) => handleDebouncedFieldChange(field.name, e.target.value, debounceMs)}
                         className="h-9 w-full border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
                     />
                 );
@@ -304,29 +431,25 @@ export function CustomFilter({
 
     return (
         <div className={cn("space-y-2", className)}>
-            {/* All filters on one line - search and filters together */}
             <div className="flex flex-wrap gap-2 items-center">
-                {/* Search input */}
                 {config.showSearch !== false && (
                     <div className="relative" style={{ width: '240px' }}>
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                         <Input
                             placeholder={config.searchPlaceholder || "Search..."}
                             value={tempSearch}
-                            onChange={(e) => handleSearchChange(e.target.value)}
+                            onChange={(e) => handleSearchChange(e.target.value, config.searchDebounceMs || 500)}
                             className="pl-9 h-9 border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/50 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
                         />
                     </div>
                 )}
 
-                {/* Filter fields */}
                 {config.fields.map((field) => (
                     <div key={field.name}>
                         {renderField(field)}
                     </div>
                 ))}
 
-                {/* Apply Filters Button */}
                 <Button
                     variant={hasChanges ? "default" : "secondary"}
                     size="sm"
@@ -343,7 +466,6 @@ export function CustomFilter({
                     Apply Filters
                 </Button>
 
-                {/* Clear button - shows when filters are active */}
                 {hasActiveFilters() && (
                     <Button
                         variant="ghost"
@@ -362,7 +484,6 @@ export function CustomFilter({
                 )}
             </div>
 
-            {/* Indicator that shows unsaved changes */}
             {hasChanges && (
                 <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />

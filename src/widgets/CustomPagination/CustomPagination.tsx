@@ -129,12 +129,16 @@ export function CustomPagination({
                             value={per_page.toString()}
                             onValueChange={(value) => onLimitChange(parseInt(value))}
                         >
-                            <SelectTrigger className="w-20 h-8 text-sm">
+                            <SelectTrigger className="w-20 h-8 text-sm rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900/50 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="rounded-md border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
                                 {limitOptions.map((limit) => (
-                                    <SelectItem key={limit} value={limit.toString()}>
+                                    <SelectItem
+                                        key={limit}
+                                        value={limit.toString()}
+                                        className="text-gray-900 dark:text-gray-100 focus:bg-gray-100 dark:focus:bg-gray-800 focus:text-gray-900 dark:focus:text-gray-100"
+                                    >
                                         {limit}
                                     </SelectItem>
                                 ))}
@@ -150,7 +154,7 @@ export function CustomPagination({
                     size="sm"
                     onClick={() => onPageChange(1)}
                     disabled={!has_previous}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <ChevronsLeft size={16} />
                 </Button>
@@ -161,7 +165,7 @@ export function CustomPagination({
                     size="sm"
                     onClick={() => previous_page && onPageChange(previous_page)}
                     disabled={!has_previous}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <ChevronLeft size={16} />
                 </Button>
@@ -171,15 +175,17 @@ export function CustomPagination({
                     {getPageNumbers().map((page, index) => (
                         <React.Fragment key={index}>
                             {page === '...' ? (
-                                <span className="px-2 text-gray-500">...</span>
+                                <span className="px-2 text-gray-500 dark:text-gray-400">...</span>
                             ) : (
                                 <Button
                                     variant={current_page === page ? 'default' : 'outline'}
                                     size="sm"
                                     onClick={() => typeof page === 'number' && onPageChange(page)}
                                     className={cn(
-                                        "h-8 w-8 p-0",
-                                        current_page === page && "bg-gray-900 dark:bg-gray-800 text-white"
+                                        "h-8 w-8 p-0 rounded-md",
+                                        current_page === page
+                                            ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200"
+                                            : "border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
                                     )}
                                 >
                                     {page}
@@ -195,7 +201,7 @@ export function CustomPagination({
                     size="sm"
                     onClick={() => next_page && onPageChange(next_page)}
                     disabled={!has_next}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <ChevronRight size={16} />
                 </Button>
@@ -206,7 +212,7 @@ export function CustomPagination({
                     size="sm"
                     onClick={() => onPageChange(total_pages)}
                     disabled={!has_next}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <ChevronsRight size={16} />
                 </Button>

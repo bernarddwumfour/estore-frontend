@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
@@ -27,7 +26,6 @@ import OrderItemsList from './OrderItemsList';
 import ShippingAddressCard from './ShippingAddressCard';
 import { useRouter } from 'next/navigation';
 import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
-import Link from 'next/link';
 
 // Types
 interface Order {
@@ -68,10 +66,10 @@ const fetchOrders = async (params?: any): Promise<{
   if (params?.status && params.status !== '') queryParams.append('status', params.status);
   if (params?.payment_status && params.payment_status !== '') queryParams.append('payment_status', params.payment_status);
   if (params?.payment_method && params.payment_method !== '') queryParams.append('payment_method', params.payment_method);
-  if (params?.date_from) queryParams.append('date_from', params.date_from);
-  if (params?.date_to) queryParams.append('date_to', params.date_to);
-  if (params?.min_total) queryParams.append('min_total', params.min_total);
-  if (params?.max_total) queryParams.append('max_total', params.max_total);
+  if (params?.date_range?.from) queryParams.append('date_from', params.date_range.from);
+  if (params?.date_range?.to) queryParams.append('date_to', params.date_range.to);
+  if (params?.min_total && params.min_total !== '') queryParams.append('min_total', params.min_total);
+  if (params?.max_total && params.max_total !== '') queryParams.append('max_total', params.max_total);
   if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
   if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
 
@@ -144,6 +142,22 @@ const filterConfig: FilterConfig = {
       defaultValue: '',
       width: '150px',
     },
+    {
+      name: 'date_range',
+      type: 'date_range',
+      placeholder: 'Date Range',
+      defaultValue: undefined,
+      width: '260px',
+    },
+    {
+      name: 'total_range',
+      type: 'number_range',
+      placeholder: 'Total Amount',
+      defaultValue: { min: '', max: '' },
+      width: '220px',
+      min: 0,
+      step: 0.01,
+    },
   ],
   searchPlaceholder: 'Search by order number, customer name, or email...',
   showSearch: true,
@@ -167,18 +181,17 @@ function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSucc
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const statusOptions = [
-    { value: "confirmed", label: "Confirmed", color: "emerald" },
-    { value: "processing", label: "Processing", color: "blue" },
-    { value: "shipped", label: "Shipped", color: "violet" },
-    { value: "delivered", label: "Delivered", color: "emerald" },
-    { value: "cancelled", label: "Cancelled", color: "rose" },
+    { value: "confirmed", label: "Confirmed" },
+    { value: "processing", label: "Processing" },
+    { value: "shipped", label: "Shipped" },
+    { value: "delivered", label: "Delivered" },
+    { value: "cancelled", label: "Cancelled" },
   ];
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
       const response = await updateOrderStatus(order.id, selectedStatus);
-
       if (response.success) {
         toast.success(`Order status updated to ${selectedStatus}`);
         onSuccess();
@@ -201,6 +214,7 @@ function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSucc
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
         >
+          <option value="">Select status</option>
           {statusOptions.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
@@ -232,7 +246,6 @@ function UpdatePaymentForm({ order, onSuccess, onCancel }: { order: Order; onSuc
     setIsSubmitting(true);
     try {
       const response = await updatePaymentStatus(order.id, selectedStatus);
-
       if (response.success) {
         toast.success(`Payment status updated to ${selectedStatus}`);
         onSuccess();
@@ -255,6 +268,7 @@ function UpdatePaymentForm({ order, onSuccess, onCancel }: { order: Order; onSuc
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
         >
+          <option value="">Select payment status</option>
           {paymentOptions.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
@@ -293,10 +307,8 @@ export default function OrdersPage() {
     status: '',
     payment_status: '',
     payment_method: '',
-    date_from: '',
-    date_to: '',
-    min_total: '',
-    max_total: '',
+    date_range: undefined,
+    total_range: { min: '', max: '' },
     sort_by: 'created_at',
     sort_order: 'desc',
   });
@@ -351,7 +363,7 @@ export default function OrdersPage() {
     setFilters({ page: 1, limit });
   };
 
-  // Handle filter changes
+  // Handle filter changes from CustomFilter
   const handleFilterChange = (newFilters: Record<string, any>) => {
     setAppliedFilters({
       ...appliedFilters,
@@ -359,29 +371,13 @@ export default function OrdersPage() {
       status: newFilters.status || '',
       payment_status: newFilters.payment_status || '',
       payment_method: newFilters.payment_method || '',
+      date_range: newFilters.date_range,
+      total_range: newFilters.total_range || { min: '', max: '' },
     });
     setFilters({ ...filters, page: 1 });
   };
 
-  // Handle date filter changes
-  const handleDateChange = (field: string, value: string) => {
-    setAppliedFilters({
-      ...appliedFilters,
-      [field]: value,
-    });
-    setFilters({ ...filters, page: 1 });
-  };
-
-  // Handle amount filter changes
-  const handleAmountChange = (field: string, value: string) => {
-    setAppliedFilters({
-      ...appliedFilters,
-      [field]: value,
-    });
-    setFilters({ ...filters, page: 1 });
-  };
-
-  // Handle sort changes
+  // Handle sort changes from CustomSort
   const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
     setAppliedFilters({
       ...appliedFilters,
@@ -404,10 +400,8 @@ export default function OrdersPage() {
       status: '',
       payment_status: '',
       payment_method: '',
-      date_from: '',
-      date_to: '',
-      min_total: '',
-      max_total: '',
+      date_range: undefined,
+      total_range: { min: '', max: '' },
       sort_by: 'created_at',
       sort_order: 'desc',
     });
@@ -612,6 +606,8 @@ export default function OrdersPage() {
               status: appliedFilters.status,
               payment_status: appliedFilters.payment_status,
               payment_method: appliedFilters.payment_method,
+              date_range: appliedFilters.date_range,
+              total_range: appliedFilters.total_range,
             }}
             onFilterChange={handleFilterChange}
             onReset={handleResetFilters}
@@ -621,46 +617,6 @@ export default function OrdersPage() {
           config={sortConfig}
           onSortChange={handleSortChange}
         />
-      </div>
-
-      {/* Additional Filters - Date Range and Amount */}
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Date Range:</span>
-          <Input
-            type="date"
-            placeholder="From"
-            value={appliedFilters.date_from}
-            onChange={(e) => handleDateChange('date_from', e.target.value)}
-            className="w-36 h-9 border-gray-300 dark:border-gray-700"
-          />
-          <span className="text-gray-500">to</span>
-          <Input
-            type="date"
-            placeholder="To"
-            value={appliedFilters.date_to}
-            onChange={(e) => handleDateChange('date_to', e.target.value)}
-            className="w-36 h-9 border-gray-300 dark:border-gray-700"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Total Amount:</span>
-          <Input
-            type="number"
-            placeholder="Min"
-            value={appliedFilters.min_total}
-            onChange={(e) => handleAmountChange('min_total', e.target.value)}
-            className="w-28 h-9 border-gray-300 dark:border-gray-700"
-          />
-          <span className="text-gray-500">-</span>
-          <Input
-            type="number"
-            placeholder="Max"
-            value={appliedFilters.max_total}
-            onChange={(e) => handleAmountChange('max_total', e.target.value)}
-            className="w-28 h-9 border-gray-300 dark:border-gray-700"
-          />
-        </div>
       </div>
 
       {/* Confirmation Dialog */}
