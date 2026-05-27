@@ -30,7 +30,8 @@ import {
   Store,
   Megaphone,
   Mail,
-  LucideIcon
+  LucideIcon,
+  ChartArea
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ const SIDEBAR_LINKS = [
     label: 'Products',
     isCollapsible: true,
     children: [
+      { icon: ChartArea, label: 'Analytics', href: '/dashboard/products/analytics' },
       { icon: Layers, label: 'Categories', href: '/dashboard/products/categories' },
       { icon: Package, label: 'All Products', href: '/dashboard/products' },
       { icon: Tag, label: 'Poduct Variants', href: '/dashboard/products/variants' },
@@ -63,6 +65,7 @@ const SIDEBAR_LINKS = [
     label: 'Orders',
     isCollapsible: true,
     children: [
+      { icon: ChartArea, label: 'Analytics', href: '/dashboard/orders/analytics' },
       { icon: ShoppingCart, label: 'All Orders', href: '/dashboard/orders' },
       { icon: Truck, label: 'Shipments', href: '/dashboard/orders/shipments' },
       { icon: DollarSign, label: 'transactions', href: '/dashboard/orders/transactions' },

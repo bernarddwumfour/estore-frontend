@@ -20,6 +20,21 @@ export const endpoints = {
   },
 
   products: {
+    analytics: {
+      overview: '/products/admin/products/analytics/overview',
+      salesPerformance: '/products/admin/products/analytics/sales-performance',
+      productFunnel: '/products/admin/products/analytics/product-funnel',
+      inventoryHealth: '/products/admin/products/analytics/inventory-health',
+      pricing: '/products/admin/products/analytics/pricing',
+      categories: '/products/admin/products/analytics/categories',
+      topProducts: '/products/admin/products/analytics/top-products',
+      categoryPerformance: '/products/admin/products/analytics/category-performance',
+      variants: '/products/admin/products/analytics/variants',
+      inventory: '/products/admin/products/analytics/inventory',
+      priceDistribution: '/products/admin/products/analytics/price-distribution',
+      reviews: '/products/admin/products/analytics/reviews',
+    }
+    ,
     adminlistProducts: "/products/admin/products",
     listProductsWeb: "/products",
     listCategories: "/products/categories",
@@ -33,7 +48,6 @@ export const endpoints = {
     removeFromWishList: "/products/wishlist/:id",
     createReview: "/products/:slug/reviews/create",
     getReviews: "/products/:slug/reviews",
-    analytics: "/products/admin/analytics",
     bulkProductAction: "/products/admin/products/bulk-action",
 
     listVariants: "/products/admin/variants",
@@ -52,6 +66,19 @@ export const endpoints = {
     adminDeleteProduct: ""
   },
   orders: {
+    analytics: {
+      summary: '/orders/admin/orders/analytics/summary',
+      salesTrends: '/orders/admin/orders/analytics/sales-trends',
+      statusDistribution: '/orders/admin/orders/analytics/status-distribution',
+      paymentStatusDistribution: '/orders/admin/orders/analytics/payment-status-distribution',
+      topCustomers: '/orders/admin/orders/analytics/top-customers',
+      fulfillment: '/orders/admin/orders/analytics/fulfillment',
+      refunds: '/orders/admin/orders/analytics/refunds',
+      customerRetention: '/orders/admin/orders/analytics/customer-retention',
+      hourlyDistribution: '/orders/admin/orders/analytics/hourly-distribution',
+      dayOfWeekDistribution: '/orders/admin/orders/analytics/day-of-week-distribution',
+    }
+    ,
     listOrders: "/orders/admin/orders",
     listUserOrders: "/orders",
     createOrder: "/orders/create",

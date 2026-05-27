@@ -70,10 +70,12 @@ interface DataTableProps<T> {
     arrays?: Record<string, {
         maxItems?: number;
     }>;
+    objects?: Record<string, {
+        maxItems?: number;
+    }>;
     stickyActions?: boolean;
 }
 
-// Helper function to get button color classes
 const getButtonColorClasses = (color?: string) => {
     switch (color) {
         case 'emerald':
@@ -93,7 +95,6 @@ const getButtonColorClasses = (color?: string) => {
     }
 };
 
-// Multi-Image Cell Component
 function MultiImageCell({ images, alt }: { images: string[]; alt: string }) {
     const [open, setOpen] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -167,20 +168,19 @@ function MultiImageCell({ images, alt }: { images: string[]; alt: string }) {
     );
 }
 
-// Array Cell Component for rendering arrays as pill badges
-function ArrayCell({ value, maxItems = 3 }: { value: any[]; maxItems?: number }) {
+function ArrayCell({ value, maxItems = 3, onExpand }: { value: any[]; maxItems?: number; onExpand: () => void }) {
     if (!value || value.length === 0) return <span className="text-xs font-bold tracking-tight text-gray-700 dark:text-gray-300">—</span>;
 
     const displayItems = value.slice(0, maxItems);
     const remaining = value.length - maxItems;
 
     return (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 cursor-pointer" onClick={onExpand}>
             {displayItems.map((item, idx) => (
                 <Badge
                     key={idx}
                     variant="secondary"
-                    className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full border-none"
+                    className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full border-none hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
                     {typeof item === 'object' ? JSON.stringify(item) : String(item)}
                 </Badge>
@@ -188,9 +188,38 @@ function ArrayCell({ value, maxItems = 3 }: { value: any[]; maxItems?: number })
             {remaining > 0 && (
                 <Badge
                     variant="secondary"
-                    className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full border-none"
+                    className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full border-none hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
                     +{remaining}
+                </Badge>
+            )}
+        </div>
+    );
+}
+
+function ObjectCell({ value, maxItems = 3, onExpand }: { value: Record<string, any>; maxItems?: number; onExpand: () => void }) {
+    if (!value || Object.keys(value).length === 0) return <span className="text-xs font-bold tracking-tight text-gray-700 dark:text-gray-300">—</span>;
+
+    const entries = Object.entries(value).slice(0, maxItems);
+    const remaining = Object.keys(value).length - maxItems;
+
+    return (
+        <div className="flex flex-wrap gap-1.5 cursor-pointer" onClick={onExpand}>
+            {entries.map(([k, v], idx) => (
+                <Badge
+                    key={idx}
+                    variant="secondary"
+                    className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full border-none hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                    {k}: {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                </Badge>
+            ))}
+            {remaining > 0 && (
+                <Badge
+                    variant="secondary"
+                    className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full border-none hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                    +{remaining} more
                 </Badge>
             )}
         </div>
@@ -214,10 +243,10 @@ export function DataTable<T extends { id: string | number }>({
     onSelectionChange,
     actionsFirst = true,
     arrays = {},
+    objects = {},
     bulkActionsMessage = "Select Rows To Perform Bulk Actions On.",
     stickyActions = true,
 }: DataTableProps<T>) {
-    // --- State ---
     const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
     const [activeView, setActiveView] = useState<{
         data: any;
@@ -225,8 +254,8 @@ export function DataTable<T extends { id: string | number }>({
         onClose: () => void
     } | null>(null);
     const [showMoreBulkActions, setShowMoreBulkActions] = useState(false);
+    const [expandedData, setExpandedData] = useState<{ data: any; title: string; onClose: () => void } | null>(null);
 
-    // --- Column Logic ---
     const allKeys = useMemo(() => (data.length > 0 ? Object.keys(data[0]) : []), [data]);
     const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
 
@@ -234,7 +263,6 @@ export function DataTable<T extends { id: string | number }>({
         setVisibleColumns(allKeys.filter(k => !excludeColumns.includes(k)));
     }, [allKeys, excludeColumns]);
 
-    // --- Handlers ---
     const exportToCSV = () => {
         if (data.length === 0) return;
         const headers = visibleColumns.join(',');
@@ -271,22 +299,39 @@ export function DataTable<T extends { id: string | number }>({
         onSelectionChange?.(data.filter(i => next.has(i.id)));
     };
 
-    // --- Cell Renderer ---
+    const handleExpandObject = (value: any, key: string) => {
+        setExpandedData({
+            data: value,
+            title: `Details: ${key}`,
+            onClose: () => setExpandedData(null)
+        });
+    };
+
+    const handleExpandArray = (value: any[], key: string) => {
+        const arrayAsObject = value.reduce((acc, item, index) => {
+            acc[`[${index}]`] = item;
+            return acc;
+        }, {});
+
+        setExpandedData({
+            data: arrayAsObject,
+            title: `Details: ${key} (${value.length} items)`,
+            onClose: () => setExpandedData(null)
+        });
+    };
+
     const renderCell = (item: T, key: string) => {
         const rawValue = (item as any)[key];
-
-        if (Array.isArray(rawValue) && arrays[key]) {
-            return <ArrayCell value={rawValue} maxItems={arrays[key]?.maxItems || 3} />;
-        }
-
         const stringValue = String(rawValue ?? '');
 
+        // Images
         if (images[key]) {
             const imageValue = images[key](item);
             const imageUrls = Array.isArray(imageValue) ? imageValue : (imageValue ? [imageValue] : []);
             return <MultiImageCell images={imageUrls} alt={stringValue} />;
         }
 
+        // Icons
         if (icons[key]?.[stringValue]) {
             return (
                 <div className="flex items-center gap-2">
@@ -296,42 +341,46 @@ export function DataTable<T extends { id: string | number }>({
             );
         }
 
+        // Dots
         if (dots[key]?.[stringValue]) {
             const color = dots[key][stringValue];
+            const dotColors: Record<string, string> = {
+                emerald: "bg-emerald-500",
+                orange: "bg-orange-500",
+                blue: "bg-blue-500",
+                rose: "bg-rose-500",
+                zinc: "bg-gray-400",
+                violet: "bg-violet-500",
+                amber: "bg-amber-500",
+            };
             return (
                 <div className="flex items-center gap-2">
-                    <div className={cn("w-1.5 h-1.5 rounded-full", {
-                        "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]": color === 'emerald',
-                        "bg-orange-600": color === 'orange',
-                        "bg-blue-500": color === 'blue',
-                        "bg-rose-500": color === 'rose',
-                        "bg-gray-400": color === 'zinc',
-                        "bg-violet-500": color === 'violet',
-                        "bg-amber-500": color === 'amber',
-                    })} />
+                    <div className={cn("w-1.5 h-1.5 rounded-full", dotColors[color])} />
                     <span className="text-[11px] font-bold uppercase tracking-tight text-gray-600 dark:text-gray-400">{stringValue}</span>
                 </div>
             );
         }
 
+        // Badges
         if (badges[key]?.[stringValue]) {
             const color = badges[key][stringValue];
+            const badgeColors: Record<string, string> = {
+                blue: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                orange: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+                violet: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+                emerald: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                zinc: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
+                rose: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+                amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+            };
             return (
-                <Badge variant="secondary" className={cn(
-                    "font-black text-[9px] uppercase tracking-[0.1em] px-2 py-0.5 rounded-lg border-none",
-                    color === 'blue' && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-                    color === 'orange' && "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-                    color === 'violet' && "bg-violet-500/10 text-violet-600 dark:text-violet-400",
-                    color === 'emerald' && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                    color === 'zinc' && "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
-                    color === 'rose' && "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-                    color === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-                )}>
+                <Badge variant="secondary" className={cn("font-black text-[9px] uppercase tracking-[0.1em] px-2 py-0.5 rounded-lg border-none", badgeColors[color])}>
                     {stringValue}
                 </Badge>
             );
         }
 
+        // Links
         if (links[key]) {
             return (
                 <Link href={links[key](item)} className="text-gray-900 text-sm dark:text-white hover:text-gray-600 dark:hover:text-gray-400 font-bold flex items-center gap-1 group/link transition-all">
@@ -341,27 +390,38 @@ export function DataTable<T extends { id: string | number }>({
             );
         }
 
+        // Arrays
+        if (Array.isArray(rawValue)) {
+            const config = arrays[key] || { maxItems: 3 };
+            return (
+                <ArrayCell
+                    value={rawValue}
+                    maxItems={config.maxItems}
+                    onExpand={() => handleExpandArray(rawValue, key)}
+                />
+            );
+        }
+
+        // Objects
+        if (typeof rawValue === 'object' && rawValue !== null && !Array.isArray(rawValue)) {
+            const config = objects[key] || { maxItems: 3 };
+            return (
+                <ObjectCell
+                    value={rawValue}
+                    maxItems={config.maxItems}
+                    onExpand={() => handleExpandObject(rawValue, key)}
+                />
+            );
+        }
+
+        // Default
         return <span className="text-xs font-bold tracking-tight text-gray-700 dark:text-gray-300">{stringValue || '-'}</span>;
     };
 
     const visibleBulkActions = bulkActions.slice(0, 3);
     const moreBulkActions = bulkActions.slice(3);
-
     const hasActions = actions.length > 0 || renderActions;
-    const showCheckboxes = bulkActions.length > 0; // Changed: show checkboxes if there are any bulk actions
-
-    // Calculate sticky offsets based on what columns are shown
-    let checkboxOffset = 0;
-    let actionsOffset = 0;
-
-    if (stickyActions && actionsFirst) {
-        if (showCheckboxes) {
-            checkboxOffset = 40; // Checkbox column width
-            actionsOffset = 40; // Actions column starts after checkbox
-        } else if (hasActions) {
-            actionsOffset = 0; // Actions column starts at left edge
-        }
-    }
+    const showCheckboxes = bulkActions.length > 0;
 
     const stickyCheckboxClass = stickyActions && actionsFirst && showCheckboxes
         ? "sticky left-0 bg-white dark:bg-black z-10 after:absolute after:right-0 after:top-0 after:h-full after:w-[1px] after:bg-gray-200 dark:after:bg-gray-800"
@@ -375,7 +435,6 @@ export function DataTable<T extends { id: string | number }>({
         ? "sticky right-0 bg-white dark:bg-black z-10 before:absolute before:left-0 before:top-0 before:h-full before:w-[1px] before:bg-gray-200 dark:before:bg-gray-800"
         : "";
 
-    // --- Empty State Render ---
     if (data.length === 0) {
         return (
             <Card className="shadow-none border-gray-200 dark:border-gray-800 bg-white dark:bg-black rounded-xl border-dashed">
@@ -384,53 +443,38 @@ export function DataTable<T extends { id: string | number }>({
                         <Inbox size={20} className="text-gray-400 dark:text-gray-600" />
                     </div>
                     <div className="text-center space-y-1">
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-gray-900 dark:text-white">
-                            {emptyTitle}
-                        </h3>
-                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-relaxed">
-                            {emptyDescription}
-                        </p>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-gray-900 dark:text-white">{emptyTitle}</h3>
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-relaxed">{emptyDescription}</p>
                     </div>
                 </CardContent>
             </Card>
         );
     }
 
-    // --- Main Table Render ---
     return (
         <div className="space-y-4">
-            {/* Top Bar - Bulk Actions on left, Export/Columns on right */}
             <div className="flex items-center justify-between gap-4 px-1">
                 <div className="flex items-center gap-2">
                     {showCheckboxes && selectedIds.size > 0 && bulkActions.length > 0 && (
-                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
+                        <div className="flex items-center gap-2">
                             <span className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg tracking-widest">
                                 {selectedIds.size} Selected
                             </span>
-
                             {visibleBulkActions.map((action, i) => (
                                 <Button
                                     key={i}
                                     variant={action.variant === 'destructive' ? "destructive" : "default"}
                                     size="sm"
                                     onClick={() => action.onClick(data.filter(d => selectedIds.has(d.id)))}
-                                    className={cn(
-                                        "h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg",
-                                        action.color && getButtonColorClasses(action.color)
-                                    )}
+                                    className={cn("h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg", action.color && getButtonColorClasses(action.color))}
                                 >
                                     {action.icon}{action.label}
                                 </Button>
                             ))}
-
                             {moreBulkActions.length > 0 && (
                                 <DropdownMenu open={showMoreBulkActions} onOpenChange={setShowMoreBulkActions}>
                                     <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700"
-                                        >
+                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700">
                                             More Actions <ChevronDown size={12} />
                                         </Button>
                                     </DropdownMenuTrigger>
@@ -442,13 +486,9 @@ export function DataTable<T extends { id: string | number }>({
                                                     action.onClick(data.filter(d => selectedIds.has(d.id)));
                                                     setShowMoreBulkActions(false);
                                                 }}
-                                                className={cn(
-                                                    "font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg  dark:hover:bg-gray-800/90 dark:hover:text-gray-300 ",
-                                                    action.variant === 'destructive' && "text-rose-600 dark:text-rose-400 dark:hover:text-rose-400"
-                                                )}
+                                                className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg dark:hover:bg-gray-800/90", action.variant === 'destructive' && "text-rose-600 dark:text-rose-400")}
                                             >
-                                                {action.icon}
-                                                {action.label}
+                                                {action.icon}{action.label}
                                             </DropdownMenuItem>
                                         ))}
                                     </DropdownMenuContent>
@@ -456,25 +496,14 @@ export function DataTable<T extends { id: string | number }>({
                             )}
                         </div>
                     )}
-
                     {showCheckboxes && selectedIds.size === 0 && (
-                        <p className='p-2 text-sm bg-gray-100 rounded-md text-gray-600 dark:text-gray-300 dark:bg-gray-900/90'>
-                            {bulkActionsMessage}
-                        </p>
+                        <p className='p-2 text-sm bg-gray-100 rounded-md text-gray-600 dark:text-gray-300 dark:bg-gray-900/90'>{bulkActionsMessage}</p>
                     )}
                 </div>
-
-                {/* Right side - Export and Columns buttons */}
                 <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={exportToCSV}
-                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 dark:bg-gray-800/70"
-                    >
+                    <Button variant="outline" size="sm" onClick={exportToCSV} className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 dark:bg-gray-800/70">
                         <Download size={14} /> Export
                     </Button>
-
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 dark:bg-gray-800/70">
@@ -501,149 +530,63 @@ export function DataTable<T extends { id: string | number }>({
                 </div>
             </div>
 
-            {/* Main Table */}
             <Card className="shadow-none border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-black rounded-xl py-0">
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-separate border-spacing-0">
                             <thead className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800">
                                 <tr>
-                                    {showCheckboxes && (
-                                        <th className={cn("p-4 w-10 border-b border-gray-200 dark:border-gray-800 align-middle", stickyCheckboxClass)}>
-                                            <Checkbox checked={selectedIds.size === data.length} onCheckedChange={handleToggleAll} />
-                                        </th>
-                                    )}
-                                    {actionsFirst && hasActions && (
-                                        <th className={cn("p-4 text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-[0.25em] border-b border-gray-200 dark:border-gray-800 align-middle whitespace-nowrap", stickyActionsLeftClass)}>
-                                            <span>Actions</span>
-                                        </th>
-                                    )}
-                                    {visibleColumns.map(key => (
-                                        <th key={key} className="p-4 text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-[0.25em] border-b border-gray-200 dark:border-gray-800 align-middle whitespace-nowrap">
-                                            {key.replace(/([A-Z])/g, ' $1')}
-                                        </th>
-                                    ))}
-                                    {!actionsFirst && hasActions && (
-                                        <th className={cn("p-4 text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-[0.25em] border-b border-gray-200 dark:border-gray-800 align-middle whitespace-nowrap", stickyActionsRightClass)}>
-                                            <span>Actions</span>
-                                        </th>
-                                    )}
+                                    {showCheckboxes && <th className={cn("p-4 w-10 border-b border-gray-200 dark:border-gray-800 align-middle", stickyCheckboxClass)}><Checkbox checked={selectedIds.size === data.length} onCheckedChange={handleToggleAll} /></th>}
+                                    {actionsFirst && hasActions && <th className={cn("p-4 text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-[0.25em] border-b border-gray-200 dark:border-gray-800 align-middle whitespace-nowrap", stickyActionsLeftClass)}><span>Actions</span></th>}
+                                    {visibleColumns.map(key => <th key={key} className="p-4 text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-[0.25em] border-b border-gray-200 dark:border-gray-800 align-middle whitespace-nowrap">{key.replace(/([A-Z])/g, ' $1')}</th>)}
+                                    {!actionsFirst && hasActions && <th className={cn("p-4 text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-[0.25em] border-b border-gray-200 dark:border-gray-800 align-middle whitespace-nowrap", stickyActionsRightClass)}><span>Actions</span></th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {data.map((item) => (
-                                    <tr key={item.id} className={cn(
-                                        "hover:bg-gray-50/30 dark:hover:bg-gray-900/20 transition-colors group",
-                                        showCheckboxes && selectedIds.has(item.id) && "bg-gray-500/[0.02]"
-                                    )}>
-                                        {showCheckboxes && (
-                                            <td className={cn("p-4 w-10 h-px align-middle border-none", stickyCheckboxClass)}>
-                                                <Checkbox checked={selectedIds.has(item.id)} onCheckedChange={() => handleToggleOne(item.id)} />
-                                            </td>
-                                        )}
-                                        {actionsFirst && hasActions && (
-                                            <td className={cn("p-4 py-3 text-left h-px align-middle border-none", stickyActionsLeftClass)}>
-                                                {renderActions ? (
-                                                    renderActions(item)
-                                                ) : (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 transition-all rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50">
-                                                                <MoreVertical size={14} className="text-gray-500 dark:text-gray-400" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-2xl border-gray-200 dark:border-gray-800 bg-white dark:bg-black p-1">
-                                                            {displayConfigs.map((config) => (
-                                                                <DropdownMenuItem
-                                                                    key={config.id}
-                                                                    onClick={() => {
-                                                                        setActiveView({
-                                                                            data: config.getData(item),
-                                                                            config,
-                                                                            onClose: () => setActiveView(null)
-                                                                        });
-                                                                    }}
-                                                                    className="font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
-                                                                >
-                                                                    <div className="text-gray-600 dark:text-gray-400">{config.icon}</div>
-                                                                    {config.label}
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                            {displayConfigs.length > 0 && actions.length > 0 && <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-800" />}
-                                                            {actions.map((a, i) => (
-                                                                <DropdownMenuItem
-                                                                    key={i}
-                                                                    onClick={() => a.onClick(item)}
-                                                                    className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg",
-                                                                        typeof a.variant === 'function'
-                                                                            ? a.variant(item) === 'destructive' && "text-rose-600 dark:text-rose-400 hover:bg-red-50 dark:hover:bg-red-950/20"
-                                                                            : a.variant === 'destructive' && "text-rose-600 dark:text-rose-400 hover:bg-red-50 dark:hover:bg-red-950/20",
-                                                                        "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
-                                                                    )}
-                                                                >
-                                                                    {typeof a.icon === 'function' ? a.icon(item) : a.icon}
-                                                                    {typeof a.label === 'function' ? a.label(item) : a.label}
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
-                                            </td>
-                                        )}
-                                        {visibleColumns.map(key => (
-                                            <td key={key} className="p-4 py-3 h-px align-middle whitespace-nowrap border-none">
-                                                {renderCell(item, key)}
-                                            </td>
-                                        ))}
-                                        {!actionsFirst && hasActions && (
-                                            <td className={cn("p-4 py-3 text-right h-px align-middle border-none", stickyActionsRightClass)}>
-                                                {renderActions ? (
-                                                    renderActions(item)
-                                                ) : (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 transition-all rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50">
-                                                                <MoreVertical size={14} className="text-gray-500 dark:text-gray-400" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-2xl border-gray-200 dark:border-gray-800 bg-white dark:bg-black p-1">
-                                                            {displayConfigs.map((config) => (
-                                                                <DropdownMenuItem
-                                                                    key={config.id}
-                                                                    onClick={() => {
-                                                                        setActiveView({
-                                                                            data: config.getData(item),
-                                                                            config,
-                                                                            onClose: () => setActiveView(null)
-                                                                        });
-                                                                    }}
-                                                                    className="font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
-                                                                >
-                                                                    <div className="text-gray-600 dark:text-gray-400">{config.icon}</div>
-                                                                    {config.label}
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                            {displayConfigs.length > 0 && actions.length > 0 && <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-800" />}
-                                                            {actions.map((a, i) => (
-                                                                <DropdownMenuItem
-                                                                    key={i}
-                                                                    onClick={() => a.onClick(item)}
-                                                                    className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg",
-                                                                        typeof a.variant === 'function'
-                                                                            ? a.variant(item) === 'destructive' && "text-rose-600 dark:text-rose-400 hover:bg-red-50 dark:hover:bg-red-950/20"
-                                                                            : a.variant === 'destructive' && "text-rose-600 dark:text-rose-400 hover:bg-red-50 dark:hover:bg-red-950/20",
-                                                                        "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900"
-                                                                    )}
-                                                                >
-                                                                    {typeof a.icon === 'function' ? a.icon(item) : a.icon}
-                                                                    {typeof a.label === 'function' ? a.label(item) : a.label}
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
-                                            </td>
-                                        )}
+                                    <tr key={item.id} className={cn("hover:bg-gray-50/30 dark:hover:bg-gray-900/20 transition-colors group", showCheckboxes && selectedIds.has(item.id) && "bg-gray-500/[0.02]")}>
+                                        {showCheckboxes && <td className={cn("p-4 w-10 h-px align-middle border-none", stickyCheckboxClass)}><Checkbox checked={selectedIds.has(item.id)} onCheckedChange={() => handleToggleOne(item.id)} /></td>}
+                                        {actionsFirst && hasActions && <td className={cn("p-4 py-3 text-left h-px align-middle border-none", stickyActionsLeftClass)}>
+                                            {renderActions ? renderActions(item) : (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 transition-all rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"><MoreVertical size={14} className="text-gray-500 dark:text-gray-400" /></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-2xl border-gray-200 dark:border-gray-800 bg-white dark:bg-black p-1">
+                                                        {displayConfigs.map((config) => (
+                                                            <DropdownMenuItem key={config.id} onClick={() => setActiveView({ data: config.getData(item), config, onClose: () => setActiveView(null) })} className="font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900">
+                                                                <div className="text-gray-600 dark:text-gray-400">{config.icon}</div>{config.label}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                        {displayConfigs.length > 0 && actions.length > 0 && <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-800" />}
+                                                        {actions.map((a, i) => (
+                                                            <DropdownMenuItem key={i} onClick={() => a.onClick(item)} className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900", typeof a.variant === 'function' ? (a.variant(item) === 'destructive' && "text-rose-600 dark:text-rose-400") : (a.variant === 'destructive' && "text-rose-600 dark:text-rose-400"))}>
+                                                                {typeof a.icon === 'function' ? a.icon(item) : a.icon}{typeof a.label === 'function' ? a.label(item) : a.label}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
+                                        </td>}
+                                        {visibleColumns.map(key => <td key={key} className="p-4 py-3 h-px align-middle whitespace-nowrap border-none">{renderCell(item, key)}</td>)}
+                                        {!actionsFirst && hasActions && <td className={cn("p-4 py-3 text-right h-px align-middle border-none", stickyActionsRightClass)}>
+                                            {renderActions ? renderActions(item) : (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 transition-all rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"><MoreVertical size={14} className="text-gray-500 dark:text-gray-400" /></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-2xl border-gray-200 dark:border-gray-800 bg-white dark:bg-black p-1">
+                                                        {displayConfigs.map((config) => (
+                                                            <DropdownMenuItem key={config.id} onClick={() => setActiveView({ data: config.getData(item), config, onClose: () => setActiveView(null) })} className="font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900">
+                                                                <div className="text-gray-600 dark:text-gray-400">{config.icon}</div>{config.label}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                        {displayConfigs.length > 0 && actions.length > 0 && <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-800" />}
+                                                        {actions.map((a, i) => (
+                                                            <DropdownMenuItem key={i} onClick={() => a.onClick(item)} className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900", typeof a.variant === 'function' ? (a.variant(item) === 'destructive' && "text-rose-600 dark:text-rose-400") : (a.variant === 'destructive' && "text-rose-600 dark:text-rose-400"))}>
+                                                                {typeof a.icon === 'function' ? a.icon(item) : a.icon}{typeof a.label === 'function' ? a.label(item) : a.label}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
+                                        </td>}
                                     </tr>
                                 ))}
                             </tbody>
@@ -652,54 +595,34 @@ export function DataTable<T extends { id: string | number }>({
                 </CardContent>
             </Card>
 
-            {/* Dynamic View Renderer */}
             {activeView && (() => {
                 const { config, data: viewData, onClose } = activeView;
-                const viewType = config.viewType || 'dialog';
-                const sheetSide = config.sheetSide || 'right';
-                const sheetSize = config.sheetSize || 'lg';
-
                 if (config.component) {
-                    if (viewType === 'sheet') {
+                    if (config.viewType === 'sheet') {
                         return (
-                            <CustomSheet
-                                title={config.label}
-                                description=""
-                                side={sheetSide}
-                                size={sheetSize}
-                                open={!!activeView}
-                                onOpenChange={(open) => !open && onClose()}
-                            >
+                            <CustomSheet title={config.label} description="" side={config.sheetSide || 'right'} size={config.sheetSize || 'lg'} open={!!activeView} onOpenChange={(open) => !open && onClose()}>
                                 {config.component(viewData, onClose)}
                             </CustomSheet>
                         );
-                    } else {
-                        return (
-                            <CustomDialog
-                                title={config.label}
-                                description=""
-                                open={!!activeView}
-                                onOpenChange={(open) => !open && onClose()}
-                                contentWidth="max-w-2xl"
-                            >
-                                {config.component(viewData, onClose)}
-                            </CustomDialog>
-                        );
                     }
+                    return (
+                        <CustomDialog title={config.label} description="" open={!!activeView} onOpenChange={(open) => !open && onClose()} contentWidth="max-w-2xl">
+                            {config.component(viewData, onClose)}
+                        </CustomDialog>
+                    );
                 }
-
                 return (
-                    <CustomDialog
-                        title={config.label}
-                        description=""
-                        open={!!activeView}
-                        onOpenChange={(open) => !open && onClose()}
-                        contentWidth="max-w-2xl"
-                    >
+                    <CustomDialog title={config.label} description="" open={!!activeView} onOpenChange={(open) => !open && onClose()} contentWidth="max-w-2xl">
                         <DataDisplay data={viewData} excludeKeys={config.excludeKeys} />
                     </CustomDialog>
                 );
             })()}
+
+            {expandedData && (
+                <CustomDialog title={expandedData.title} description="" open={!!expandedData} onOpenChange={(open) => !open && expandedData.onClose()} contentWidth="max-w-2xl">
+                    <DataDisplay data={expandedData.data} />
+                </CustomDialog>
+            )}
         </div>
     );
 }
