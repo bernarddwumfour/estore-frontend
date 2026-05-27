@@ -17,6 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface ShippingOption {
   id: string;
@@ -26,15 +27,29 @@ interface ShippingOption {
   is_free: boolean;
 }
 
+interface GuestInfo {
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+}
+
 export default function CheckoutPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [selectedShippingId, setSelectedShippingId] = useState<string>('');
-  const [isCreatingGuest, setIsCreatingGuest] = useState(false);
-  const [guestUserCreated, setGuestUserCreated] = useState(false);
+  const [usePersonalInfoForShipping, setUsePersonalInfoForShipping] = useState(true);
   const router = useRouter();
+
+  // Guest info state (separate from shipping address)
+  const [guestInfo, setGuestInfo] = useState<GuestInfo>({
+    email: '',
+    first_name: '',
+    last_name: '',
+    phone: '',
+  });
 
   // Form data matching the backend expected structure
   const [formData, setFormData] = useState({
@@ -74,7 +89,8 @@ export default function CheckoutPage() {
   const getTotalPrice = useCartStore((state) => state.getTotalPrice);
   const clearCart = useCartStore((state) => state.clearCart);
   const { user } = useAuth();
-  const isAuthenticated = !!user
+  const isAuthenticated = !!user;
+
   // Calculate totals
   const subtotal = getTotalPrice();
   const selectedShipping = shippingOptions.find(opt => opt.id === selectedShippingId);
@@ -85,27 +101,46 @@ export default function CheckoutPage() {
   useEffect(() => {
     setIsMounted(true);
 
-    // If user is logged in, pre-fill shipping address with user data
+    // If user is logged in, pre-fill guest info and shipping address with user data
     if (user) {
+      const userData = {
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+      };
+
+      setGuestInfo(userData);
+
       setFormData(prev => ({
         ...prev,
         shipping_address: {
           ...prev.shipping_address,
-          first_name: user.first_name || '',
-          last_name: user.last_name || '',
-          email: user.email || '',
-          phone: user.phone || '',
+          ...userData,
         },
         billing_address: {
           ...prev.billing_address,
-          first_name: user.first_name || '',
-          last_name: user.last_name || '',
-          email: user.email || '',
-          phone: user.phone || '',
+          ...userData,
         }
       }));
     }
   }, [user]);
+
+  // Auto-fill shipping address when personal info changes and checkbox is checked
+  useEffect(() => {
+    if (!isAuthenticated && usePersonalInfoForShipping) {
+      setFormData(prev => ({
+        ...prev,
+        shipping_address: {
+          ...prev.shipping_address,
+          first_name: guestInfo.first_name,
+          last_name: guestInfo.last_name,
+          email: guestInfo.email,
+          phone: guestInfo.phone,
+        }
+      }));
+    }
+  }, [guestInfo, usePersonalInfoForShipping, isAuthenticated]);
 
   // Calculate shipping options when address changes
   useEffect(() => {
@@ -174,6 +209,27 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleGuestInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setGuestInfo(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleShippingAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    const fieldName = name.replace('shipping_address.', '');
+
+    setFormData(prev => ({
+      ...prev,
+      shipping_address: {
+        ...prev.shipping_address,
+        [fieldName]: value
+      }
+    }));
+  };
+
   const handleBillingSameAsShipping = (checked: boolean) => {
     setFormData(prev => ({
       ...prev,
@@ -199,58 +255,6 @@ export default function CheckoutPage() {
 
   const handleShippingOptionChange = (optionId: string) => {
     setSelectedShippingId(optionId);
-  };
-
-  const handleGuestCheckout = async () => {
-    const shipping = formData.shipping_address;
-
-    // Validate shipping fields
-    if (!shipping.first_name || !shipping.last_name || !shipping.email) {
-      toast.error('Please enter your first name, last name, and email address');
-      return;
-    }
-
-    if (!shipping.email.includes('@')) {
-      toast.error('Please enter a valid email address');
-      return;
-    }
-
-    if (!shipping.address_line1 || !shipping.city || !shipping.state || !shipping.postal_code) {
-      toast.error('Please fill all required shipping address fields');
-      return;
-    }
-
-    if (!selectedShippingId && shippingOptions.length > 0) {
-      toast.error('Please select a shipping method');
-      return;
-    }
-
-    setIsCreatingGuest(true);
-    try {
-      const guestData = {
-        email: shipping.email,
-        first_name: shipping.first_name,
-        last_name: shipping.last_name,
-        phone: shipping.phone,
-      };
-
-      const response = await UnAuthenticatedAxios.post('/auth/guest-checkout/', guestData);
-
-      if (response.data.success) {
-        setGuestUserCreated(true);
-        toast.success('Guest account created! You can now complete your purchase.');
-
-        // Proceed with order creation
-        await createOrder();
-      } else {
-        toast.error(response.data.error || 'Failed to create guest account');
-      }
-    } catch (error: any) {
-      console.error('Guest checkout error:', error);
-      toast.error(error.response?.data?.error || 'Failed to process guest checkout');
-    } finally {
-      setIsCreatingGuest(false);
-    }
   };
 
   const createOrder = async () => {
@@ -299,17 +303,11 @@ export default function CheckoutPage() {
   };
 
   const prepareOrderData = () => {
-    return {
+    const orderData: any = {
       shipping_address: {
         ...formData.shipping_address,
         address_type: 'shipping',
       },
-      ...(formData.use_separate_billing && {
-        billing_address: {
-          ...formData.billing_address,
-          address_type: 'billing',
-        }
-      }),
       payment_method: formData.payment_method,
       shipping_method: selectedShippingId || 'standard',
       customer_note: formData.customer_note,
@@ -318,6 +316,26 @@ export default function CheckoutPage() {
         quantity: item.quantity,
       })),
     };
+
+    // Add guest_info for non-authenticated users
+    if (!isAuthenticated) {
+      orderData.guest_info = {
+        email: guestInfo.email,
+        first_name: guestInfo.first_name,
+        last_name: guestInfo.last_name,
+        phone: guestInfo.phone,
+      };
+    }
+
+    // Add billing address if separate
+    if (formData.use_separate_billing) {
+      orderData.billing_address = {
+        ...formData.billing_address,
+        address_type: 'billing',
+      };
+    }
+
+    return orderData;
   };
 
   const handlePaystackPayment = (authorizationUrl: string) => {
@@ -333,16 +351,22 @@ export default function CheckoutPage() {
       return;
     }
 
-    // If user is authenticated, proceed directly
-    if (isAuthenticated && user) {
-      await createOrder();
-    } else {
-      // Guest checkout - create guest account first
-      await handleGuestCheckout();
-    }
+    // Proceed directly to order creation
+    await createOrder();
   };
 
   const validateForm = () => {
+    // Validate guest info for non-authenticated users
+    if (!isAuthenticated) {
+      if (!guestInfo.first_name || !guestInfo.last_name) {
+        return 'Please enter your first name and last name';
+      }
+      if (!guestInfo.email || !guestInfo.email.includes('@')) {
+        return 'Please enter a valid email address';
+      }
+    }
+
+    // Validate shipping address
     const shipping = formData.shipping_address;
     if (!shipping.first_name || !shipping.last_name || !shipping.phone || !shipping.email ||
       !shipping.address_line1 || !shipping.city || !shipping.state || !shipping.postal_code) {
@@ -412,7 +436,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* Guest checkout info banner */}
-        {!isAuthenticated && !guestUserCreated && (
+        {!isAuthenticated && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-start gap-3">
               <UserPlus className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -424,69 +448,126 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {/* Success message for guest account creation */}
-        {guestUserCreated && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-              <div>
-                <p className="text-sm text-green-800 font-medium">Guest account created!</p>
-                <p className="text-sm text-green-600">Your order is being processed. You'll receive a confirmation email shortly.</p>
-              </div>
-            </div>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column - Forms */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Guest Information Section (only for non-authenticated users) */}
+              {!isAuthenticated && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <User className="h-5 w-5" /> Your Information
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
+                        name="first_name"
+                        placeholder="First Name *"
+                        value={guestInfo.first_name}
+                        onChange={handleGuestInfoChange}
+                        required
+                        className="h-12 text-base"
+                      />
+                      <Input
+                        name="last_name"
+                        placeholder="Last Name *"
+                        value={guestInfo.last_name}
+                        onChange={handleGuestInfoChange}
+                        required
+                        className="h-12 text-base"
+                      />
+                      <Input
+                        name="email"
+                        type="email"
+                        placeholder="Email Address *"
+                        value={guestInfo.email}
+                        onChange={handleGuestInfoChange}
+                        required
+                        className="h-12 text-base"
+                      />
+                      <Input
+                        name="phone"
+                        placeholder="Phone Number *"
+                        value={guestInfo.phone}
+                        onChange={handleGuestInfoChange}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-3">
+                      We'll use this information to create your guest account and send order updates.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Shipping Address */}
               <Card>
                 <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                    <MapPin className="h-5 w-5" /> Shipping Address
-                  </h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold flex items-center gap-2">
+                      <MapPin className="h-5 w-5" /> Shipping Address
+                    </h2>
+                    {!isAuthenticated && (
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="usePersonalInfo"
+                          checked={usePersonalInfoForShipping}
+                          onCheckedChange={(checked) => setUsePersonalInfoForShipping(checked as boolean)}
+                        />
+                        <Label
+                          htmlFor="usePersonalInfo"
+                          className="text-sm cursor-pointer text-gray-600 hover:text-gray-800"
+                        >
+                          Use my personal information
+                        </Label>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input
                       name="shipping_address.first_name"
                       placeholder="First Name *"
                       value={formData.shipping_address.first_name}
-                      onChange={handleInputChange}
+                      onChange={handleShippingAddressChange}
                       required
                       className="h-12 text-base"
+                      disabled={!isAuthenticated && usePersonalInfoForShipping}
                     />
                     <Input
                       name="shipping_address.last_name"
                       placeholder="Last Name *"
                       value={formData.shipping_address.last_name}
-                      onChange={handleInputChange}
+                      onChange={handleShippingAddressChange}
                       required
                       className="h-12 text-base"
+                      disabled={!isAuthenticated && usePersonalInfoForShipping}
                     />
                     <Input
                       name="shipping_address.email"
                       type="email"
                       placeholder="Email *"
                       value={formData.shipping_address.email}
-                      onChange={handleInputChange}
+                      onChange={handleShippingAddressChange}
                       required
                       className="h-12 text-base"
+                      disabled={!isAuthenticated && usePersonalInfoForShipping}
                     />
                     <Input
                       name="shipping_address.phone"
                       placeholder="Phone *"
                       value={formData.shipping_address.phone}
-                      onChange={handleInputChange}
+                      onChange={handleShippingAddressChange}
                       required
                       className="h-12 text-base"
+                      disabled={!isAuthenticated && usePersonalInfoForShipping}
                     />
                     <div className="md:col-span-2">
                       <Input
                         name="shipping_address.address_line1"
                         placeholder="Street Address *"
                         value={formData.shipping_address.address_line1}
-                        onChange={handleInputChange}
+                        onChange={handleShippingAddressChange}
                         required
                         className="h-12 text-base"
                       />
@@ -496,7 +577,7 @@ export default function CheckoutPage() {
                         name="shipping_address.address_line2"
                         placeholder="Apartment, suite, unit (Optional)"
                         value={formData.shipping_address.address_line2}
-                        onChange={handleInputChange}
+                        onChange={handleShippingAddressChange}
                         className="h-12 text-base"
                       />
                     </div>
@@ -504,7 +585,7 @@ export default function CheckoutPage() {
                       name="shipping_address.city"
                       placeholder="City *"
                       value={formData.shipping_address.city}
-                      onChange={handleInputChange}
+                      onChange={handleShippingAddressChange}
                       required
                       className="h-12 text-base"
                     />
@@ -512,7 +593,7 @@ export default function CheckoutPage() {
                       name="shipping_address.state"
                       placeholder="State/Province *"
                       value={formData.shipping_address.state}
-                      onChange={handleInputChange}
+                      onChange={handleShippingAddressChange}
                       required
                       className="h-12 text-base"
                     />
@@ -520,14 +601,14 @@ export default function CheckoutPage() {
                       name="shipping_address.postal_code"
                       placeholder="Postal Code *"
                       value={formData.shipping_address.postal_code}
-                      onChange={handleInputChange}
+                      onChange={handleShippingAddressChange}
                       required
                       className="h-12 text-base"
                     />
                     <select
                       name="shipping_address.country"
                       value={formData.shipping_address.country}
-                      onChange={handleInputChange}
+                      onChange={handleShippingAddressChange}
                       className="w-full h-12 px-3 border rounded-md text-base bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
                     >
                       <option value="Ghana">Ghana</option>
@@ -540,7 +621,7 @@ export default function CheckoutPage() {
                         name="shipping_address.instructions"
                         placeholder="Delivery Instructions (Optional)"
                         value={formData.shipping_address.instructions}
-                        onChange={handleInputChange}
+                        onChange={handleShippingAddressChange}
                         rows={2}
                         className="text-base"
                       />
@@ -790,12 +871,12 @@ export default function CheckoutPage() {
                       type="submit"
                       className="w-full h-12 text-base"
                       size="lg"
-                      disabled={isLoading || isCalculatingShipping || !selectedShippingId || isCreatingGuest}
+                      disabled={isLoading || isCalculatingShipping || !selectedShippingId}
                     >
-                      {isLoading || isCreatingGuest ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isCreatingGuest ? 'Creating Guest Account...' : 'Processing...'}</>
+                      {isLoading ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
                       ) : (
-                        !isAuthenticated ? 'Continue as Guest' : (formData.payment_method === 'pod' ? 'Place Order (Pay on Delivery)' : 'Proceed to Payment')
+                        !isAuthenticated ? 'Place Order as Guest' : (formData.payment_method === 'pod' ? 'Place Order (Pay on Delivery)' : 'Proceed to Payment')
                       )}
                     </Button>
                   </div>
