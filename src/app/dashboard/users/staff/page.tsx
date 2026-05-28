@@ -31,6 +31,7 @@ import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/Cus
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
 import Link from 'next/link';
+import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 
 // Types
 interface StaffUser {
@@ -561,31 +562,66 @@ export default function StaffUsersPage() {
     const staff = data?.data?.staff || [];
     const pagination = data?.data?.pagination;
 
-    if (isLoading && !staff.length) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
-            </div>
-        );
-    }
-
+    // Error state - Keep UI visible
     if (isError) {
         return (
-            <div className="text-center py-12">
-                <p className="text-red-600 dark:text-red-400">Error loading staff users: {error?.message}</p>
+            <div className="space-y-6">
+                {/* Header - Always visible */}
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Staff Management</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Manage staff members and administrators</p>
+                </div>
+
+                {/* Buttons - Always visible */}
+                <div className="flex justify-between items-center">
+                    <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+                        <Plus size={16} />
+                        Add Staff Member
+                    </Button>
+                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
+                        <RefreshCw size={16} />
+                        Refresh
+                    </Button>
+                </div>
+
+                {/* Filters and Sort - Always visible */}
+                <div className="flex flex-wrap gap-4 items-start justify-between">
+                    <div className="flex-1">
+                        <CustomFilter
+                            config={filterConfig}
+                            filters={{
+                                search: appliedFilters.search,
+                                role: appliedFilters.role,
+                                is_active: appliedFilters.is_active,
+                                email_verified: appliedFilters.email_verified,
+                            }}
+                            onFilterChange={handleFilterChange}
+                            onReset={handleResetFilters}
+                        />
+                    </div>
+                    <CustomSort
+                        config={sortConfig}
+                        onSortChange={handleSortChange}
+                    />
+                </div>
+
+                {/* Error Message */}
+                <div className="text-center py-12">
+                    <p className="text-red-600 dark:text-red-400">Error loading staff users: {error?.message}</p>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            {/* Header with Title and Description */}
+            {/* Header with Title and Description - Always visible */}
             <div>
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Staff Management</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Manage staff members and administrators</p>
             </div>
 
-            {/* New Staff Button and Refresh */}
+            {/* New Staff Button and Refresh - Always visible */}
             <div className="flex justify-between items-center">
                 <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
                     <Plus size={16} />
@@ -601,7 +637,7 @@ export default function StaffUsersPage() {
                 </Button>
             </div>
 
-            {/* Filters and Sort Row */}
+            {/* Filters and Sort Row - Always visible and interactive */}
             <div className="flex flex-wrap gap-4 items-start justify-between">
                 <div className="flex-1">
                     <CustomFilter
@@ -716,62 +752,59 @@ export default function StaffUsersPage() {
                 )}
             </CustomSheet>
 
-            {/* Data Table */}
-            <DataTable
-                data={staff}
-                renderActions={(user: StaffUser) => (
-                    <ActionsDropdown
-                        actions={getStaffActions(user)}
-                        maxVisible={3}
-                        showLabels={false}
-                        buttonSize="sm"
+            {/* Data Table or Skeleton - Only this shows loading state */}
+            {isLoading ? (
+                <TableSkeleton />
+            ) : (
+                <>
+                    <DataTable
+                        data={staff}
+                        renderActions={(user: StaffUser) => (
+                            <ActionsDropdown
+                                actions={getStaffActions(user)}
+                                maxVisible={3}
+                                showLabels={false}
+                                buttonSize="sm"
+                            />
+                        )}
+                        bulkActions={bulkActions}
+                        bulkActionsMessage="Select staff members to activate, deactivate, remove, or export"
+                        excludeColumns={['id', 'full_name', 'date_joined', 'last_login', 'created_at']}
+                        dots={{
+                            is_active: {
+                                true: 'emerald',
+                                false: 'rose',
+                            },
+                            email_verified: {
+                                true: 'emerald',
+                                false: 'amber',
+                            },
+                        }}
+                        badges={{
+                            role: {
+                                admin: 'rose',
+                                staff: 'amber',
+                            },
+                        }}
+                        links={{
+                            email: (user: StaffUser) => `/dashboard/users/${user.id}`,
+                        }}
+                        emptyTitle="No Staff Members Found"
+                        emptyDescription="Add your first staff member to get started."
+                        onSelectionChange={(selected) => console.log('Selected staff:', selected.length)}
                     />
-                )}
-                bulkActions={bulkActions}
-                bulkActionsMessage="Select staff members to activate, deactivate, remove, or export"
-                excludeColumns={['id', 'full_name', 'date_joined', 'last_login', 'created_at']}
-                dots={{
-                    is_active: {
-                        true: 'emerald',
-                        false: 'rose',
-                    },
-                    email_verified: {
-                        true: 'emerald',
-                        false: 'amber',
-                    },
-                }}
-                badges={{
-                    role: {
-                        admin: 'rose',
-                        staff: 'amber',
-                    },
-                }}
-                links={{
-                    email: (user: StaffUser) => `/dashboard/users/${user.id}`,
-                }}
-                // columnMaxWidth={{
-                //     email: '250px',
-                //     first_name: '150px',
-                //     last_name: '150px',
-                //     phone: '150px',
-                //     role: '100px',
-                //     is_active: '80px',
-                //     email_verified: '100px',
-                // }}
-                emptyTitle="No Staff Members Found"
-                emptyDescription="Add your first staff member to get started."
-                onSelectionChange={(selected) => console.log('Selected staff:', selected.length)}
-            />
 
-            {/* Pagination */}
-            {pagination && pagination.total_pages > 1 && (
-                <CustomPagination
-                    pagination={pagination}
-                    onPageChange={handlePageChange}
-                    onLimitChange={handleLimitChange}
-                    showLimitSelector={true}
-                    limitOptions={[10, 20, 50, 100]}
-                />
+                    {/* Pagination */}
+                    {pagination && pagination.total_pages > 1 && (
+                        <CustomPagination
+                            pagination={pagination}
+                            onPageChange={handlePageChange}
+                            onLimitChange={handleLimitChange}
+                            showLimitSelector={true}
+                            limitOptions={[10, 20, 50, 100]}
+                        />
+                    )}
+                </>
             )}
         </div>
     );

@@ -26,6 +26,7 @@ import OrderItemsList from './OrderItemsList';
 import ShippingAddressCard from './ShippingAddressCard';
 import { useRouter } from 'next/navigation';
 import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
+import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 
 // Types
 interface Order {
@@ -564,31 +565,64 @@ export default function OrdersPage() {
   const orders = data?.data?.orders || [];
   const pagination = data?.data?.pagination;
 
-  if (isLoading && !orders.length) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
-      </div>
-    );
-  }
-
+  // Error state - Keep UI visible
   if (isError) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-600 dark:text-red-400">Error loading orders: {error?.message}</p>
+      <div className="space-y-6">
+        {/* Header - Always visible */}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Orders</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage and track customer orders</p>
+        </div>
+
+        {/* Refresh Button - Always visible */}
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={handleRefresh} className="gap-2">
+            <RefreshCw size={16} />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Filters and Sort - Always visible */}
+        <div className="flex flex-wrap gap-4 items-start justify-between">
+          <div className="flex-1">
+            <CustomFilter
+              config={filterConfig}
+              filters={{
+                search: appliedFilters.search,
+                status: appliedFilters.status,
+                payment_status: appliedFilters.payment_status,
+                payment_method: appliedFilters.payment_method,
+                date_range: appliedFilters.date_range,
+                total_range: appliedFilters.total_range,
+              }}
+              onFilterChange={handleFilterChange}
+              onReset={handleResetFilters}
+            />
+          </div>
+          <CustomSort
+            config={sortConfig}
+            onSortChange={handleSortChange}
+          />
+        </div>
+
+        {/* Error Message */}
+        <div className="text-center py-12">
+          <p className="text-red-600 dark:text-red-400">Error loading orders: {error?.message}</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header - Always visible */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Orders</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">Manage and track customer orders</p>
       </div>
 
-      {/* Refresh Button */}
+      {/* Refresh Button - Always visible */}
       <div className="flex justify-end">
         <Button variant="outline" onClick={handleRefresh} className="gap-2">
           <RefreshCw size={16} />
@@ -596,7 +630,7 @@ export default function OrdersPage() {
         </Button>
       </div>
 
-      {/* Filters and Sort Row */}
+      {/* Filters and Sort Row - Always visible and interactive */}
       <div className="flex flex-wrap gap-4 items-start justify-between">
         <div className="flex-1">
           <CustomFilter
@@ -725,60 +759,66 @@ export default function OrdersPage() {
         )}
       </CustomDialog>
 
-      {/* Data Table */}
-      <DataTable
-        data={orders}
-        renderActions={(order: Order) => (
-          <ActionsDropdown
-            actions={getOrderActions(order)}
-            maxVisible={3}
-            showLabels={false}
-            buttonSize="sm"
+      {/* Data Table or Skeleton - Only this shows loading state */}
+      {isLoading ? (
+        <TableSkeleton />
+      ) : (
+        <>
+          <DataTable
+            data={orders}
+            renderActions={(order: Order) => (
+              <ActionsDropdown
+                actions={getOrderActions(order)}
+                maxVisible={3}
+                showLabels={false}
+                buttonSize="sm"
+              />
+            )}
+            bulkActions={bulkActions}
+            bulkActionsMessage="Select orders to confirm, process, ship, deliver, cancel, or export"
+            excludeColumns={['id', 'items', 'shipping_address', 'tax_amount', 'discount_amount', 'currency']}
+            dots={{
+              status: {
+                pending: 'amber',
+                confirmed: 'emerald',
+                processing: 'blue',
+                shipped: 'violet',
+                delivered: 'emerald',
+                cancelled: 'rose',
+                refunded: 'zinc'
+              },
+              payment_status: {
+                pending: 'amber',
+                paid: 'emerald',
+                failed: 'rose',
+                refunded: 'zinc'
+              },
+            }}
+            badges={{
+              payment_method: {
+                paystack: 'blue',
+                pod: 'orange'
+              },
+            }}
+            links={{
+              order_number: (order: Order) => `/dashboard/orders/${order.id}`,
+            }}
+            emptyTitle="No Orders Found"
+            emptyDescription="Orders will appear here once customers place them."
+            onSelectionChange={(selected) => console.log('Selected orders:', selected.length)}
           />
-        )}
-        bulkActions={bulkActions}
-        bulkActionsMessage="Select orders to confirm, process, ship, deliver, cancel, or export"
-        excludeColumns={['id', 'items', 'shipping_address', 'tax_amount', 'discount_amount', 'currency']}
-        dots={{
-          status: {
-            pending: 'amber',
-            confirmed: 'emerald',
-            processing: 'blue',
-            shipped: 'violet',
-            delivered: 'emerald',
-            cancelled: 'rose',
-            refunded: 'zinc'
-          },
-          payment_status: {
-            pending: 'amber',
-            paid: 'emerald',
-            failed: 'rose',
-            refunded: 'zinc'
-          },
-        }}
-        badges={{
-          payment_method: {
-            paystack: 'blue',
-            pod: 'orange'
-          },
-        }}
-        links={{
-          order_number: (order: Order) => `/dashboard/orders/${order.id}`,
-        }}
-        emptyTitle="No Orders Found"
-        emptyDescription="Orders will appear here once customers place them."
-        onSelectionChange={(selected) => console.log('Selected orders:', selected.length)}
-      />
 
-      {/* Pagination */}
-      {pagination && pagination.total_pages > 1 && (
-        <CustomPagination
-          pagination={pagination}
-          onPageChange={handlePageChange}
-          onLimitChange={handleLimitChange}
-          showLimitSelector={true}
-          limitOptions={[10, 20, 50, 100]}
-        />
+          {/* Pagination */}
+          {pagination && pagination.total_pages > 1 && (
+            <CustomPagination
+              pagination={pagination}
+              onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
+              showLimitSelector={true}
+              limitOptions={[10, 20, 50, 100]}
+            />
+          )}
+        </>
       )}
     </div>
   );

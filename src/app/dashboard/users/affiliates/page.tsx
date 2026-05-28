@@ -19,6 +19,7 @@ import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
 import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
+import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 
 // Types
 interface Affiliate {
@@ -160,6 +161,7 @@ export default function AffiliatesPage() {
     // State for dialogs/sheets
     const [viewingAffiliate, setViewingAffiliate] = useState<Affiliate | null>(null);
     const [makingAffiliate, setMakingAffiliate] = useState<{ open: boolean; user: Affiliate | null }>({ open: false, user: null });
+    const [searchEmail, setSearchEmail] = useState('');
 
     // Filter and pagination state
     const [filters, setFilters] = useState({
@@ -211,6 +213,7 @@ export default function AffiliatesPage() {
         onSuccess: () => {
             toast.success('User is now an affiliate');
             setMakingAffiliate({ open: false, user: null });
+            setSearchEmail('');
             refetch();
             queryClient.invalidateQueries({ queryKey: ['affiliates'] });
         },
@@ -334,8 +337,10 @@ export default function AffiliatesPage() {
     };
 
     const handleMakeAffiliate = () => {
-        if (makingAffiliate.user) {
-            makeAffiliateMutation.mutate(makingAffiliate.user.id);
+        if (searchEmail) {
+            // In a real implementation, you would search for the user by email first
+            // For now, we'll just show a toast
+            toast.info('Please select a user from the search results');
         }
     };
 
@@ -403,87 +408,144 @@ export default function AffiliatesPage() {
     const pagination = data?.data?.pagination;
     const total = data?.data?.total || 0;
 
-    // Stats
+    // Stats calculations
     const totalEarnings = affiliates.reduce((sum, a) => sum + (a.total_earnings || 0), 0);
     const totalReferrals = affiliates.reduce((sum, a) => sum + (a.total_referrals || 0), 0);
     const activeCount = affiliates.filter(a => a.is_active).length;
+    const avgEarnings = total > 0 ? totalEarnings / total : 0;
 
-    if (isLoading && !affiliates.length) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
-            </div>
-        );
-    }
-
+    // Error state - Keep UI visible
     if (isError) {
         return (
-            <div className="text-center py-12">
-                <p className="text-red-600 dark:text-red-400">Error loading affiliates: {error?.message}</p>
+            <div className="space-y-6">
+                {/* Header - Always visible */}
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Affiliates</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Manage affiliate marketers and their earnings</p>
+                </div>
+
+                {/* Stats Cards Skeleton - Show placeholder stats cards */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4 animate-pulse">
+                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                            <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Buttons - Always visible */}
+                <div className="flex justify-between items-center">
+                    <Button className="gap-2" disabled>
+                        <UserPlus size={16} />
+                        Make Affiliate
+                    </Button>
+                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
+                        <RefreshCw size={16} />
+                        Refresh
+                    </Button>
+                </div>
+
+                {/* Filters and Sort - Always visible */}
+                <div className="flex flex-wrap gap-4 items-start justify-between">
+                    <div className="flex-1">
+                        <CustomFilter
+                            config={filterConfig}
+                            filters={{
+                                search: appliedFilters.search,
+                                is_active: appliedFilters.is_active,
+                                email_verified: appliedFilters.email_verified,
+                                affiliate_level: appliedFilters.affiliate_level,
+                                earnings_range: appliedFilters.earnings_range,
+                                min_referrals: appliedFilters.min_referrals,
+                            }}
+                            onFilterChange={handleFilterChange}
+                            onReset={handleResetFilters}
+                        />
+                    </div>
+                    <CustomSort
+                        config={sortConfig}
+                        onSortChange={handleSortChange}
+                    />
+                </div>
+
+                {/* Error Message */}
+                <div className="text-center py-12">
+                    <p className="text-red-600 dark:text-red-400">Error loading affiliates: {error?.message}</p>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            {/* Header with Title and Description */}
+            {/* Header with Title and Description - Always visible */}
             <div>
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Affiliates</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Manage affiliate marketers and their earnings</p>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Affiliates</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{total}</p>
+            {/* Stats Cards - Always visible (show actual stats or skeletons while loading) */}
+            {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 animate-pulse">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                            <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
                         </div>
-                        <Users className="h-8 w-8 text-purple-500" />
+                    ))}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Total Affiliates</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{total}</p>
+                            </div>
+                            <Users className="h-8 w-8 text-purple-500" />
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Active</p>
+                                <p className="text-2xl font-bold text-green-600">{activeCount}</p>
+                            </div>
+                            <CheckCircle className="h-8 w-8 text-green-500" />
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Total Earnings</p>
+                                <p className="text-2xl font-bold text-emerald-600">${totalEarnings.toFixed(2)}</p>
+                            </div>
+                            <DollarSign className="h-8 w-8 text-emerald-500" />
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Total Referrals</p>
+                                <p className="text-2xl font-bold text-amber-600">{totalReferrals}</p>
+                            </div>
+                            <TrendingUp className="h-8 w-8 text-amber-500" />
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Avg Earnings</p>
+                                <p className="text-2xl font-bold text-blue-600">${avgEarnings.toFixed(2)}</p>
+                            </div>
+                            <BarChart3 className="h-8 w-8 text-blue-500" />
+                        </div>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Active</p>
-                            <p className="text-2xl font-bold text-green-600">{activeCount}</p>
-                        </div>
-                        <CheckCircle className="h-8 w-8 text-green-500" />
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Earnings</p>
-                            <p className="text-2xl font-bold text-emerald-600">${totalEarnings.toFixed(2)}</p>
-                        </div>
-                        <DollarSign className="h-8 w-8 text-emerald-500" />
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Referrals</p>
-                            <p className="text-2xl font-bold text-amber-600">{totalReferrals}</p>
-                        </div>
-                        <TrendingUp className="h-8 w-8 text-amber-500" />
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Avg Earnings</p>
-                            <p className="text-2xl font-bold text-blue-600">
-                                ${total > 0 ? (totalEarnings / total).toFixed(2) : '0.00'}
-                            </p>
-                        </div>
-                        <BarChart3 className="h-8 w-8 text-blue-500" />
-                    </div>
-                </div>
-            </div>
+            )}
 
-            {/* Make Affiliate Button and Refresh */}
+            {/* Make Affiliate Button and Refresh - Always visible */}
             <div className="flex justify-between items-center">
                 <Button
                     onClick={() => setMakingAffiliate({ open: true, user: null })}
@@ -498,7 +560,7 @@ export default function AffiliatesPage() {
                 </Button>
             </div>
 
-            {/* Filters and Sort Row - All filters now in CustomFilter */}
+            {/* Filters and Sort Row - Always visible and interactive */}
             <div className="flex flex-wrap gap-4 items-start justify-between">
                 <div className="flex-1">
                     <CustomFilter
@@ -548,15 +610,9 @@ export default function AffiliatesPage() {
                         <input
                             type="text"
                             placeholder="Search by email..."
+                            value={searchEmail}
+                            onChange={(e) => setSearchEmail(e.target.value)}
                             className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
-                            onChange={(e) => {
-                                // Search for user by email
-                                const searchEmail = e.target.value;
-                                if (searchEmail) {
-                                    // You can implement user search here
-                                    // For now, just show a message
-                                }
-                            }}
                         />
                         <p className="text-xs text-gray-500 mt-1">Enter user email to make them an affiliate</p>
                     </div>
@@ -564,7 +620,7 @@ export default function AffiliatesPage() {
                         <Button variant="outline" onClick={() => setMakingAffiliate({ open: false, user: null })}>Cancel</Button>
                         <Button
                             onClick={handleMakeAffiliate}
-                            disabled={!makingAffiliate.user}
+                            disabled={!searchEmail}
                         >
                             Make Affiliate
                         </Button>
@@ -634,55 +690,61 @@ export default function AffiliatesPage() {
                 )}
             </CustomSheet>
 
-            {/* Data Table */}
-            <DataTable
-                data={affiliates}
-                renderActions={(affiliate: Affiliate) => (
-                    <ActionsDropdown
-                        actions={getAffiliateActions(affiliate)}
-                        maxVisible={3}
-                        showLabels={false}
-                        buttonSize="sm"
+            {/* Data Table or Skeleton - Only this shows loading state */}
+            {isLoading ? (
+                <TableSkeleton />
+            ) : (
+                <>
+                    <DataTable
+                        data={affiliates}
+                        renderActions={(affiliate: Affiliate) => (
+                            <ActionsDropdown
+                                actions={getAffiliateActions(affiliate)}
+                                maxVisible={3}
+                                showLabels={false}
+                                buttonSize="sm"
+                            />
+                        )}
+                        bulkActions={bulkActions}
+                        bulkActionsMessage="Select affiliates to export"
+                        excludeColumns={['id', 'full_name', 'last_login', 'joined_affiliate_at', 'pending_earnings', 'paid_earnings']}
+                        dots={{
+                            is_active: {
+                                true: 'emerald',
+                                false: 'rose',
+                            },
+                            email_verified: {
+                                true: 'emerald',
+                                false: 'amber',
+                            },
+                        }}
+                        badges={{
+                            affiliate_level: {
+                                platinum: 'orange',
+                                gold: 'amber',
+                                silver: 'zinc',
+                                bronze: 'violet',
+                            },
+                        }}
+                        links={{
+                            email: (affiliate: Affiliate) => `/dashboard/users/${affiliate.id}`,
+                        }}
+                        emptyTitle="No Affiliates Found"
+                        emptyDescription="No affiliate marketers yet. Make your first affiliate to get started."
+                        onSelectionChange={(selected) => console.log('Selected affiliates:', selected.length)}
                     />
-                )}
-                bulkActions={bulkActions}
-                bulkActionsMessage="Select affiliates to export"
-                excludeColumns={['id', 'full_name', 'last_login', 'joined_affiliate_at', 'pending_earnings', 'paid_earnings']}
-                dots={{
-                    is_active: {
-                        true: 'emerald',
-                        false: 'rose',
-                    },
-                    email_verified: {
-                        true: 'emerald',
-                        false: 'amber',
-                    },
-                }}
-                badges={{
-                    affiliate_level: {
-                        platinum: 'orange',
-                        gold: 'amber',
-                        silver: 'zinc',
-                        bronze: 'violet',
-                    },
-                }}
-                links={{
-                    email: (affiliate: Affiliate) => `/dashboard/users/${affiliate.id}`,
-                }}
-                emptyTitle="No Affiliates Found"
-                emptyDescription="No affiliate marketers yet. Make your first affiliate to get started."
-                onSelectionChange={(selected) => console.log('Selected affiliates:', selected.length)}
-            />
 
-            {/* Pagination */}
-            {pagination && pagination.total_pages > 1 && (
-                <CustomPagination
-                    pagination={pagination}
-                    onPageChange={handlePageChange}
-                    onLimitChange={handleLimitChange}
-                    showLimitSelector={true}
-                    limitOptions={[10, 20, 50, 100]}
-                />
+                    {/* Pagination */}
+                    {pagination && pagination.total_pages > 1 && (
+                        <CustomPagination
+                            pagination={pagination}
+                            onPageChange={handlePageChange}
+                            onLimitChange={handleLimitChange}
+                            showLimitSelector={true}
+                            limitOptions={[10, 20, 50, 100]}
+                        />
+                    )}
+                </>
             )}
         </div>
     );

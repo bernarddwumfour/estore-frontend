@@ -19,6 +19,7 @@ import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/Cus
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
 import { useRouter } from 'next/navigation';
+import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 
 // Types
 interface Transaction {
@@ -308,32 +309,75 @@ export default function TransactionsPage() {
     const pagination = data?.data?.pagination;
     const stats = data?.data?.stats;
 
-    if (isLoading && !transactions.length) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
-            </div>
-        );
-    }
-
+    // Error state - Keep UI visible
     if (isError) {
         return (
-            <div className="text-center py-12">
-                <p className="text-red-600 dark:text-red-400">Error loading transactions: {error?.message}</p>
+            <div className="space-y-6">
+                {/* Header - Always visible */}
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Transactions</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">View and manage all payment transactions</p>
+                </div>
+
+                {/* Stats Cards Skeleton - Show placeholder stats cards */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4 animate-pulse">
+                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                            <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Refresh Button - Always visible */}
+                <div className="flex justify-end">
+                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
+                        <RefreshCw size={16} />
+                        Refresh
+                    </Button>
+                </div>
+
+                {/* Filters and Sort - Always visible */}
+                <div className="flex flex-wrap gap-4 items-start justify-between">
+                    <div className="flex-1">
+                        <CustomFilter
+                            config={filterConfig}
+                            filters={{
+                                search: appliedFilters.search,
+                                type: appliedFilters.type,
+                                status: appliedFilters.status,
+                                payment_method: appliedFilters.payment_method,
+                                date_range: appliedFilters.date_range,
+                                amount_range: appliedFilters.amount_range,
+                            }}
+                            onFilterChange={handleFilterChange}
+                            onReset={handleResetFilters}
+                        />
+                    </div>
+                    <CustomSort
+                        config={sortConfig}
+                        onSortChange={handleSortChange}
+                    />
+                </div>
+
+                {/* Error Message */}
+                <div className="text-center py-12">
+                    <p className="text-red-600 dark:text-red-400">Error loading transactions: {error?.message}</p>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            {/* Header */}
+            {/* Header - Always visible */}
             <div>
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Transactions</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">View and manage all payment transactions</p>
             </div>
 
-            {/* Stats Cards */}
-            {stats && (
+            {/* Stats Cards - Always visible (show actual stats when available, skeleton fallback while loading) */}
+            {stats ? (
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
                         <div className="flex items-center justify-between">
@@ -391,9 +435,19 @@ export default function TransactionsPage() {
                         </div>
                     </div>
                 </div>
+            ) : (
+                /* Stats Cards Skeleton while loading */
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 animate-pulse">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+                            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                            <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        </div>
+                    ))}
+                </div>
             )}
 
-            {/* Refresh Button */}
+            {/* Refresh Button - Always visible */}
             <div className="flex justify-end">
                 <Button variant="outline" onClick={handleRefresh} className="gap-2">
                     <RefreshCw size={16} />
@@ -401,7 +455,7 @@ export default function TransactionsPage() {
                 </Button>
             </div>
 
-            {/* Filters and Sort Row - All filters now in CustomFilter */}
+            {/* Filters and Sort Row - Always visible and interactive */}
             <div className="flex flex-wrap gap-4 items-start justify-between">
                 <div className="flex-1">
                     <CustomFilter
@@ -424,66 +478,72 @@ export default function TransactionsPage() {
                 />
             </div>
 
-            {/* Data Table */}
-            <DataTable
-                data={transactions}
-                renderActions={(transaction: Transaction) => (
-                    <ActionsDropdown
-                        actions={getTransactionActions(transaction)}
-                        maxVisible={3}
-                        showLabels={false}
-                        buttonSize="sm"
+            {/* Data Table or Skeleton - Only this shows loading state */}
+            {isLoading ? (
+                <TableSkeleton />
+            ) : (
+                <>
+                    <DataTable
+                        data={transactions}
+                        renderActions={(transaction: Transaction) => (
+                            <ActionsDropdown
+                                actions={getTransactionActions(transaction)}
+                                maxVisible={3}
+                                showLabels={false}
+                                buttonSize="sm"
+                            />
+                        )}
+                        bulkActions={bulkActions}
+                        bulkActionsMessage="Select transactions to export"
+                        excludeColumns={['id', 'card_last4', 'card_brand', 'notes', 'refund_reason', 'parent_transaction_id', 'receipt_url', 'metadata']}
+                        dots={{
+                            transaction_type: {
+                                charge: 'emerald',
+                                refund: 'rose',
+                                shipping: 'blue',
+                                authorization: 'amber',
+                            },
+                            status: {
+                                pending: 'amber',
+                                success: 'emerald',
+                                failed: 'rose',
+                                refunded: 'zinc',
+                            },
+                        }}
+                        badges={{
+                            transaction_type: {
+                                charge: 'emerald',
+                                refund: 'rose',
+                                shipping: 'blue',
+                                authorization: 'amber',
+                            },
+                            status: {
+                                pending: 'amber',
+                                success: 'emerald',
+                                failed: 'rose',
+                                refunded: 'zinc',
+                            },
+                        }}
+                        links={{
+                            transaction_id: (transaction: Transaction) => `/dashboard/transactions/${transaction.transaction_id}`,
+                            order_number: (transaction: Transaction) => transaction.order_number ? `/dashboard/orders/${transaction.order_number}` : "",
+                        }}
+                        emptyTitle="No Transactions Found"
+                        emptyDescription="Transactions will appear here once orders are placed."
+                        onSelectionChange={(selected) => console.log('Selected transactions:', selected.length)}
                     />
-                )}
-                bulkActions={bulkActions}
-                bulkActionsMessage="Select transactions to export"
-                excludeColumns={['id', 'card_last4', 'card_brand', 'notes', 'refund_reason', 'parent_transaction_id', 'receipt_url', 'metadata']}
-                dots={{
-                    transaction_type: {
-                        charge: 'emerald',
-                        refund: 'rose',
-                        shipping: 'blue',
-                        authorization: 'amber',
-                    },
-                    status: {
-                        pending: 'amber',
-                        success: 'emerald',
-                        failed: 'rose',
-                        refunded: 'zinc',
-                    },
-                }}
-                badges={{
-                    transaction_type: {
-                        charge: 'emerald',
-                        refund: 'rose',
-                        shipping: 'blue',
-                        authorization: 'amber',
-                    },
-                    status: {
-                        pending: 'amber',
-                        success: 'emerald',
-                        failed: 'rose',
-                        refunded: 'zinc',
-                    },
-                }}
-                links={{
-                    transaction_id: (transaction: Transaction) => `/dashboard/transactions/${transaction.transaction_id}`,
-                    order_number: (transaction: Transaction) => transaction.order_number ? `/dashboard/orders/${transaction.order_number}` : "",
-                }}
-                emptyTitle="No Transactions Found"
-                emptyDescription="Transactions will appear here once orders are placed."
-                onSelectionChange={(selected) => console.log('Selected transactions:', selected.length)}
-            />
 
-            {/* Pagination */}
-            {pagination && pagination.total_pages > 1 && (
-                <CustomPagination
-                    pagination={pagination}
-                    onPageChange={handlePageChange}
-                    onLimitChange={handleLimitChange}
-                    showLimitSelector={true}
-                    limitOptions={[10, 20, 50, 100]}
-                />
+                    {/* Pagination */}
+                    {pagination && pagination.total_pages > 1 && (
+                        <CustomPagination
+                            pagination={pagination}
+                            onPageChange={handlePageChange}
+                            onLimitChange={handleLimitChange}
+                            showLimitSelector={true}
+                            limitOptions={[10, 20, 50, 100]}
+                        />
+                    )}
+                </>
             )}
 
             {/* Transaction Detail Sheet */}

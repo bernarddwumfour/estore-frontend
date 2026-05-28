@@ -21,6 +21,7 @@ import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
 import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 
 // Types
 interface Shipment {
@@ -667,31 +668,62 @@ export default function ShipmentsPage() {
     const shipments = data?.data?.shipments || [];
     const pagination = data?.data?.pagination;
 
-    if (isLoading && !shipments.length) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
-            </div>
-        );
-    }
-
+    // Error state - Keep UI visible
     if (isError) {
         return (
-            <div className="text-center py-12">
-                <p className="text-red-600 dark:text-red-400">Error loading shipments: {error?.message}</p>
+            <div className="space-y-6">
+                {/* Header - Always visible */}
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Shipments</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Track and manage all order shipments</p>
+                </div>
+
+                {/* Refresh Button - Always visible */}
+                <div className="flex justify-end">
+                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
+                        <RefreshCw size={16} />
+                        Refresh
+                    </Button>
+                </div>
+
+                {/* Filters and Sort - Always visible */}
+                <div className="flex flex-wrap gap-4 items-start justify-between">
+                    <div className="flex-1">
+                        <CustomFilter
+                            config={filterConfig}
+                            filters={{
+                                search: appliedFilters.search,
+                                status: appliedFilters.status,
+                                carrier: appliedFilters.carrier,
+                                date_range: appliedFilters.date_range,
+                            }}
+                            onFilterChange={handleFilterChange}
+                            onReset={handleResetFilters}
+                        />
+                    </div>
+                    <CustomSort
+                        config={sortConfig}
+                        onSortChange={handleSortChange}
+                    />
+                </div>
+
+                {/* Error Message */}
+                <div className="text-center py-12">
+                    <p className="text-red-600 dark:text-red-400">Error loading shipments: {error?.message}</p>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            {/* Header */}
+            {/* Header - Always visible */}
             <div>
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Shipments</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Track and manage all order shipments</p>
             </div>
 
-            {/* Refresh Button */}
+            {/* Refresh Button - Always visible */}
             <div className="flex justify-end">
                 <Button variant="outline" onClick={handleRefresh} className="gap-2">
                     <RefreshCw size={16} />
@@ -699,7 +731,7 @@ export default function ShipmentsPage() {
                 </Button>
             </div>
 
-            {/* Filters and Sort Row */}
+            {/* Filters and Sort Row - Always visible and interactive */}
             <div className="flex flex-wrap gap-4 items-start justify-between">
                 <div className="flex-1">
                     <CustomFilter
@@ -755,80 +787,69 @@ export default function ShipmentsPage() {
                 )}
             </CustomDialog>
 
-            {/* Data Table */}
-            <DataTable
-                data={shipments}
-                renderActions={(shipment: Shipment) => (
-                    <ActionsDropdown
-                        actions={getShipmentActions(shipment)}
-                        maxVisible={3}
-                        showLabels={false}
-                        buttonSize="sm"
+            {/* Data Table or Skeleton - Only this shows loading state */}
+            {isLoading ? (
+                <TableSkeleton />
+            ) : (
+                <>
+                    <DataTable
+                        data={shipments}
+                        renderActions={(shipment: Shipment) => (
+                            <ActionsDropdown
+                                actions={getShipmentActions(shipment)}
+                                maxVisible={3}
+                                showLabels={false}
+                                buttonSize="sm"
+                            />
+                        )}
+                        bulkActions={bulkActions}
+                        bulkActionsMessage="Select shipments to mark as delivered, cancel, or export"
+                        excludeColumns={['id', 'customer_email', 'created_at', 'shipped_at', 'delivered_at', 'estimated_delivery']}
+                        dots={{
+                            status: {
+                                pending: 'amber',
+                                shipped: 'violet',
+                                delivered: 'emerald',
+                                cancelled: 'rose',
+                                returned: 'zinc'
+                            },
+                        }}
+                        links={{
+                            order_number: (shipment: Shipment) => `/dashboard/orders/${shipment.order_number}`,
+                        }}
+                        emptyTitle="No Shipments Found"
+                        emptyDescription="Shipments will appear here once orders are shipped."
+                        onSelectionChange={(selected) => console.log('Selected shipments:', selected.length)}
                     />
-                )}
-                bulkActions={bulkActions}
-                bulkActionsMessage="Select shipments to mark as delivered, cancel, or export"
-                excludeColumns={['id', 'customer_email', 'created_at', 'shipped_at', 'delivered_at', 'estimated_delivery']}
-                dots={{
-                    status: {
-                        pending: 'amber',
-                        shipped: 'violet',
-                        delivered: 'emerald',
-                        cancelled: 'rose',
-                        returned: 'zinc'
-                    },
-                }}
-                // badges={{
-                //   carrier: {
-                //     fedex: 'purple',
-                //     dhl: 'yellow',
-                //     ups: 'brown',
-                //     usps: 'blue',
-                //     internal: 'gray',
-                //   },
-                // }}
-                links={{
-                    order_number: (shipment: Shipment) => `/dashboard/orders/${shipment.order_number}`,
-                }}
-                // columnMaxWidth={{
-                //   order_number: '120px',
-                //   customer_name: '180px',
-                //   status: '100px',
-                //   tracking_number: '150px',
-                //   carrier: '100px',
-                //   created_at: '120px',
-                // }}
-                emptyTitle="No Shipments Found"
-                emptyDescription="Shipments will appear here once orders are shipped."
-                onSelectionChange={(selected) => console.log('Selected shipments:', selected.length)}
-            />
 
-            {/* View Shipment Details Sheet */}
-            <CustomSheet
-                title="Shipment Details"
-                description={`Shipment for order ${viewingShipment?.order_number || ''}`}
-                side="bottom"
-                size="lg"
-                open={!!viewingShipment}
-                onOpenChange={(open) => !open && setViewingShipment(null)}
-            >
-                {viewingShipment && (
-                    <ShipmentDetailView
-                        shipmentId={viewingShipment.id}
-                        onClose={() => setViewingShipment(null)}
-                    />
-                )}
-            </CustomSheet>
+                    {/* View Shipment Details Sheet */}
+                    <CustomSheet
+                        title="Shipment Details"
+                        description={`Shipment for order ${viewingShipment?.order_number || ''}`}
+                        side="bottom"
+                        size="lg"
+                        open={!!viewingShipment}
+                        onOpenChange={(open) => !open && setViewingShipment(null)}
+                    >
+                        {viewingShipment && (
+                            <ShipmentDetailView
+                                shipmentId={viewingShipment.id}
+                                onClose={() => setViewingShipment(null)}
+                            />
+                        )}
+                    </CustomSheet>
 
-            {/* Pagination */}
-            {pagination && pagination.total_pages > 1 && (
-                <CustomPagination
-                    pagination={pagination}
-                    onPageChange={handlePageChange}
-                    onLimitChange={handleLimitChange}
-                    showLimitSelector={true}
-                    limitOptions={[10, 20, 50, 100]}
-                />
+                    {/* Pagination */}
+                    {pagination && pagination.total_pages > 1 && (
+                        <CustomPagination
+                            pagination={pagination}
+                            onPageChange={handlePageChange}
+                            onLimitChange={handleLimitChange}
+                            showLimitSelector={true}
+                            limitOptions={[10, 20, 50, 100]}
+                        />
+                    )}
+                </>
             )}
         </div>
     );

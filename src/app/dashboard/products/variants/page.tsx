@@ -22,6 +22,7 @@ import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter'
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
 import ProductVariantForm from '../ProductVariantForm';
 import Link from 'next/link';
+import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 
 // Types
 interface Variant {
@@ -465,31 +466,67 @@ export default function VariantsPage() {
     const variants = data?.data?.variants || [];
     const pagination = data?.data?.pagination;
 
-    if (isLoading && !variants.length) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
-            </div>
-        );
-    }
-
+    // Error state - Keep UI visible
     if (isError) {
         return (
-            <div className="text-center py-12">
-                <p className="text-red-600 dark:text-red-400">Error loading variants: {error?.message}</p>
+            <div className="space-y-6">
+                {/* Header - Always visible */}
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Product Variants</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Manage all product variants across your catalog</p>
+                </div>
+
+                {/* Buttons - Always visible */}
+                <div className="flex justify-between items-center">
+                    <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+                        <Plus size={16} />
+                        New Variant
+                    </Button>
+                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
+                        <RefreshCw size={16} />
+                        Refresh
+                    </Button>
+                </div>
+
+                {/* Filters and Sort - Always visible */}
+                <div className="flex flex-wrap gap-64 items-start justify-between">
+                    <div className="flex-1">
+                        <CustomFilter
+                            config={filterConfig}
+                            filters={{
+                                search: appliedFilters.search,
+                                is_active: appliedFilters.is_active,
+                                is_default: appliedFilters.is_default,
+                                in_stock: appliedFilters.in_stock,
+                                price_range: appliedFilters.price_range,
+                            }}
+                            onFilterChange={handleFilterChange}
+                            onReset={handleResetFilters}
+                        />
+                    </div>
+                    <CustomSort
+                        config={sortConfig}
+                        onSortChange={handleSortChange}
+                    />
+                </div>
+
+                {/* Error Message */}
+                <div className="text-center py-12">
+                    <p className="text-red-600 dark:text-red-400">Error loading variants: {error?.message}</p>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            {/* Header with Title and Description */}
+            {/* Header with Title and Description - Always visible */}
             <div>
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Product Variants</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Manage all product variants across your catalog</p>
             </div>
 
-            {/* New Variant Button and Refresh */}
+            {/* New Variant Button and Refresh - Always visible */}
             <div className="flex justify-between items-center">
                 <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
                     <Plus size={16} />
@@ -505,7 +542,7 @@ export default function VariantsPage() {
                 </Button>
             </div>
 
-            {/* Filters and Sort Row - All on one line */}
+            {/* Filters and Sort Row - Always visible and interactive */}
             <div className="flex flex-wrap gap-64 items-start justify-between">
                 <div className="flex-1">
                     <CustomFilter
@@ -654,69 +691,75 @@ export default function VariantsPage() {
                 )}
             </CustomSheet>
 
-            {/* Data Table */}
-            <DataTable
-                data={variants}
-                renderActions={(variant: Variant) => (
-                    <ActionsDropdown
-                        actions={getVariantActions(variant)}
-                        maxVisible={3}
-                        showLabels={false}
-                        buttonSize="sm"
+            {/* Data Table or Skeleton - Only this shows loading state */}
+            {isLoading ? (
+                <TableSkeleton />
+            ) : (
+                <>
+                    <DataTable
+                        data={variants}
+                        renderActions={(variant: Variant) => (
+                            <ActionsDropdown
+                                actions={getVariantActions(variant)}
+                                maxVisible={3}
+                                showLabels={false}
+                                buttonSize="sm"
+                            />
+                        )}
+                        bulkActions={bulkActions}
+                        bulkActionsMessage="Select variants to activate, deactivate, set as default, delete or export"
+                        excludeColumns={['id', 'discount_amount', 'created_at', 'updated_at', 'weight', 'height', 'width', 'depth', 'low_stock_threshold', 'attributes']}
+                        images={{
+                            images: (variant: Variant) => {
+                                if (variant.images && variant.images.length > 0) {
+                                    return variant.images.map(img => img.url);
+                                }
+                                return [];
+                            }
+                        }}
+                        dots={{
+                            is_active: {
+                                true: 'emerald',
+                                false: 'rose',
+                            },
+                            is_default: {
+                                true: 'amber',
+                                false: 'zinc',
+                            },
+                        }}
+                        badges={{
+                            is_active: {
+                                true: 'emerald',
+                                false: 'rose',
+                            },
+                            is_default: {
+                                true: 'amber',
+                                false: 'zinc',
+                            },
+                        }}
+                        links={{
+                            sku: (variant: Variant) => `/dashboard/products/variants/${variant.id}`,
+                            product_name: (variant: Variant) => `/dashboard/products/${variant.product.slug}`,
+                        }}
+                        arrays={{
+                            attributes: { maxItems: 3 }
+                        }}
+                        emptyTitle="No Variants Found"
+                        emptyDescription="Create your first variant to get started."
+                        onSelectionChange={(selected) => console.log('Selected variants:', selected.length)}
                     />
-                )}
-                bulkActions={bulkActions}
-                bulkActionsMessage="Select variants to activate, deactivate, set as default, delete or export"
-                excludeColumns={['id', 'discount_amount', 'created_at', 'updated_at', 'weight', 'height', 'width', 'depth', 'low_stock_threshold', 'attributes']}
-                images={{
-                    images: (variant: Variant) => {
-                        if (variant.images && variant.images.length > 0) {
-                            return variant.images.map(img => img.url);
-                        }
-                        return [];
-                    }
-                }}
-                dots={{
-                    is_active: {
-                        true: 'emerald',
-                        false: 'rose',
-                    },
-                    is_default: {
-                        true: 'amber',
-                        false: 'zinc',
-                    },
-                }}
-                badges={{
-                    is_active: {
-                        true: 'emerald',
-                        false: 'rose',
-                    },
-                    is_default: {
-                        true: 'amber',
-                        false: 'zinc',
-                    },
-                }}
-                links={{
-                    sku: (variant: Variant) => `/dashboard/products/variants/${variant.id}`,
-                    product_name: (variant: Variant) => `/dashboard/products/${variant.product.slug}`,
-                }}
-                arrays={{
-                    attributes: { maxItems: 3 }
-                }}
-                emptyTitle="No Variants Found"
-                emptyDescription="Create your first variant to get started."
-                onSelectionChange={(selected) => console.log('Selected variants:', selected.length)}
-            />
 
-            {/* Pagination */}
-            {pagination && pagination.total_pages > 1 && (
-                <CustomPagination
-                    pagination={pagination}
-                    onPageChange={handlePageChange}
-                    onLimitChange={handleLimitChange}
-                    showLimitSelector={true}
-                    limitOptions={[10, 20, 50, 100]}
-                />
+                    {/* Pagination */}
+                    {pagination && pagination.total_pages > 1 && (
+                        <CustomPagination
+                            pagination={pagination}
+                            onPageChange={handlePageChange}
+                            onLimitChange={handleLimitChange}
+                            showLimitSelector={true}
+                            limitOptions={[10, 20, 50, 100]}
+                        />
+                    )}
+                </>
             )}
         </div>
     );

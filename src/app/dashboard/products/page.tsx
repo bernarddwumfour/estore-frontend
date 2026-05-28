@@ -24,6 +24,7 @@ import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
 import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
+import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 
 // Types
 interface Product {
@@ -647,31 +648,68 @@ export default function ProductsPage() {
   const products = data?.data?.products || [];
   const pagination = data?.data?.pagination;
 
-  if (isLoading && !products.length) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
-      </div>
-    );
-  }
-
+  // Error state - Keep UI visible
   if (isError) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-600 dark:text-red-400">Error loading products: {error?.message}</p>
+      <div className="space-y-6">
+        {/* Header - Always visible */}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Products</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage your product catalog</p>
+        </div>
+
+        {/* Buttons - Always visible */}
+        <div className="flex justify-between items-center">
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+            <Plus size={16} />
+            New Product
+          </Button>
+          <Button variant="outline" onClick={handleRefresh} className="gap-2">
+            <RefreshCw size={16} />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Filters and Sort - Always visible */}
+        <div className="flex flex-wrap gap-32 items-start justify-between">
+          <div className="flex-1">
+            <CustomFilter
+              config={filterConfig}
+              filters={{
+                search: filters.search,
+                status: filters.status,
+                is_featured: filters.is_featured,
+                is_bestseller: filters.is_bestseller,
+                is_new: filters.is_new,
+                has_stock: filters.has_stock,
+              }}
+              onFilterChange={handleFilterChange}
+              onReset={handleReset}
+            />
+          </div>
+          <CustomSort
+            config={sortConfig}
+            onSortChange={handleSortChange}
+          />
+        </div>
+
+        {/* Error Message */}
+        <div className="text-center py-12">
+          <p className="text-red-600 dark:text-red-400">Error loading products: {error?.message}</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with Title and Description */}
+      {/* Header with Title and Description - Always visible */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Products</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">Manage your product catalog</p>
       </div>
 
-      {/* New Product Button and Refresh */}
+      {/* New Product Button and Refresh - Always visible */}
       <div className="flex justify-between items-center">
         <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
           <Plus size={16} />
@@ -687,7 +725,7 @@ export default function ProductsPage() {
         </Button>
       </div>
 
-      {/* Filters and Sort Row */}
+      {/* Filters and Sort Row - Always visible and interactive */}
       <div className="flex flex-wrap gap-32 items-start justify-between">
         <div className="flex-1">
           <CustomFilter
@@ -818,68 +856,74 @@ export default function ProductsPage() {
         )}
       </CustomSheet>
 
-      {/* Data Table */}
-      <DataTable
-        data={products}
-        renderActions={(product: Product) => (
-          <ActionsDropdown
-            actions={getProductActions(product)}
-            maxVisible={3}
-            showLabels={false}
-            buttonSize="sm"
+      {/* Data Table or Skeleton - Only this shows loading state */}
+      {isLoading ? (
+        <TableSkeleton />
+      ) : (
+        <>
+          <DataTable
+            data={products}
+            renderActions={(product: Product) => (
+              <ActionsDropdown
+                actions={getProductActions(product)}
+                maxVisible={3}
+                showLabels={false}
+                buttonSize="sm"
+              />
+            )}
+            bulkActions={bulkActions}
+            bulkActionsMessage="Select products to publish, draft, archive, or modify status"
+            excludeColumns={['id', 'description', 'slug', 'created_at', 'published_at', 'total_reviews', 'average_rating']}
+            arrays={{
+              features: { maxItems: 3 },
+              options: { maxItems: 3 },
+            }}
+            dots={{
+              status: {
+                published: 'emerald',
+                draft: 'amber',
+                archived: 'rose',
+              },
+              has_stock: {
+                true: 'emerald',
+                false: 'rose',
+              },
+            }}
+            badges={{
+              is_featured: {
+                true: 'amber',
+                false: 'zinc',
+              },
+              is_bestseller: {
+                true: 'orange',
+                false: 'zinc',
+              },
+              is_new: {
+                true: 'emerald',
+                false: 'zinc',
+              },
+            }}
+            links={{
+              title: (product: Product) => `/dashboard/products/${product.id}`,
+            }}
+            emptyTitle="No Products Found"
+            emptyDescription="Create your first product to start selling."
+            onSelectionChange={(selected) => {
+              console.log('Selected products:', selected.length);
+            }}
           />
-        )}
-        bulkActions={bulkActions}
-        bulkActionsMessage="Select products to publish, draft, archive, or modify status"
-        excludeColumns={['id', 'description', 'slug', 'created_at', 'published_at', 'total_reviews', 'average_rating']}
-        arrays={{
-          features: { maxItems: 3 },
-          options: { maxItems: 3 },
-        }}
-        dots={{
-          status: {
-            published: 'emerald',
-            draft: 'amber',
-            archived: 'rose',
-          },
-          has_stock: {
-            true: 'emerald',
-            false: 'rose',
-          },
-        }}
-        badges={{
-          is_featured: {
-            true: 'amber',
-            false: 'zinc',
-          },
-          is_bestseller: {
-            true: 'orange',
-            false: 'zinc',
-          },
-          is_new: {
-            true: 'emerald',
-            false: 'zinc',
-          },
-        }}
-        links={{
-          title: (product: Product) => `/dashboard/products/${product.id}`,
-        }}
-        emptyTitle="No Products Found"
-        emptyDescription="Create your first product to start selling."
-        onSelectionChange={(selected) => {
-          console.log('Selected products:', selected.length);
-        }}
-      />
 
-      {/* Pagination */}
-      {pagination && pagination.total_pages > 1 && (
-        <CustomPagination
-          pagination={pagination}
-          onPageChange={handlePageChange}
-          onLimitChange={handleLimitChange}
-          showLimitSelector={true}
-          limitOptions={[10, 20, 50, 100]}
-        />
+          {/* Pagination */}
+          {pagination && pagination.total_pages > 1 && (
+            <CustomPagination
+              pagination={pagination}
+              onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
+              showLimitSelector={true}
+              limitOptions={[10, 20, 50, 100]}
+            />
+          )}
+        </>
       )}
     </div>
   );

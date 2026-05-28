@@ -353,7 +353,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               className="rounded-full hover:bg-gray-100 dark:hover:bg-gray-900"
             >
               {theme === 'dark' ? (
-                <Sun size={18} className="text-amber-500" />
+                <Sun size={18} className="text-gray-200" />
               ) : (
                 <Moon size={18} className="text-gray-800 dark:text-gray-200" />
               )}

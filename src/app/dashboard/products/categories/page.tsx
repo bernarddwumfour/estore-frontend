@@ -20,6 +20,7 @@ import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
 import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
+import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 
 // Types
 interface Category {
@@ -51,7 +52,6 @@ const fetchCategories = async (params?: any): Promise<{
   if (params?.search && params.search !== '') queryParams.append('search', params.search);
   if (params?.status && params.status !== '') queryParams.append('is_active', params.status);
   if (params?.visibility && params.visibility !== '') queryParams.append('is_hidden', params.visibility);
-  // Handle has_parent filter - convert to API parameter
   if (params?.has_parent === 'true') queryParams.append('parent_id', 'not_null');
   if (params?.has_parent === 'false') queryParams.append('parent_id', 'null');
   if (params?.created_after && params.created_after !== '') queryParams.append('created_after', params.created_after);
@@ -74,7 +74,7 @@ const bulkCategoryAction = async (action: string, categoryIds: string[]) => {
   return response.data;
 };
 
-// Filter configuration - has_parent changed to select dropdown
+// Filter configuration
 const filterConfig: FilterConfig = {
   fields: [
     {
@@ -271,7 +271,6 @@ export default function CategoriesPage() {
   };
 
   const handleToggleActive = (category: Category) => {
-    const action = category.is_active ? 'deactivate' : 'activate';
     const actionText = category.is_active ? 'Deactivate' : 'Activate';
 
     setConfirmDialog({
@@ -291,7 +290,6 @@ export default function CategoriesPage() {
   };
 
   const handleToggleHidden = (category: Category) => {
-    const action = category.is_hidden ? 'unhide' : 'hide';
     const actionText = category.is_hidden ? 'Make Visible' : 'Hide';
 
     setConfirmDialog({
@@ -469,31 +467,67 @@ export default function CategoriesPage() {
   const categories = data?.data?.categories || [];
   const pagination = data?.data?.pagination;
 
-  if (isLoading && !categories.length) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100" />
-      </div>
-    );
-  }
-
+  // Error state
   if (isError) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-600 dark:text-red-400">Error loading categories: {error?.message}</p>
+      <div className="space-y-6">
+        {/* Header - Always visible */}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Categories</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage your product categories and subcategories</p>
+        </div>
+
+        {/* Buttons - Always visible */}
+        <div className="flex justify-between items-center">
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+            <Plus size={16} />
+            New Category
+          </Button>
+          <Button variant="outline" onClick={handleRefresh} className="gap-2">
+            <RefreshCw size={16} />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Filters and Sort - Always visible */}
+        <div className="flex flex-wrap gap-4 items-start justify-between">
+          <div className="flex-1">
+            <CustomFilter
+              config={filterConfig}
+              filters={{
+                search: appliedFilters.search,
+                status: appliedFilters.status,
+                visibility: appliedFilters.visibility,
+                has_parent: appliedFilters.has_parent,
+                created_after: appliedFilters.created_after,
+              }}
+              onFilterChange={handleFilterChange}
+              onReset={handleReset}
+            />
+          </div>
+          <CustomSort
+            config={sortConfig}
+            onSortChange={handleSortChange}
+          />
+        </div>
+
+        {/* Error Message */}
+        <div className="text-center py-12">
+          <p className="text-red-600 dark:text-red-400">Error loading categories: {error?.message}</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with Title and Description */}
+      {/* Header - Always visible */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Categories</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">Manage your product categories and subcategories</p>
       </div>
 
-      {/* New Category Button and Refresh */}
+      {/* Buttons - Always visible */}
       <div className="flex justify-between items-center">
         <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
           <Plus size={16} />
@@ -509,7 +543,7 @@ export default function CategoriesPage() {
         </Button>
       </div>
 
-      {/* Filters and Sort Row */}
+      {/* Filters and Sort Row - Always visible and interactive */}
       <div className="flex flex-wrap gap-4 items-start justify-between">
         <div className="flex-1">
           <CustomFilter
@@ -689,61 +723,67 @@ export default function CategoriesPage() {
         secondaryAction={() => setConfirmDialog({ ...confirmDialog, open: false })}
       />
 
-      {/* Data Table with bulkActionsMessage */}
-      <DataTable
-        data={categories}
-        renderActions={(category: Category) => (
-          <ActionsDropdown
-            actions={getCategoryActions(category)}
-            maxVisible={3}
-            showLabels={false}
-            buttonSize="sm"
+      {/* Data Table or Skeleton - Only this shows loading state */}
+      {isLoading ? (
+        <TableSkeleton />
+      ) : (
+        <>
+          <DataTable
+            data={categories}
+            renderActions={(category: Category) => (
+              <ActionsDropdown
+                actions={getCategoryActions(category)}
+                maxVisible={3}
+                showLabels={false}
+                buttonSize="sm"
+              />
+            )}
+            bulkActions={bulkActions}
+            bulkActionsMessage="Select categories to activate, deactivate, hide, delete or export"
+            excludeColumns={['id', 'parent_id', 'meta_title', 'meta_description', 'created_at', 'updated_at', 'slug', 'full_path']}
+            images={{
+              image: (category: Category) => category.image || '',
+            }}
+            dots={{
+              is_active: {
+                true: 'emerald',
+                false: 'rose',
+              },
+              is_hidden: {
+                true: 'amber',
+                false: 'zinc',
+              },
+            }}
+            badges={{
+              is_active: {
+                true: 'emerald',
+                false: 'rose',
+              },
+              is_hidden: {
+                true: 'amber',
+                false: 'zinc',
+              },
+            }}
+            links={{
+              name: (category: Category) => `/dashboard/products/categories/${category.slug}`,
+              parent_name: (category: Category) => category.parent_id ? `/dashboard/products/categories/${category.parent_id}` : '',
+            }}
+            emptyTitle="No Categories Found"
+            emptyDescription="Create your first category to get started."
+            onSelectionChange={(selected) => console.log('Selected categories:', selected.length)}
           />
-        )}
-        bulkActions={bulkActions}
-        bulkActionsMessage="Select categories to activate, deactivate, hide, delete or export"
-        excludeColumns={['id', 'parent_id', 'meta_title', 'meta_description', 'created_at', 'updated_at', 'slug', 'full_path']}
-        images={{
-          image: (category: Category) => category.image || '',
-        }}
-        dots={{
-          is_active: {
-            true: 'emerald',
-            false: 'rose',
-          },
-          is_hidden: {
-            true: 'amber',
-            false: 'zinc',
-          },
-        }}
-        badges={{
-          is_active: {
-            true: 'emerald',
-            false: 'rose',
-          },
-          is_hidden: {
-            true: 'amber',
-            false: 'zinc',
-          },
-        }}
-        links={{
-          name: (category: Category) => `/dashboard/products/categories/${category.slug}`,
-          parent_name: (category: Category) => category.parent_id ? `/dashboard/products/categories/${category.parent_id}` : '',
-        }}
-        emptyTitle="No Categories Found"
-        emptyDescription="Create your first category to get started."
-        onSelectionChange={(selected) => console.log('Selected categories:', selected.length)}
-      />
 
-      {/* Pagination */}
-      {pagination && pagination.total_pages > 1 && (
-        <CustomPagination
-          pagination={pagination}
-          onPageChange={handlePageChange}
-          onLimitChange={handleLimitChange}
-          showLimitSelector={true}
-          limitOptions={[10, 20, 50, 100]}
-        />
+          {/* Pagination */}
+          {pagination && pagination.total_pages > 1 && (
+            <CustomPagination
+              pagination={pagination}
+              onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
+              showLimitSelector={true}
+              limitOptions={[10, 20, 50, 100]}
+            />
+          )}
+        </>
       )}
     </div>
   );
