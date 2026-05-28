@@ -103,6 +103,19 @@ export const endpoints = {
     adminTransactionDetail: "/orders/admin/transactions/:id",
   },
   users: {
+    analytics: {
+      overview: '/users/admin/users/analytics/overview',
+      growthTrends: '/users/admin/users/analytics/growth-trends',
+      engagement: '/users/admin/users/analytics/engagement',
+      geographic: '/users/admin/users/analytics/geographic',
+      activity: '/users/admin/users/analytics/activity',
+      affiliates: '/users/admin/users/analytics/affiliates',
+      affiliateGrowth: '/users/admin/users/analytics/affiliate-growth',
+      customerDemographics: '/users/admin/users/analytics/customer-demographics',
+      topCustomers: '/users/admin/users/analytics/top-customers',
+    }
+
+    ,
     // Analytics
     listUsersCardAnalytics: "/analytics/overall?module=user_management",
 

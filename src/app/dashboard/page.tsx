@@ -1,304 +1,87 @@
-// app/(dashboard)/analytics/page.tsx
-"use client";
+'use client';
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Download } from "lucide-react";
-import { toast } from "sonner";
-import { AlertMessage } from "@/widgets/alert-message/AlertMessage";
-import AnalyticsLoader from "@/widgets/loaders/AnalyticsLoader";
-import { AnalyticsCards } from "@/components/analytics/AnalyticsCards";
-import { AreaChart } from "@/components/analytics/AreaChart";
-import { BarChart } from "@/components/analytics/BarChart";
-import { PieChart } from "@/components/analytics/PieChart";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { analyticsService } from "../../../services/analytics/service";
+import { RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { DateRangePicker } from '@/widgets/DatePicker/DateRangePicker';
+import { addDays } from 'date-fns';
+import ProductsAnalyticsPage from './products/analytics/page';
+import OrdersAnalyticsPage from './orders/analytics/page';
+import UsersAnalyticsPage from './users/analytics/page';
 
-export default function AnalyticsDashboard() {
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("overview");
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["product-analytics", activeTab],
-    queryFn: () => {
-      const chartType = activeTab === "overview" ? undefined : activeTab;
-      return analyticsService.getProductAnalytics(chartType);
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+export default function DashboardAnalyticsPage() {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [dateRange, setDateRange] = useState({
+    from: addDays(new Date(), -30),
+    to: new Date()
   });
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      analyticsService.clearCache();
-      await refetch();
-      toast.success("Analytics refreshed");
-    } catch (error) {
-      toast.error("Failed to refresh analytics");
-    } finally {
-      setIsRefreshing(false);
-    }
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+    toast.success('Analytics data refreshed');
   };
 
-  const handleExport = () => {
-    const exportData = {
-      timestamp: new Date().toISOString(),
-      data: data?.data,
-    };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `analytics-export-${new Date().toISOString()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Analytics exported");
-  };
-
-  if (isLoading) return <AnalyticsLoader />;
-
-  if (isError) {
-    return (
-      <AlertMessage
-        variant="error"
-        message={error?.message || "Failed to load analytics"}
-      />
-    );
-  }
-
-  const analytics = data?.data;
-  const charts = analytics?.charts || {};
-  const cards = analytics?.cards || [];
+  // Note: Since the child components have their own date pickers,
+  // we're not passing dateRange down. If you want a global date picker,
+  // you'd need to modify the child components to accept dateRange as a prop.
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* <div className="flex flex-wrap gap-4 items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-          <p className="text-muted-foreground">
-            Monitor your store performance and metrics
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            Analytics Dashboard
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Comprehensive insights into products, orders, and users
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            disabled={isLoading || isRefreshing}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button
-            onClick={handleRefresh}
-            disabled={isLoading || isRefreshing}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-            Refresh
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={handleRefresh} className="gap-2">
+            <RefreshCw size={16} />
+            Refresh All
           </Button>
         </div>
-      </div>
+      </div> */}
 
-      {/* Summary Cards */}
-      <AnalyticsCards cards={cards.slice(0, 8)} isLoading={isLoading} columns={4} />
-
-      {/* Tabs for Different Views */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="monthly_trend">Trends</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="stock">Inventory</TabsTrigger>
+      {/* Tabs for different analytics views */}
+      <Tabs defaultValue="products" className="space-y-4">
+        <TabsList className="bg-gray-100 dark:bg-gray-900/50">
+          <TabsTrigger
+            value="products"
+            className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200"
+          >
+            Products
+          </TabsTrigger>
+          <TabsTrigger
+            value="orders"
+            className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200"
+          >
+            Orders
+          </TabsTrigger>
+          <TabsTrigger
+            value="users"
+            className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200"
+          >
+            Users
+          </TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* More Cards */}
-          <AnalyticsCards cards={cards.slice(8, 16)} isLoading={isLoading} columns={4} />
-
-          {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {charts.monthly_trend && (
-              <AreaChart
-                title={charts.monthly_trend.title}
-                description={charts.monthly_trend.description}
-                data={charts.monthly_trend.data}
-                config={charts.monthly_trend.config}
-                dataKey="products"
-              />
-            )}
-
-            {charts.categories && (
-              <BarChart
-                title={charts.categories.title}
-                description={charts.categories.description}
-                data={charts.categories.data}
-                dataKey="products"
-                xAxisKey="category"
-                horizontal={true}
-                colors={["hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"]}
-              />
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {charts.status_distribution && (
-              <PieChart
-                title={charts.status_distribution.title}
-                description={charts.status_distribution.description}
-                data={charts.status_distribution.data}
-                dataKey="count"
-                nameKey="status"
-              />
-            )}
-
-            {charts.stock_distribution && (
-              <PieChart
-                title={charts.stock_distribution.title}
-                description={charts.stock_distribution.description}
-                data={charts.stock_distribution.data}
-                dataKey="count"
-                nameKey="status"
-                innerRadius={60}
-                outerRadius={100}
-              />
-            )}
-          </div>
+        <TabsContent value="products" className="space-y-4">
+          <ProductsAnalyticsPage />
         </TabsContent>
 
-        {/* Trends Tab */}
-        <TabsContent value="monthly_trend" className="space-y-6">
-          {charts.monthly_trend && (
-            <AreaChart
-              title={charts.monthly_trend.title}
-              description={charts.monthly_trend.description}
-              data={charts.monthly_trend.data}
-              config={charts.monthly_trend.config}
-              dataKey="products"
-              height={400}
-            />
-          )}
-
-          {charts.weekly_activity && (
-            <BarChart
-              title={charts.weekly_activity.title}
-              description={charts.weekly_activity.description}
-              data={charts.weekly_activity.data}
-              dataKey="created"
-              xAxisKey="day"
-            />
-          )}
+        <TabsContent value="orders" className="space-y-4">
+          <OrdersAnalyticsPage />
         </TabsContent>
 
-        {/* Categories Tab */}
-        <TabsContent value="categories" className="space-y-6">
-          {charts.categories && (
-            <BarChart
-              title={charts.categories.title}
-              description={charts.categories.description}
-              data={charts.categories.data}
-              dataKey="products"
-              xAxisKey="category"
-              horizontal={true}
-              height={500}
-            />
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {charts.product_flags && (
-              <BarChart
-                title={charts.product_flags.title}
-                description={charts.product_flags.description}
-                data={charts.product_flags.data}
-                dataKey="count"
-                xAxisKey="flag"
-              />
-            )}
-
-            {charts.category_visibility && (
-              <PieChart
-                title={charts.category_visibility.title}
-                description={charts.category_visibility.description}
-                data={charts.category_visibility.data}
-                dataKey="count"
-                nameKey="status"
-              />
-            )}
-          </div>
-        </TabsContent>
-
-        {/* Stock/Inventory Tab */}
-        <TabsContent value="stock" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {charts.stock_distribution && (
-              <PieChart
-                title={charts.stock_distribution.title}
-                description={charts.stock_distribution.description}
-                data={charts.stock_distribution.data}
-                dataKey="count"
-                nameKey="status"
-                innerRadius={60}
-                outerRadius={120}
-              />
-            )}
-
-            {charts.top_products && (
-              <BarChart
-                title={charts.top_products.title}
-                description={charts.top_products.description}
-                data={charts.top_products.data}
-                dataKey="value"
-                xAxisKey="product"
-                horizontal={true}
-                height={400}
-              />
-            )}
-          </div>
-
-          {charts.rating_distribution && (
-            <BarChart
-              title={charts.rating_distribution.title}
-              description={charts.rating_distribution.description}
-              data={charts.rating_distribution.data}
-              dataKey="count"
-              xAxisKey="rating"
-            />
-          )}
+        <TabsContent value="users" className="space-y-4">
+          <UsersAnalyticsPage />
         </TabsContent>
       </Tabs>
-
-      {/* Summary Section */}
-      {analytics?.summary && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Summary</CardTitle>
-            <CardDescription>Key metrics at a glance</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Products</p>
-                <p className="text-2xl font-bold">{analytics.summary.total_products}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Variants</p>
-                <p className="text-2xl font-bold">{analytics.summary.total_variants}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Stock</p>
-                <p className="text-2xl font-bold">{analytics.summary.total_stock}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Inventory Value</p>
-                <p className="text-2xl font-bold">${analytics.summary.inventory_value.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

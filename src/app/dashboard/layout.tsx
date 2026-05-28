@@ -76,6 +76,7 @@ const SIDEBAR_LINKS = [
     label: 'Users',
     isCollapsible: true,
     children: [
+      { icon: ChartArea, label: 'Analytics', href: '/dashboard/users/analytics' },
       { icon: ShieldCheck, label: 'Staff', href: '/dashboard/users/staff' },
       { icon: Users, label: 'Customers', href: '/dashboard/users' },
       { icon: ShieldCheck, label: 'Guests', href: '/dashboard/users/guests' },
