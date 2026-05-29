@@ -113,7 +113,7 @@ const ProductActions = ({
               Add to Cart
             </Button>
           ) : (
-            <div className="flex items-center justify-between w-full bg-gray-50 rounded-lg border border-gray-200 px-3 py-2">
+            <div className="flex items-center justify-between w-full bg-gray-50 rounded-full border border-gray-200 px-3 py-1">
               <Button
                 variant="ghost"
                 size="sm"

@@ -197,10 +197,10 @@ function About() {
           </div>
 
           {/* RIGHT PANEL: Media Frame */}
-          <div className="lg:col-span-5 relative w-full aspect-[4/3] lg:aspect-square bg-[#f8f9fa] rounded-[2.5rem] p-8 flex items-center justify-center border border-slate-100">
+          <div className="lg:col-span-5 relative w-full aspect-[4/3] lg:aspect-square bg-[#f8f9fa] rounded-[2.5rem] p-2 flex items-center justify-center border border-slate-100">
             <Image
-              width={600}
-              height={600}
+              width={800}
+              height={800}
               src="https://images.unsplash.com/photo-1609334761848-77b4d1994040?q=80&w=800&auto=format&fit=crop"
               className="object-contain max-h-[85%] max-w-[85%] mix-blend-multiply drop-shadow-md"
               alt="Premium Living and Tech Space"

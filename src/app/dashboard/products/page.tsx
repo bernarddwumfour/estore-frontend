@@ -873,7 +873,7 @@ export default function ProductsPage() {
             )}
             bulkActions={bulkActions}
             bulkActionsMessage="Select products to publish, draft, archive, or modify status"
-            excludeColumns={['id', 'description', 'slug', 'created_at', 'published_at', 'total_reviews', 'average_rating']}
+            excludeColumns={['id', 'description', 'slug', 'created_at', 'published_at', 'total_reviews', 'average_rating', 'variants']}
             arrays={{
               features: { maxItems: 3 },
               options: { maxItems: 3 },

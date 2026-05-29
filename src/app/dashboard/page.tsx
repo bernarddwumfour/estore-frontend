@@ -23,9 +23,6 @@ export default function DashboardAnalyticsPage() {
     toast.success('Analytics data refreshed');
   };
 
-  // Note: Since the child components have their own date pickers,
-  // we're not passing dateRange down. If you want a global date picker,
-  // you'd need to modify the child components to accept dateRange as a prop.
 
   return (
     <div className="space-y-6">

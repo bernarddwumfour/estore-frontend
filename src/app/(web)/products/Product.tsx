@@ -33,7 +33,7 @@ const Product = ({ product, isMinimal = false }: ProductProps) => {
       <Link href={`/products/${product.slug}`} className="block w-full">
 
         {/* Top Section: Media Container (Reduced bounds if isMinimal is active) */}
-        <div className={`relative bg-[#f8f9fa] rounded-[2rem] border border-slate-100/50 transition-all duration-300 group-hover:bg-[#f1f3f5] flex items-center justify-center
+        <div className={`relative bg-[#f8f9fa] rounded-[2rem] overflow-hidden border border-slate-100/50 transition-all duration-300 group-hover:bg-[#f1f3f5] flex items-center justify-center
           ${isMinimal ? 'p-3 aspect-[6/4]' : 'p-6 aspect-square'}`}
         >
 
@@ -42,7 +42,7 @@ const Product = ({ product, isMinimal = false }: ProductProps) => {
             <>
               {/* Top Left: Discount Percentage Badge */}
               {hasDiscount && (
-                <div className="absolute left-4 top-4 z-10">
+                <div className="absolute scale-80 lg:scale-100 left-2 md:left-4 top-2 md:top-4 z-10">
                   <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-bold text-destructive">
                     <BadgePercent className="h-3.5 w-3.5" />
                     -{discountPercentage}%
@@ -51,7 +51,7 @@ const Product = ({ product, isMinimal = false }: ProductProps) => {
               )}
 
               {/* Top Right: Category Tag */}
-              <div className="absolute right-4 top-4 z-10">
+              <div className="absolute scale-80 lg:scale-100 right-2 md:right-4 top-2 md:top-4 z-10">
                 <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500 shadow-sm border border-slate-100">
                   {product.category.name}
                 </span>
@@ -60,7 +60,7 @@ const Product = ({ product, isMinimal = false }: ProductProps) => {
           )}
 
           {/* Carousel Viewport Wrapper */}
-          <div className="w-full h-full max-h-[95%] max-w-[95%] flex items-center justify-center mix-blend-multiply transition-transform duration-500 group-hover:scale-102">
+          <div className="w-full h-full max-h-[95%] max-w-[95%] flex items-center justify-center mix-blend-multiply transition-transform duration-500">
             <ProductImageCarousel
               images={images}
               productTitle={product.title}
@@ -100,7 +100,7 @@ const Product = ({ product, isMinimal = false }: ProductProps) => {
           </div>
 
           {/* Row 2: Price Tiers and Savings Options */}
-          <div className="flex items-baseline justify-between mt-1 w-full">
+          <div className="flex items-baseline flex-wrap gap-2 justify-between mt-1 w-full">
             <div>
               {hasDefaultVariant ? (
                 <div className="flex items-baseline gap-2">

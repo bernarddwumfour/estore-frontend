@@ -17,11 +17,11 @@ import { endpoints } from '@/constants/endpoints/endpoints'
 import { useAuth } from '@/lib/use-auth'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { 
+import {
   useAddToWishlist,
   useRemoveFromWishlist,
-  useWishlist, 
-  useWishlistHydrated 
+  useWishlist,
+  useWishlistHydrated
 } from '@/app/lib/store/wishlist-store'
 
 interface AddToWishListProps {
@@ -30,10 +30,10 @@ interface AddToWishListProps {
   className?: string
   iconSize?: string
 
-  
+
 }
 
-const AddToWishList = ({ variantId, productTitle,className,iconSize }: AddToWishListProps) => {
+const AddToWishList = ({ variantId, productTitle, className, iconSize }: AddToWishListProps) => {
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const router = useRouter()
@@ -73,12 +73,12 @@ const AddToWishList = ({ variantId, productTitle,className,iconSize }: AddToWish
 
         if (response.status === 200 || response.data.success) {
           toast.success(response.data.message || "Removed from wishlist!");
-          
+
           // Use direct store access like cart store pattern
           removeFromWishlist(variantId)
-          
-          queryClient.invalidateQueries({ 
-            queryKey: [endpoints.products.listWishList] 
+
+          queryClient.invalidateQueries({
+            queryKey: [endpoints.products.listWishList]
           })
         } else {
           toast.error("Failed to remove from wishlist");
@@ -97,12 +97,12 @@ const AddToWishList = ({ variantId, productTitle,className,iconSize }: AddToWish
 
         if (response.status === 201 || response.data.success) {
           toast.success(response.data.message || "Added to wishlist!");
-          
+
           // Use direct store access like cart store pattern
           addToWishlist(variantId)
-          
-          queryClient.invalidateQueries({ 
-            queryKey: [endpoints.products.listWishList] 
+
+          queryClient.invalidateQueries({
+            queryKey: [endpoints.products.listWishList]
           })
         } else {
           toast.error("Failed to add to wishlist");
@@ -135,11 +135,11 @@ const AddToWishList = ({ variantId, productTitle,className,iconSize }: AddToWish
       <button
         onClick={handleWishlistAction}
         disabled={isAdding || !hasHydrated}
-        className={`absolute flex gap-1 items-center bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        className={`absolute flex gap-1 items-center bottom-2 md:bottom-4 left-2 md:left-4 rounded-full bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed  scale-80 md:scale-100 ${className}`}
         aria-label={
           !hasHydrated ? 'Loading...' :
-          isAdding ? 'Processing...' :
-          isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'
+            isAdding ? 'Processing...' :
+              isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'
         }
       >
         <Heart

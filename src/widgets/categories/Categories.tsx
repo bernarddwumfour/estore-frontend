@@ -101,20 +101,20 @@ export default async function Categories({
                   href={`/products?category=${category.slug}`}
                   className="block group"
                 >
-                  <div className="relative overflow-hidden bg-[#f8f9fa] rounded-[2rem] border border-slate-100 p-5 aspect-[6/4] flex flex-col justify-between transition-all duration-300 hover:bg-[#f1f3f5]">
+                  <div className="relative overflow-hidden bg-[#f8f9fa] rounded-[2rem] border border-slate-100 p-5 aspect-[6/5] flex flex-col justify-between transition-all duration-300 hover:bg-[#f1f3f5]">
 
                     <div className="w-8 h-8 absolute top-6 right-6 rounded-full bg-white text-slate-950 flex items-center justify-center border border-slate-100 shadow-sm opacity-0 transform translate-y-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
                       <ArrowUpRight className="h-3.5 w-3.5" />
                     </div>
 
                     {/* Centered Graphic Media Element Context */}
-                    <div className="relative w-full h-[100%] my-auto flex items-center justify-center mix-blend-multiply transition-transform duration-500 group-hover:scale-102">
+                    <div className="relative w-full h-full my-auto flex items-center justify-center mix-blend-multiply transition-transform duration-500 group-hover:scale-102">
                       <Image
                         src={category.image}
                         alt={category.name}
                         fill
                         className="object-contain max-h-full max-w-full"
-                        sizes="(max-width: 768px) 50vw, 20vw"
+                      // sizes="(max-width: 768px) 50vw, 20vw"
                       />
                     </div>
 
