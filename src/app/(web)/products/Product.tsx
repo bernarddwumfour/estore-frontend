@@ -34,7 +34,7 @@ const Product = ({ product, isMinimal = false }: ProductProps) => {
 
         {/* Top Section: Media Container (Reduced bounds if isMinimal is active) */}
         <div className={`relative bg-[#f8f9fa] rounded-[2rem] overflow-hidden border border-slate-100/50 transition-all duration-300 group-hover:bg-[#f1f3f5] flex items-center justify-center
-          ${isMinimal ? 'p-3 aspect-[6/4]' : 'p-6 aspect-square'}`}
+          ${isMinimal ? 'p-3 aspect-[12/7]' : 'p-6 aspect-square'}`}
         >
 
           {/* Badges - Hidden in minimal mode */}

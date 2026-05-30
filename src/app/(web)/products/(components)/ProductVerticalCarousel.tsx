@@ -59,9 +59,9 @@ export default async function ProductVerticalCarousel({ category, endpoint }: Pr
     }
 
     return (
-        <div className="lg:col-span-3 w-full md:h-[650px] relative overflow-hidden">
+        <div className="lg:col-span-3 w-full md:h-[680px] relative overflow-hidden">
             {/* Pass fetched data down into the Swiper client-wrapper */}
-            <p className="font-bold p-1 rounded-md">Best Value Products.</p>
+            <p className="font-black text-2xl rounded-md py-12 lg:py-0 pb-6 lg:pb-2">Explore Our Best Selling Products .</p>
             <ProductVerticalSwiper products={products} />
         </div>
     );

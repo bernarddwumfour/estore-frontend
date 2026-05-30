@@ -18,7 +18,6 @@ import ProductVerticalCarousel from "./products/(components)/ProductVerticalCaro
 export default function Home() {
   return (
     <>
-      <div ></div>
       <Hero />
       <ProductCategories />
       <Products1 />
@@ -35,7 +34,7 @@ function Hero() {
       <div className="container mx-auto px-4 lg:px-8 ">
 
         {/* Title Header */}
-        <div className="mx-auto text-center mb-12 mt-8">
+        <div className="mx-auto text-center mb-10 mt-6">
 
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.15] flex flex-wrap items-center justify-center gap-x-3 gap-y-2 tracking-[4]">
@@ -55,7 +54,7 @@ function Hero() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mx-auto items-stretch">
 
           {/* LEFT: Main Hero — iMac */}
-          <div className="lg:col-span-9 relative bg-[#f0ede8] rounded-[2.5rem] overflow-hidden flex items-center justify-center min-h-[400px] sm:min-h-[500px] border border-slate-100">
+          <div className="lg:col-span-9 relative bg-[#f0ede8] rounded-[2.5rem] overflow-hidden flex items-center justify-center min-h-[400px] sm:min-h-[500px]">
 
             {/* TOP LEFT: "Check Reviews" Badge */}
             <div className="absolute top-0 left-0 bg-white pt-4 pl-4 pr-6 pb-4 rounded-br-[2.5rem] z-10 flex items-center gap-3">
