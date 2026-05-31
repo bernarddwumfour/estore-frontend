@@ -19,6 +19,16 @@ export const endpoints = {
     guestConvert: "/auth/guest-convert",
   },
 
+  common: {
+    logs: '/common/admin/logs',
+    logsStats: '/common/admin/logs/stats',
+    logsApps: '/common/admin/logs/apps',
+    logsDetail: "/common/admin/logs/:id"
+    // logsActions: '/common/admin/logs/actions',
+    // logsExport: '/common/admin/logs/export',
+  },
+
+
   products: {
     analytics: {
       overview: '/products/admin/products/analytics/overview',
@@ -64,6 +74,18 @@ export const endpoints = {
     deleteCategory: "/products/admin/categories/:id/delete",
     bulkCategoryAction: "/products/admin/categories/bulk-action",
     adminDeleteProduct: ""
+  },
+  promotions: {
+    listPromotions: "/promotions",
+    promotionDetails: "/promotions/:id",
+    adminDetails: "/promotions/admin/promotions/:id",
+    adminList: '/promotions/admin/promotions',
+    create: '/promotions/admin/promotions/create',
+    bulkAction: '/promotions/admin/promotions/bulk-action',
+    activate: '/promotions/admin/promotions/:id/activate',
+    pause: '/promotions/admin/promotions/:id/pause',
+    refreshStock: '/promotions/admin/promotions/:id/refresh-stock',
+    update: '/promotions/admin/promotions/:id/update',
   },
   orders: {
     analytics: {

@@ -1,10 +1,10 @@
 'use client'
 
-
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCartStore } from '@/app/lib/store/cart-store'
+import { Package, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface CartProps {
   cartopen: boolean
@@ -13,6 +13,8 @@ interface CartProps {
 
 export default function Cart({ cartopen, setcartopen }: CartProps) {
   const cartRef = useRef<HTMLDivElement>(null)
+  const [expandedBundles, setExpandedBundles] = useState<Record<string, boolean>>({})
+
   const {
     items,
     removeItem,
@@ -22,6 +24,10 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
     getTotalPrice,
   } = useCartStore()
 
+  // Toggle bundle expansion
+  const toggleBundle = (sku: string) => {
+    setExpandedBundles(prev => ({ ...prev, [sku]: !prev[sku] }))
+  }
 
   // Close cart when clicking outside
   useEffect(() => {
@@ -52,7 +58,6 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
       document.body.style.overflow = 'unset'
     }
   }, [cartopen])
-
 
   if (!cartopen) return null
 
@@ -92,7 +97,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
             <>
               <ul className="space-y-6">
                 {items.map((item) => (
-                  <li key={item.id} className="flex items-start gap-4">
+                  <li key={item.sku} className="flex items-start gap-4">
                     <Link href={`/products/${item.slug}`} className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
                       <Image
                         width={88}
@@ -104,9 +109,17 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                     </Link>
 
                     <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-900">
-                        {item.title}
-                      </h3>
+                      <div className="flex items-start justify-between">
+                        <h3 className="text-sm font-medium text-gray-900">
+                          {item.title}
+                        </h3>
+                        {item.isBundle && (
+                          <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+                            Bundle
+                          </span>
+                        )}
+                      </div>
+
                       <dl className="mt-1 space-y-1 text-xs text-gray-600">
                         <div>
                           <dt className="inline font-medium">Price:</dt>
@@ -119,6 +132,52 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                           </dd>
                         </div>
                       </dl>
+
+                      {/* Bundle Items Section */}
+                      {item.isBundle && item.bundleItems && item.bundleItems.length > 0 && (
+                        <div className="mt-2 pt-2">
+                          <button
+                            onClick={() => toggleBundle(item.sku)}
+                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                          >
+                            {expandedBundles[item.sku] ? (
+                              <ChevronUp size={12} />
+                            ) : (
+                              <ChevronDown size={12} />
+                            )}
+                            <span>{item.bundleItems.length} items in bundle</span>
+                          </button>
+
+                          {expandedBundles[item.sku] && (
+                            <div className="mt-2 space-y-2 pl-2 border-l-2 border-amber-200">
+                              {item.bundleItems.map((bundleItem, idx) => (
+                                <div key={idx} className="flex justify-between items-center text-xs">
+                                  <div className="flex items-center gap-2">
+                                    {bundleItem.imageUrl && (
+                                      <img
+                                        src={bundleItem.imageUrl}
+                                        alt={bundleItem.title}
+                                        className="w-6 h-6 object-cover rounded"
+                                      />
+                                    )}
+                                    <span className="text-gray-600">
+                                      {bundleItem.title} x{bundleItem.quantity}
+                                    </span>
+                                  </div>
+                                  {bundleItem.price > 0 && (
+                                    <span className="text-gray-500">
+                                      ${(bundleItem.price * bundleItem.quantity).toFixed(2)}
+                                    </span>
+                                  )}
+                                  {bundleItem.price === 0 && (
+                                    <span className="text-emerald-600 text-xs font-medium">FREE</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Quantity Controls */}
                       <div className="mt-3 flex items-center gap-1">
@@ -204,7 +263,6 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
           )}
         </div>
       </div>
-
     </>
   )
 }

@@ -290,12 +290,10 @@ export default function OrdersPage() {
   const router = useRouter();
 
   // State for sheets/dialogs
-  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const [viewingItemsFor, setViewingItemsFor] = useState<Order | null>(null);
   const [viewingAddressFor, setViewingAddressFor] = useState<Order | null>(null);
   const [updatingStatusFor, setUpdatingStatusFor] = useState<Order | null>(null);
   const [updatingPaymentFor, setUpdatingPaymentFor] = useState<Order | null>(null);
-
   // Filter and pagination state
   const [filters, setFilters] = useState({
     page: 1,
@@ -513,7 +511,7 @@ export default function OrdersPage() {
     actions.push({
       label: 'View Details',
       icon: <Eye size={14} />,
-      onClick: () => setViewingOrder(order),
+      onClick: () => router.push(`orders/${order.id}`),
       color: 'blue',
     });
 
@@ -666,22 +664,7 @@ export default function OrdersPage() {
         secondaryAction={() => setConfirmDialog({ ...confirmDialog, open: false })}
       />
 
-      {/* Order Details Sheet */}
-      <CustomSheet
-        title="Order Details"
-        description="Full order information"
-        side="bottom"
-        size="lg"
-        open={!!viewingOrder}
-        onOpenChange={(open) => !open && setViewingOrder(null)}
-      >
-        {viewingOrder && (
-          <OrderDetailCard
-            orderId={viewingOrder.id}
-            onClose={() => setViewingOrder(null)}
-          />
-        )}
-      </CustomSheet>
+
 
       {/* Items Sheet */}
       <CustomSheet

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Home, Loader2, CreditCard, Truck, Lock, MapPin, Phone, Mail, User, Package, ChevronRight, UserPlus, CheckCircle } from 'lucide-react';
+import { ShoppingCart, Home, Loader2, CreditCard, Truck, Lock, MapPin, Phone, Mail, User, Package, ChevronRight, UserPlus, CheckCircle, Tag } from 'lucide-react';
 import { useCartStore } from '@/app/lib/store/cart-store';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/use-auth';
@@ -34,6 +34,28 @@ interface GuestInfo {
   phone: string;
 }
 
+interface CartItem {
+  id: string;
+  sku: string;
+  title: string;
+  price: number;
+  quantity: number;
+  imageUrl: string;
+  variantId: string;
+  isBundle?: boolean;
+  bundleId?: string;
+  bundleName?: string;
+  bundleItems?: Array<{
+    id: string;
+    sku: string;
+    title: string;
+    price: number;
+    quantity: number;
+    imageUrl: string;
+    variantId: string;
+  }>;
+}
+
 export default function CheckoutPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +65,7 @@ export default function CheckoutPage() {
   const [usePersonalInfoForShipping, setUsePersonalInfoForShipping] = useState(true);
   const router = useRouter();
 
-  // Guest info state (separate from shipping address)
+  // Guest info state
   const [guestInfo, setGuestInfo] = useState<GuestInfo>({
     email: '',
     first_name: '',
@@ -85,7 +107,7 @@ export default function CheckoutPage() {
     customer_note: '',
   });
 
-  const items = useCartStore((state) => state.items);
+  const items = useCartStore((state) => state.items) as CartItem[];
   const getTotalPrice = useCartStore((state) => state.getTotalPrice);
   const clearCart = useCartStore((state) => state.clearCart);
   const { user } = useAuth();
@@ -101,7 +123,6 @@ export default function CheckoutPage() {
   useEffect(() => {
     setIsMounted(true);
 
-    // If user is logged in, pre-fill guest info and shipping address with user data
     if (user) {
       const userData = {
         first_name: user.first_name || '',
@@ -126,7 +147,6 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
-  // Auto-fill shipping address when personal info changes and checkbox is checked
   useEffect(() => {
     if (!isAuthenticated && usePersonalInfoForShipping) {
       setFormData(prev => ({
@@ -152,14 +172,31 @@ export default function CheckoutPage() {
 
       setIsCalculatingShipping(true);
       try {
+        // Prepare items for shipping calculation (expand bundles)
+        const shippingItems: any[] = [];
+
+        for (const item of items) {
+          if (item.isBundle && item.bundleItems) {
+            // Expand bundle items for weight calculation
+            for (const bundleItem of item.bundleItems) {
+              shippingItems.push({
+                variant_id: bundleItem.variantId,
+                quantity: bundleItem.quantity * item.quantity,
+              });
+            }
+          } else {
+            shippingItems.push({
+              variant_id: item.variantId,
+              quantity: item.quantity,
+            });
+          }
+        }
+
         const response = await UnAuthenticatedAxios.post(endpoints.orders.shippingOptions, {
           country_code: address.country,
           city: address.city,
           postal_code: address.postal_code,
-          items: items.map(item => ({
-            variant_id: item.variantId,
-            quantity: item.quantity,
-          })),
+          items: shippingItems,
         });
 
         if (response.data.success) {
@@ -257,6 +294,67 @@ export default function CheckoutPage() {
     setSelectedShippingId(optionId);
   };
 
+  // Prepare order data with bundle support
+  const prepareOrderData = () => {
+    const orderData: any = {
+      shipping_address: {
+        ...formData.shipping_address,
+        address_type: 'shipping',
+      },
+      payment_method: formData.payment_method,
+      shipping_method: selectedShippingId || 'standard',
+      customer_note: formData.customer_note,
+      items: [],
+    };
+
+    // Process cart items - support both regular items and bundles
+    for (const item of items) {
+      if (item.isBundle && item.bundleId) {
+        // Handle bundle/promotion
+        orderData.items.push({
+          is_bundle: true,
+          bundle_id: item.bundleId,
+          bundle_name: item.bundleName || item.title,
+          price: item.price,
+          quantity: item.quantity,
+          bundle_items: item.bundleItems?.map(bundleItem => ({
+            variant_id: bundleItem.variantId,
+            quantity: bundleItem.quantity,
+            is_free: bundleItem.price === 0,
+            original_price: bundleItem.price,
+          })) || [],
+        });
+      } else {
+        // Handle regular variant
+        orderData.items.push({
+          is_bundle: false,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+        });
+      }
+    }
+
+    // Add guest_info for non-authenticated users
+    if (!isAuthenticated) {
+      orderData.guest_info = {
+        email: guestInfo.email,
+        first_name: guestInfo.first_name,
+        last_name: guestInfo.last_name,
+        phone: guestInfo.phone,
+      };
+    }
+
+    // Add billing address if separate
+    if (formData.use_separate_billing) {
+      orderData.billing_address = {
+        ...formData.billing_address,
+        address_type: 'billing',
+      };
+    }
+
+    return orderData;
+  };
+
   const createOrder = async () => {
     setIsLoading(true);
     try {
@@ -302,42 +400,6 @@ export default function CheckoutPage() {
     }
   };
 
-  const prepareOrderData = () => {
-    const orderData: any = {
-      shipping_address: {
-        ...formData.shipping_address,
-        address_type: 'shipping',
-      },
-      payment_method: formData.payment_method,
-      shipping_method: selectedShippingId || 'standard',
-      customer_note: formData.customer_note,
-      items: items.map(item => ({
-        variant_id: item.variantId,
-        quantity: item.quantity,
-      })),
-    };
-
-    // Add guest_info for non-authenticated users
-    if (!isAuthenticated) {
-      orderData.guest_info = {
-        email: guestInfo.email,
-        first_name: guestInfo.first_name,
-        last_name: guestInfo.last_name,
-        phone: guestInfo.phone,
-      };
-    }
-
-    // Add billing address if separate
-    if (formData.use_separate_billing) {
-      orderData.billing_address = {
-        ...formData.billing_address,
-        address_type: 'billing',
-      };
-    }
-
-    return orderData;
-  };
-
   const handlePaystackPayment = (authorizationUrl: string) => {
     window.location.href = authorizationUrl;
   };
@@ -351,12 +413,10 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Proceed directly to order creation
     await createOrder();
   };
 
   const validateForm = () => {
-    // Validate guest info for non-authenticated users
     if (!isAuthenticated) {
       if (!guestInfo.first_name || !guestInfo.last_name) {
         return 'Please enter your first name and last name';
@@ -366,7 +426,6 @@ export default function CheckoutPage() {
       }
     }
 
-    // Validate shipping address
     const shipping = formData.shipping_address;
     if (!shipping.first_name || !shipping.last_name || !shipping.phone || !shipping.email ||
       !shipping.address_line1 || !shipping.city || !shipping.state || !shipping.postal_code) {
@@ -452,7 +511,7 @@ export default function CheckoutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column - Forms */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Guest Information Section (only for non-authenticated users) */}
+              {/* Guest Information Section */}
               {!isAuthenticated && (
                 <Card>
                   <CardContent className="p-6">
@@ -650,6 +709,7 @@ export default function CheckoutPage() {
                       <CreditCard className="h-5 w-5" /> Billing Address
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Billing address fields - same as shipping */}
                       <Input
                         name="billing_address.first_name"
                         placeholder="First Name *"
@@ -827,14 +887,36 @@ export default function CheckoutPage() {
 
                   <div className="space-y-4 max-h-[400px] overflow-y-auto mb-6">
                     {items.map((item) => (
-                      <div key={item.id} className="flex gap-3">
+                      <div key={item.sku} className="flex gap-3">
                         <div className="relative w-16 h-16 flex-shrink-0 overflow-hidden rounded-md border">
                           <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-sm">{item.title}</p>
+                          <p className="font-medium text-sm flex items-center gap-1">
+                            {item.title}
+                            {item.isBundle && (
+                              <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">
+                                Bundle
+                              </Badge>
+                            )}
+                          </p>
                           <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                           <p className="text-xs text-gray-500">${item.price.toFixed(2)} each</p>
+                          {item.isBundle && item.bundleItems && (
+                            <details className="mt-2">
+                              <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
+                                Includes {item.bundleItems.length} items
+                              </summary>
+                              <div className="mt-1 space-y-1">
+                                {item.bundleItems.map((bItem, idx) => (
+                                  <p key={idx} className="text-xs text-gray-500 ml-2">
+                                    • {bItem.title} x{bItem.quantity}
+                                    {bItem.price === 0 && <span className="text-emerald-600 ml-1">(FREE)</span>}
+                                  </p>
+                                ))}
+                              </div>
+                            </details>
+                          )}
                         </div>
                         <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
                       </div>

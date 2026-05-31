@@ -9,7 +9,7 @@ import { endpoints } from "@/constants/endpoints/endpoints";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Package, MapPin, CreditCard, Truck, CheckCircle, ArrowLeft, Loader2, DollarSign, Phone, Mail, User, Hash, PackageCheck, XCircle, Timer, ShoppingBag, Eye, ShoppingCart, Edit, Trash2 } from "lucide-react";
+import { Clock, Package, MapPin, CreditCard, Truck, CheckCircle, ArrowLeft, Loader2, DollarSign, Phone, Mail, User, Hash, PackageCheck, XCircle, Timer, ShoppingBag, Eye, ShoppingCart, Edit, Trash2, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 import { DataTable } from '@/widgets/Customtable/DataTable';
@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 import { Dispatch, SetStateAction, useState } from 'react';
 import { CustomSelect, selectField } from '@/widgets/custom-select/CustomSelect';
 import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
-
 
 interface OrderItem {
     id: string;
@@ -32,6 +31,16 @@ interface OrderItem {
     total_price: number;
     discounted_unit_price: number;
     image: string;
+    is_bundle_item?: boolean;
+    bundle_id?: string;
+    bundle_name?: string;
+}
+
+interface BundleItem {
+    bundle_id: string;
+    bundle_name: string;
+    items: OrderItem[];
+    total: number;
 }
 
 interface Address {
@@ -73,6 +82,7 @@ interface OrderData {
     customer_note: string;
     admin_note: string;
     items: OrderItem[];
+    bundles: BundleItem[];
     shipping_address: Address;
     billing_address: Address;
     created_at: string;
@@ -90,6 +100,7 @@ interface TimelineEvent {
     icon: React.ReactNode;
     status: 'completed' | 'current' | 'pending' | 'cancelled';
 }
+
 const fetchOrderById = async (orderId: string): Promise<OrderData> => {
     if (!orderId) throw new Error("Order ID is required");
 
@@ -197,15 +208,11 @@ function OrderTimeline({ order }: { order: OrderData }) {
             </CardHeader>
             <CardContent>
                 <div className="relative">
-                    {/* Vertical Line */}
                     <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-200 dark:bg-gray-800" />
-
                     <div className="space-y-6 relative">
                         {timelineEvents.map((event, index) => {
-                            const isLast = index === timelineEvents.length - 1;
                             return (
                                 <div key={event.label} className="relative flex gap-4">
-                                    {/* Icon Circle */}
                                     <div className={cn(
                                         "relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2 bg-white dark:bg-black transition-all shadow-sm",
                                         getStatusColor(event.status)
@@ -214,8 +221,6 @@ function OrderTimeline({ order }: { order: OrderData }) {
                                             {event.icon}
                                         </div>
                                     </div>
-
-                                    {/* Content */}
                                     <div className="flex-1 pb-4">
                                         <div className="flex items-center justify-between flex-wrap gap-2">
                                             <h4 className={cn(
@@ -253,6 +258,43 @@ function OrderTimeline({ order }: { order: OrderData }) {
     );
 }
 
+// Bundle Items Component
+function BundleItems({ bundles }: { bundles: BundleItem[] }) {
+    if (!bundles || bundles.length === 0) return null;
+
+    return (
+        <div className="space-y-4">
+            {bundles.map((bundle) => (
+                <Card key={bundle.bundle_id} className="border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                            <Gift className="h-5 w-5" />
+                            Bundle: {bundle.bundle_name}
+                        </CardTitle>
+                        <CardDescription className="text-amber-600/70 dark:text-amber-500/70">
+                            Bundle total: ${bundle.total.toFixed(2)}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <DataTable
+                            data={bundle.items}
+                            excludeColumns={['id', 'discount_amount', 'discounted_unit_price', 'variant_attributes', 'is_bundle_item', 'bundle_id', 'bundle_name', 'bundle_discount']}
+                            images={{
+                                image: (item: OrderItem) => item.image || '',
+                            }}
+                            links={{
+                                product_title: (item: OrderItem) => `/dashboard/products/${item.product_slug}`,
+                            }}
+                            emptyTitle="No Items"
+                            emptyDescription="This bundle has no items."
+                            actionsFirst={false}
+                        />
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    );
+}
 
 export default function OrderDetailPage() {
     const params = useParams();
@@ -260,14 +302,12 @@ export default function OrderDetailPage() {
     const queryClient = useQueryClient();
     const orderId = params?.id as string;
 
-    // State for dialogs
     const [updatingStatus, setUpdatingStatus] = useState(false);
     const [updatingPayment, setUpdatingPayment] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<selectField | undefined>();
     const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<selectField | undefined>();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Status options for CustomSelect
     const statusOptions: selectField[] = [
         { id: 'confirmed', label: 'Confirmed', value: 'confirmed' },
         { id: 'processing', label: 'Processing', value: 'processing' },
@@ -276,7 +316,6 @@ export default function OrderDetailPage() {
         { id: 'cancelled', label: 'Cancelled', value: 'cancelled' },
     ];
 
-    // Payment status options for CustomSelect
     const paymentStatusOptions: selectField[] = [
         { id: 'pending', label: 'Pending', value: 'pending' },
         { id: 'paid', label: 'Paid', value: 'paid' },
@@ -336,7 +375,6 @@ export default function OrderDetailPage() {
         }
     };
 
-    // Handle status update
     const handleUpdateStatus = async () => {
         if (!selectedStatus) {
             toast.error("Please select a status");
@@ -366,7 +404,6 @@ export default function OrderDetailPage() {
         }
     };
 
-    // Handle payment status update
     const handleUpdatePayment = async () => {
         if (!selectedPaymentStatus) {
             toast.error("Please select a payment status");
@@ -396,13 +433,9 @@ export default function OrderDetailPage() {
         }
     };
 
-
-
-    // Define actions for this page
     const getOrderActions = (orderData: OrderData): ActionItem[] => {
         const actions: ActionItem[] = [];
 
-        // View Items - scroll to items section
         actions.push({
             label: 'View Items',
             icon: <ShoppingCart />,
@@ -412,7 +445,6 @@ export default function OrderDetailPage() {
             color: 'violet',
         });
 
-        // Shipping Address - scroll to address section
         if (orderData.shipping_address) {
             actions.push({
                 label: 'Shipping Address',
@@ -424,7 +456,6 @@ export default function OrderDetailPage() {
             });
         }
 
-        // Update Status
         actions.push({
             label: 'Update Status',
             icon: <PackageCheck />,
@@ -432,7 +463,6 @@ export default function OrderDetailPage() {
             color: 'emerald',
         });
 
-        // Update Payment
         actions.push({
             label: 'Update Payment',
             icon: <CreditCard />,
@@ -440,7 +470,6 @@ export default function OrderDetailPage() {
             color: 'orange',
         });
 
-        // Edit Order
         actions.push({
             label: 'Edit Order',
             icon: <Edit />,
@@ -448,12 +477,9 @@ export default function OrderDetailPage() {
             color: 'blue',
         });
 
-
-
         return actions;
     };
 
-    // Actions for items table
     const itemActions = [
         {
             label: 'View Product',
@@ -491,6 +517,10 @@ export default function OrderDetailPage() {
             </div>
         );
     }
+
+    // Combine regular items and bundle items for display
+    const hasRegularItems = order.items && order.items.length > 0;
+    const hasBundles = order.bundles && order.bundles.length > 0;
 
     return (
         <div className="container mx-auto py-8 px-4 max-w-7xl">
@@ -618,29 +648,48 @@ export default function OrderDetailPage() {
                     </CardContent>
                 </Card>
 
-                {/* Items Table - Using DataTable */}
-                <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black" id="order-items">
-                    <CardHeader>
-                        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Order Items</CardTitle>
-                        <CardDescription className="text-sm text-gray-500 dark:text-gray-400">All items in this order</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <DataTable
-                            data={order.items}
-                            actions={itemActions}
-                            excludeColumns={['id', 'discount_amount', 'discounted_unit_price', 'variant_attributes']}
-                            images={{
-                                image: (item: OrderItem) => item.image || '',
-                            }}
-                            links={{
-                                product_title: (item: OrderItem) => `/dashboard/products/${item.product_slug}`,
-                            }}
-                            emptyTitle="No Items Found"
-                            emptyDescription="This order has no items."
-                            actionsFirst={false}
-                        />
-                    </CardContent>
-                </Card>
+                {/* Items Section - Bundles First, then Regular Items */}
+                <div id="order-items">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Order Items</h2>
+
+                    {/* Bundles Section */}
+                    {hasBundles && <BundleItems bundles={order.bundles} />}
+
+                    {/* Regular Items Section */}
+                    {hasRegularItems && (
+                        <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black">
+                            <CardHeader>
+                                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Regular Items</CardTitle>
+                                <CardDescription className="text-sm text-gray-500 dark:text-gray-400">Individual items in this order</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <DataTable
+                                    data={order.items}
+                                    actions={itemActions}
+                                    excludeColumns={['id', 'discount_amount', 'discounted_unit_price', 'variant_attributes', 'is_bundle_item', 'bundle_id', 'bundle_name', 'bundle_discount']}
+                                    images={{
+                                        image: (item: OrderItem) => item.image || '',
+                                    }}
+                                    links={{
+                                        product_title: (item: OrderItem) => `/dashboard/products/${item.product_slug}`,
+                                    }}
+                                    emptyTitle="No Items Found"
+                                    emptyDescription="This order has no individual items."
+                                    actionsFirst={false}
+                                />
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {!hasRegularItems && !hasBundles && (
+                        <Card className="border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black">
+                            <CardContent className="py-8 text-center">
+                                <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                                <p className="text-gray-500 dark:text-gray-400">No items found in this order</p>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
 
                 {/* Timeline */}
                 <OrderTimeline order={order} />
@@ -731,7 +780,7 @@ export default function OrderDetailPage() {
                 )}
             </div>
 
-            {/* Update Status Dialog with CustomSelect */}
+            {/* Update Status Dialog */}
             <CustomDialog
                 title="Update Order Status"
                 description={`Update status for order ${order.order_number}`}
@@ -765,7 +814,7 @@ export default function OrderDetailPage() {
                 </div>
             </CustomDialog>
 
-            {/* Update Payment Dialog with CustomSelect */}
+            {/* Update Payment Dialog */}
             <CustomDialog
                 title="Update Payment Status"
                 description={`Update payment for order ${order.order_number}`}

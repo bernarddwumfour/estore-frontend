@@ -1,32 +1,32 @@
 // axios-instances/SecurityAxios.ts
 import { endpoints } from "@/constants/endpoints/endpoints";
 import { getAuthCookie, setAuthCookie } from "@/lib/providers/auth-provider";
-import axios, { 
-  AxiosInstance, 
-  InternalAxiosRequestConfig, 
-  AxiosError, 
-  AxiosResponse 
+import axios, {
+  AxiosInstance,
+  InternalAxiosRequestConfig,
+  AxiosError,
+  AxiosResponse
 } from "axios";
 
 
 
 const unAuthenticatedAxios: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
-  timeout: 10000,
+  timeout: 50000,
   headers: {
     "Content-Type": "application/json",
   },
 });
- 
+
 // CHANGED: Added type for API response structure
 interface ApiResponse<T = any> {
-    success: boolean;
-    data?: T;
-    message?: string;
-    error?: string;
-    errors?: Record<string, string[]>;
-  }
-  
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+  errors?: Record<string, string[]>;
+}
+
 
 const normalizeEndpoint = (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
   if (!config.url) return config;
@@ -69,8 +69,8 @@ const isPublicEndpoint = (url: string | undefined): boolean => {
 
   // Check if URL starts with any public endpoint
   // Using startsWith to handle endpoints with parameters
-  return publicEndpoints.some(ep => 
-    url.startsWith(ep) || 
+  return publicEndpoints.some(ep =>
+    url.startsWith(ep) ||
     url.includes(ep) // Also check includes for flexibility
   );
 };
@@ -98,12 +98,12 @@ unAuthenticatedAxios.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
     // CHANGED: Optionally handle successful responses here
     // You could normalize the response data structure
-    
+
     return response;
   },
   async (error: AxiosError<ApiResponse>) => {
     const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
-    
+
     if (!originalRequest) {
       return Promise.reject(error);
     }
@@ -112,11 +112,11 @@ unAuthenticatedAxios.interceptors.response.use(
     const errorData = error.response?.data;
     const errorMessage = errorData?.error || errorData?.message;
 
-   
+
     // CHANGED: Handle other authentication errors
     if (status === 401 || status === 403) {
       console.error("Authentication error:", errorMessage);
-      
+
       // Redirect to login if not already there
       if (typeof window !== "undefined" && !window.location.pathname.includes("/")) {
         window.location.href = "/";
@@ -129,10 +129,10 @@ unAuthenticatedAxios.interceptors.response.use(
     }
 
     // CHANGED: Extract error message properly
-    const displayMessage = errorData?.error || 
-                          errorData?.message || 
-                          error.message || 
-                          "An error occurred";
+    const displayMessage = errorData?.error ||
+      errorData?.message ||
+      error.message ||
+      "An error occurred";
 
     // CHANGED: Create a new error with proper message
     const enhancedError = new Error(displayMessage);

@@ -14,12 +14,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import ProductVerticalCarousel from "./products/(components)/ProductVerticalCarousel";
+import PromotionsCarousel from "./products/(components)/Promotions/PromotionsCarousel";
 
 export default function Home() {
   return (
     <>
       <Hero />
       <ProductCategories />
+      <div className="pt-6 md:pt-12">
+        <PromotionsCarousel />
+      </div>
       <Products1 />
       <About />
       <Products1 />

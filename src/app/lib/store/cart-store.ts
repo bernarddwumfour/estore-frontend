@@ -1,19 +1,31 @@
-// app/lib/store/cart-store.ts
-
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
-export interface CartItem {
-  id: string            // product.id (for grouping/display)
-  sku: string           // unique variant identifier
+export interface BundleItem {
+  id: string
+  sku: string
   title: string
   price: number
-  slug:string,
+  quantity: number
+  imageUrl: string
+  variantId: string
+}
+
+export interface CartItem {
+  id: string
+  sku: string
+  title: string
+  price: number
+  slug: string
   imageUrl: string
   quantity: number
   originalPrice?: number
-  attributes: Record<string, string>  // e.g., { brand: "Sony", color: "Black", size: "40mm" }
-  variantId : string
+  attributes: Record<string, string>
+  variantId: string
+  // Bundle-specific fields
+  isBundle?: boolean
+  bundleId?: string
+  bundleItems?: BundleItem[]
 }
 
 interface CartStore {
@@ -23,6 +35,7 @@ interface CartStore {
 
   // Actions
   addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void
+  addBundle: (bundle: Omit<CartItem, 'quantity' | 'isBundle' | 'sku'> & { quantity?: number }) => void
   removeItem: (sku: string) => void
   updateQuantity: (sku: string, quantity: number) => void
   clearCart: () => void
@@ -51,7 +64,6 @@ export const useCartStore = create<CartStore>()(
           const existingItem = state.items.find((i) => i.sku === newItem.sku)
 
           if (existingItem) {
-            // Increase quantity if same variant already exists
             return {
               items: state.items.map((i) =>
                 i.sku === newItem.sku
@@ -60,12 +72,43 @@ export const useCartStore = create<CartStore>()(
               ),
             }
           } else {
-            // Add new variant
             return {
               items: [
                 ...state.items,
                 {
                   ...newItem,
+                  quantity,
+                } as CartItem,
+              ],
+            }
+          }
+        })
+      },
+
+      // Add bundle as a single item with nested items
+      addBundle: (bundle) => {
+        const quantity = bundle.quantity || 1
+        const bundleSku = `bundle_${bundle.bundleId}`
+
+        set((state) => {
+          const existingBundle = state.items.find((i) => i.sku === bundleSku)
+
+          if (existingBundle) {
+            return {
+              items: state.items.map((i) =>
+                i.sku === bundleSku
+                  ? { ...i, quantity: i.quantity + quantity }
+                  : i
+              ),
+            }
+          } else {
+            return {
+              items: [
+                ...state.items,
+                {
+                  ...bundle,
+                  sku: bundleSku,
+                  isBundle: true,
                   quantity,
                 } as CartItem,
               ],

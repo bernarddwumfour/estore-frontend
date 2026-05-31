@@ -3,10 +3,10 @@
 
 import { useCartStore } from '@/app/lib/store/cart-store'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, Plus, Minus, Trash, Trash2 } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react'
 import { useRouter } from "next/navigation"
-import React, { useState } from 'react' // Added useState
-import { ProductType } from '@/types/productTypes'
+import React, { useState } from 'react'
+import { ProductType, StockStatus } from '@/types/productTypes'
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { DialogTrigger } from '@radix-ui/react-dialog'
 import Image from 'next/image'
@@ -18,6 +18,21 @@ interface ProductActionsProps {
   hasDefaultVariant: boolean
   mainImage: any
   hasDiscount: boolean
+}
+
+// Helper to check if variant is available for purchase
+const isVariantAvailable = (variant: ProductType['default_variant']): boolean => {
+  if (!variant) return false
+  // Use is_in_stock flag (public) instead of stock count
+  return variant.is_in_stock === true
+}
+
+// Helper to get disabled button text
+const getDisabledButtonText = (variant: ProductType['default_variant'], hasDefaultVariant: boolean): string => {
+  if (!hasDefaultVariant) return 'Unavailable'
+  if (variant?.stock_status === 'out_of_stock') return 'Out of Stock'
+  if (variant?.stock_status === 'low_stock') return 'Limited Stock'
+  return 'Unavailable'
 }
 
 const ProductActions = ({
@@ -35,9 +50,9 @@ const ProductActions = ({
   const items = useCartStore((state) => state.items)
   const getTotalPrice = useCartStore((state) => state.getTotalPrice)
 
-  // Added: State for dialog
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
+  const variantAvailable = isVariantAvailable(defaultVariant)
   const inCart = isInCart(defaultVariant?.sku || '')
   const quantity = getItemQuantity(defaultVariant?.sku || '')
 
@@ -45,7 +60,7 @@ const ProductActions = ({
     e.preventDefault()
     e.stopPropagation()
 
-    if (!hasDefaultVariant || !defaultVariant || defaultVariant.stock <= 0) return
+    if (!variantAvailable || !defaultVariant) return
 
     addItem({
       id: product.id,
@@ -61,15 +76,11 @@ const ProductActions = ({
     })
   }
 
-  // Added: Function to handle opening dialog with add to cart
   const handleOpenDialogWithAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
-    // First add the product to cart
     handleAddToCart(e)
-
-    // Then open the dialog
     setIsDialogOpen(true)
   }
 
@@ -99,10 +110,12 @@ const ProductActions = ({
     }
   }
 
+  const disabledButtonText = getDisabledButtonText(defaultVariant, hasDefaultVariant)
+
   return (
     <div className="border-t border-gray-100 py-5">
       <div className="flex flex-col-reverse md:flex-row md:items-center gap-3">
-        {hasDefaultVariant && defaultVariant && defaultVariant.stock > 0 ? (
+        {variantAvailable ? (
           !inCart ? (
             <Button
               type="button"
@@ -142,27 +155,27 @@ const ProductActions = ({
             disabled
           >
             <ShoppingCart className="mr-2 h-4 w-4" />
-            {hasDefaultVariant ? 'Out of Stock' : 'Unavailable'}
+            {disabledButtonText}
           </Button>
         )}
 
-        {hasDefaultVariant && defaultVariant && defaultVariant.stock > 0 && (
+        {variantAvailable && (
           <>
-            {items.length == 0 ? <Button
-              variant="outline"
-              className="flex-shrink-0"
-              onClick={handleBuyNow}
-              aria-label="Buy now"
-            >
-              Buy Now
-            </Button> :
-              // Changed: Use state-controlled dialog
+            {items.length === 0 ? (
+              <Button
+                variant="outline"
+                className="flex-shrink-0"
+                onClick={handleBuyNow}
+                aria-label="Buy now"
+              >
+                Buy Now
+              </Button>
+            ) : (
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button
                     variant="outline"
                     className="flex-shrink-0"
-                    // Changed: Use new function that adds to cart then opens dialog
                     onClick={handleOpenDialogWithAddToCart}
                     aria-label="Buy now"
                   >
@@ -170,12 +183,11 @@ const ProductActions = ({
                   </Button>
                 </DialogTrigger>
                 <DialogContent className='sm:max-w-[600px]'>
-                  {/* Removed: AddProductToCart component */}
                   <DialogTitle>
                     You are about to Checkout with these items in cart.
                   </DialogTitle>
                   <DialogDescription>
-                    Please check the products in you cart , edit them if needed and proceed to checkout once you're done.
+                    Please check the products in your cart, edit them if needed and proceed to checkout once you're done.
                   </DialogDescription>
                   <>
                     <ul className="space-y-6">
@@ -208,7 +220,6 @@ const ProductActions = ({
                               </div>
                             </dl>
 
-                            {/* Quantity Controls */}
                             <div className="mt-3 flex items-center gap-1">
                               <button
                                 className="h-5 w-5 border border-gray-300 rounded-sm text-sm font-medium transition hover:bg-gray-50"
@@ -244,7 +255,6 @@ const ProductActions = ({
                       ))}
                     </ul>
 
-                    {/* Total & Actions */}
                     <div className="mt-4 border-t border-gray-200 pt-2">
                       <div className="flex justify-between text-base font-medium text-gray-900 mb-6">
                         <p>Subtotal</p>
@@ -252,8 +262,6 @@ const ProductActions = ({
                       </div>
 
                       <div className="space-y-3">
-
-
                         <Link
                           href="/checkout"
                           className="block text-center rounded-sm bg-gray-700 px-5 py-3 text-sm text-gray-100 transition hover:bg-gray-600"
@@ -263,16 +271,17 @@ const ProductActions = ({
 
                         <DialogClose className='flex justify-center w-full'>
                           <button
-                            className="block  cursor-pointer w-full text-center text-sm text-gray-500 underline underline-offset-4 transition hover:text-gray-600"
+                            className="block cursor-pointer w-full text-center text-sm text-gray-500 underline underline-offset-4 transition hover:text-gray-600"
                           >
                             Continue shopping
                           </button>
                         </DialogClose>
-
                       </div>
-                    </div></>
+                    </div>
+                  </>
                 </DialogContent>
-              </Dialog>}
+              </Dialog>
+            )}
           </>
         )}
       </div>

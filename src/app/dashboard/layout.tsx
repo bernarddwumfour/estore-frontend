@@ -31,7 +31,12 @@ import {
   Megaphone,
   Mail,
   LucideIcon,
-  ChartArea
+  ChartArea,
+  FileCog,
+  Activity,
+  Box,
+  User,
+  Globe
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -104,6 +109,18 @@ const SIDEBAR_LINKS = [
       // { icon: FileText, label: 'Pages', href: '/dashboard/settings/pages' },
     ]
   },
+  {
+    icon: FileCog,
+    label: 'Audit Logs',
+    isCollapsible: true,
+    children: [
+      { icon: Activity, label: 'Logs Statistics', href: '/dashboard/logs' },
+      { icon: Box, label: 'Product Logs', href: '/dashboard/logs/product-logs' },
+      { icon: Truck, label: 'Order Logs', href: '/dashboard/logs/order-logs' },
+      { icon: User, label: 'User Logs', href: '/dashboard/logs/user-logs' },
+      { icon: Globe, label: 'Other Logs', href: '/dashboard/logs/other-logs' },
+    ]
+  },
 
 ];
 
@@ -111,7 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // --- States ---
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [openMenus, setOpenMenus] = useState<string[]>(['Products', 'Orders', 'Users', 'Marketing', 'Store Settings']);
+  const [openMenus, setOpenMenus] = useState<string[]>(['Products', 'Orders', 'Users', 'Marketing', 'Store Settings', 'Audit Logs']);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
 
@@ -200,7 +217,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Navigation */}
-        <nav className={cn("px-4 space-y-1 mt-4 transition-all duration-500", isCollapsed ? "px-2" : "px-4")}>
+        <nav className={cn("px-4 space-y-1 mt-4 transition-all duration-500 overflow-y-scroll h-[calc(100vh-150px)] pb-24", isCollapsed ? "px-2" : "px-4")}>
           {SIDEBAR_LINKS.map((link) => {
             const hasChildren = link.isCollapsible && link.children;
             const isOpen = openMenus.includes(link.label);
