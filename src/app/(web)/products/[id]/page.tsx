@@ -404,14 +404,9 @@ export default async function ProductDetailPage({
                 {product.description}
               </p>
 
-              {/* Stock Status */}
+              {/* Stock Status - UPDATED: Removed stock count and low stock warning */}
               <p className={`mb-3 text-sm font-medium ${defaultVariant.is_in_stock ? 'text-green-600' : 'text-red-600'}`}>
-                {defaultVariant.is_in_stock
-                  ? `In Stock (${defaultVariant.stock} available)`
-                  : 'Out of Stock'}
-                {defaultVariant.is_low_stock && defaultVariant.is_in_stock && (
-                  <span className="text-amber-600 ml-2">• Low Stock</span>
-                )}
+                {defaultVariant.is_in_stock ? 'In Stock' : 'Out of Stock'}
               </p>
 
               <ProductOptions
