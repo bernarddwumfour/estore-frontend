@@ -11,6 +11,7 @@ import type { Swiper as SwiperType } from "swiper";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import { useDeviceContext } from "@/lib/providers/useDeviceContext";
 
 interface PromotionsHorizontalSwiperProps {
     promotions: PromotionType[];
@@ -36,12 +37,7 @@ export default function PromotionsHorizontalSwiper({
 }: PromotionsHorizontalSwiperProps): JSX.Element {
     const [swiperInstance, setSwiperInstance] = useState<SwiperType | null>(null);
 
-    const breakpoints: Breakpoints = {
-        320: { slidesPerView: 1, spaceBetween: 16 },
-        640: { slidesPerView: 2, spaceBetween: 20 },
-        1024: { slidesPerView: slidesPerView, spaceBetween: spaceBetween },
-        1280: { slidesPerView: Math.min(slidesPerView + 1, 4), spaceBetween: spaceBetween },
-    };
+    const { isMobile, isTablet, isDesktop, deviceType } = useDeviceContext();
 
     const shouldShowNavigation = promotions.length > slidesPerView;
 
@@ -50,8 +46,7 @@ export default function PromotionsHorizontalSwiper({
             <Swiper
                 modules={[Autoplay, Navigation, Pagination]}
                 spaceBetween={spaceBetween}
-                slidesPerView={slidesPerView}
-                // breakpoints={breakpoints}
+                slidesPerView={isMobile ? 1 : slidesPerView}
                 loop={promotions.length > slidesPerView}
                 onSwiper={(swiper: SwiperType) => setSwiperInstance(swiper)}
                 autoplay={{
@@ -81,7 +76,7 @@ export default function PromotionsHorizontalSwiper({
             {shouldShowNavigation && (
                 <>
                     <button
-                        className="swiper-button-prev absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gray-50"
+                        className="swiper-button-prev absolute left-0 top-1/2 -translate-y-1/3 md:-translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gray-50"
                         aria-label="Previous"
                     >
                         <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,7 +84,7 @@ export default function PromotionsHorizontalSwiper({
                         </svg>
                     </button>
                     <button
-                        className="swiper-button-next absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gray-50"
+                        className="swiper-button-next absolute right-0 top-1/2 -translate-y-1/3 md:-translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gray-50"
                         aria-label="Next"
                     >
                         <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -189,7 +189,7 @@ export default function PromotionDetailModal({ open, onClose, promotion }: Promo
                                     src={mainImage.url}
                                     alt={mainImage.alt_text || promotion.name}
                                     fill
-                                    className="object-contain"
+                                    className="object-cover "
                                 />
                             </div>
                         )}
