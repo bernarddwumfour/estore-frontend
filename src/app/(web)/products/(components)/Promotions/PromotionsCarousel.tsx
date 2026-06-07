@@ -56,15 +56,11 @@ export default async function PromotionsCarousel({
     const promotions: PromotionType[] = await getActivePromotions(limit);
 
     if (promotions.length === 0) {
-        return (
-            <div className="w-full h-[360px] flex items-center justify-center bg-[#f8f9fa] rounded-[2rem] border border-slate-100 p-4">
-                <p className="text-sm font-medium text-slate-400">No active promotions available</p>
-            </div>
-        );
+        return <></>
     }
 
     return (
-        <div className="w-full relative overflow-hidden py-8 container mx-auto">
+        <div className="w-full relative overflow-hidden py-8 container mx-auto px-4 md;px-6">
             {/* <div className="text-center mb-8">
                 <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-2">
                     {title}

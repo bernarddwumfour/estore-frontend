@@ -4,16 +4,22 @@
 import { useState, useEffect, useMemo, ReactNode } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Bookmark, ShoppingCart, Minus, Plus, Trash } from 'lucide-react';
+import { Bookmark, ShoppingCart, Minus, Plus, Trash, AlertCircle, Package } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/app/lib/store/cart-store';
 import AddToWishList from '../(components)/AddToWishList';
 
+// Types
+interface StockStatus {
+  stock_status: 'in_stock' | 'low_stock' | 'out_of_stock';
+  is_in_stock: boolean;
+}
+
 // Image Gallery Component
-export function ProductImageGallery({ 
+export function ProductImageGallery({
   variants,
-  defaultVariant 
-}: { 
+  defaultVariant
+}: {
   variants: any[];
   defaultVariant: any;
 }) {
@@ -39,7 +45,22 @@ export function ProductImageGallery({
             </div>
           </div>
         )}
-        
+
+        {/* Stock Status Badge */}
+        {selectedVariant && (
+          <div className="absolute top-4 right-4">
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${selectedVariant.stock_status === 'in_stock'
+              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+              : selectedVariant.stock_status === 'low_stock'
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+              }`}>
+              {selectedVariant.stock_status === 'in_stock' && 'In Stock'}
+              {selectedVariant.stock_status === 'low_stock' && 'In Stock'}
+              {selectedVariant.stock_status === 'out_of_stock' && 'Out of Stock'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Thumbnails */}
@@ -64,11 +85,11 @@ export function ProductImageGallery({
 }
 
 // Product Options Component (with own state)
-export function ProductOptions({ 
+export function ProductOptions({
   product,
   defaultVariant,
   onVariantChange
-}: { 
+}: {
   product: any;
   defaultVariant: any;
   onVariantChange?: (variant: any) => void;
@@ -163,18 +184,18 @@ export function ProductOptions({
 }
 
 // Cart Actions Component (self-contained)
-export function CartActions({ 
+export function CartActions({
   product,
   selectedVariant: externalVariant,
   onVariantChange
-}: { 
+}: {
   product: any;
   selectedVariant?: any;
   onVariantChange?: (variant: any) => void;
 }) {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
-  
+
   // Internal state for variant if not provided externally
   const [internalSelectedOptions, setInternalSelectedOptions] = useState<Record<string, string>>(
     product.variants.find((v: any) => v.is_default)?.attributes || product.variants[0]?.attributes || {}
@@ -182,10 +203,7 @@ export function CartActions({
 
   // Determine which variant to use
   const selectedVariant = useMemo(() => {
-    // Use external variant if provided
     if (externalVariant) return externalVariant;
-    
-    // Otherwise calculate from internal state
     return (
       product.variants.find((variant: any) =>
         Object.keys(internalSelectedOptions).every(key => variant.attributes[key] === internalSelectedOptions[key])
@@ -203,18 +221,19 @@ export function CartActions({
     setIsMounted(true);
   }, []);
 
-  // Cart status for current variant
+  // Cart status for current variant - use is_in_stock instead of stock
   const cartItem = isMounted && selectedVariant
     ? items.find(item => item.sku === selectedVariant.sku)
     : null;
 
   const cartQuantity = cartItem?.quantity || 0;
   const isInCart = cartQuantity > 0;
-  const inStock = selectedVariant?.stock > 0;
+  const isAvailable = selectedVariant?.is_in_stock === true;
+  const stockStatus = selectedVariant?.stock_status || 'out_of_stock';
 
   // Add to cart
   const handleAddToCart = () => {
-    if (!selectedVariant || !inStock) return;
+    if (!selectedVariant || !isAvailable) return;
 
     addItem({
       id: product.id,
@@ -231,6 +250,7 @@ export function CartActions({
   };
 
   const handleBuyNow = () => {
+    if (!selectedVariant || !isAvailable) return;
     handleAddToCart();
     router.push('/checkout');
   };
@@ -252,21 +272,30 @@ export function CartActions({
     removeItem(selectedVariant.sku);
   };
 
+  // Get button text based on stock status
+  const getButtonText = () => {
+    if (!selectedVariant) return 'Unavailable';
+    if (stockStatus === 'out_of_stock') return 'Out of Stock';
+    return 'Add to Cart';
+  };
+
+
   return (
     <div className="space-y-6">
+
       {/* Action Buttons */}
       {!isInCart ? (
         <Button
           size="lg"
           className="w-full py-8 text-lg font-medium"
           onClick={handleAddToCart}
-          disabled={!inStock}
+          disabled={!isAvailable}
         >
           <ShoppingCart className="mr-3 h-6 w-6" />
-          {inStock ? 'Add to Cart' : 'Out of Stock'}
+          {getButtonText()}
         </Button>
       ) : (
-        <div className="flex w-full items-center justify-between gap-4 p-3 bg-gray-50 rounded-lg border">
+        <div className="flex w-full items-center justify-between gap-4 p-3 px-4 bg-gray-50 rounded-full border">
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
@@ -296,14 +325,7 @@ export function CartActions({
           <span className="text-gray-900 font-medium">
             Total: ${selectedVariant ? (cartQuantity * selectedVariant.discounted_price).toFixed(2) : '0.00'}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRemoveFromCart}
-            className="text-red-600 hover:bg-red-50"
-          >
-            <Trash className="h-5 w-5" />
-          </Button>
+
         </div>
       )}
 
@@ -313,21 +335,21 @@ export function CartActions({
           variant="outline"
           className="flex-1 py-7 cursor-pointer"
           onClick={handleBuyNow}
-          disabled={!inStock || !selectedVariant}
+          disabled={!isAvailable || !selectedVariant}
         >
           Buy Now
         </Button>
-        <AddToWishList variantId={selectedVariant?.id} className='relative w-15 rounded-md top-0 left-0' iconSize={"w-12"}/>
+        <AddToWishList variantId={selectedVariant?.id} className='relative w-15 rounded-md top-0 left-0' iconSize={"w-12"} />
       </div>
     </div>
   );
 }
 
 // Combined Interactive Component (Options + Cart Actions)
-export function ProductInteractive({ 
+export function ProductInteractive({
   product,
-  defaultVariant 
-}: { 
+  defaultVariant
+}: {
   product: any;
   defaultVariant: any;
 }) {
@@ -340,7 +362,7 @@ export function ProductInteractive({
         defaultVariant={defaultVariant}
         onVariantChange={setSelectedVariant}
       />
-      
+
       <CartActions
         product={product}
         selectedVariant={selectedVariant}
@@ -350,20 +372,20 @@ export function ProductInteractive({
 }
 
 // Collapsible Features Component
-export function ExpandableFeatures({ features,Features }: { features: string[],Features:ReactNode }) {
+export function ExpandableFeatures({ features, Features }: { features: string[], Features: ReactNode }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   return (
     <div className='relative'>
       <div className={`mb-4 ${!isExpanded ? "max-h-[160px] overflow-hidden" : "max-h-auto"}`}>
-          {
-            Features
-          }
+        {
+          Features
+        }
       </div>
 
       {features.length > 3 && (
-        <div 
-          onClick={() => setIsExpanded(prev => !prev)} 
+        <div
+          onClick={() => setIsExpanded(prev => !prev)}
           className={`${!isExpanded ? "bg-white/80 -bottom-2 " : "-bottom-8"} py-2 absolute cursor-pointer flex justify-center right-0 w-full`}
         >
           <p className="text-center text-sm text-gray-500">
@@ -376,18 +398,18 @@ export function ExpandableFeatures({ features,Features }: { features: string[],F
 }
 
 // Main Interactive Component (for backward compatibility)
-export default function ProductDetailInteractive({ 
+export default function ProductDetailInteractive({
   variants,
-  defaultVariant 
-}: { 
+  defaultVariant
+}: {
   variants: any[];
   defaultVariant: any;
 }) {
   return (
     <>
-      <ProductImageGallery 
-        variants={variants} 
-        defaultVariant={defaultVariant} 
+      <ProductImageGallery
+        variants={variants}
+        defaultVariant={defaultVariant}
       />
     </>
   );

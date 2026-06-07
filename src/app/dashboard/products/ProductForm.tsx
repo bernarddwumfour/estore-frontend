@@ -76,7 +76,7 @@ const fetchCategories = async (): Promise<CategoryOption[]> => {
 
 // Fetch product for update
 const fetchProduct = async (id: string): Promise<any> => {
-  const response = await securityAxios.get(endpoints.products.getProductDetails.replace(":id", id));
+  const response = await securityAxios.get(endpoints.products.AdminGetProductDetails.replace(":id", id));
   return response.data.data;
 };
 
@@ -105,7 +105,7 @@ const createProduct = async (data: FormData): Promise<any> => {
     payload.meta_description = data.meta_description.trim();
   }
 
-  const response = await securityAxios.post(endpoints.products.addProduct, payload);
+  const response = await securityAxios.post(endpoints.products.adminAddProduct, payload);
   return response.data;
 };
 
@@ -134,7 +134,7 @@ const updateProduct = async (id: string, data: FormData): Promise<any> => {
     payload.meta_description = data.meta_description.trim();
   }
 
-  const response = await securityAxios.put(endpoints.products.updateProduct.replace(":id", id), payload);
+  const response = await securityAxios.put(endpoints.products.adminUpdateProduct.replace(":id", id), payload);
   return response.data;
 };
 

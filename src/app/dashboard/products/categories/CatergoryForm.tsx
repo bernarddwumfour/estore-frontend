@@ -73,7 +73,7 @@ const fetchAllCategories = async () => {
 // Fetch single category for update
 const fetchCategory = async (id: string) => {
   const response = await securityAxios.get(
-    endpoints.products.getCategoryDetails.replace(":id", id)
+    endpoints.products.adminGetCategoryDetails.replace(":id", id)
   );
   return response.data.data;
 };
@@ -189,7 +189,7 @@ export default function CategoryForm({ categoryId, onSuccess, onCancel }: Catego
       if (data.meta_description?.trim()) formData.append('meta_description', data.meta_description.trim());
       if (imageFile) formData.append('image', imageFile);
 
-      const response = await securityAxios.post(endpoints.products.addCategory, formData, {
+      const response = await securityAxios.post(endpoints.products.adminAddCategory, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       return response.data;
@@ -224,7 +224,7 @@ export default function CategoryForm({ categoryId, onSuccess, onCancel }: Catego
       // If no image changes, send as JSON
       if (!imageFile && !removeExistingImage) {
         const response = await securityAxios.put(
-          endpoints.products.updateCategory.replace(":id", categoryId!),
+          endpoints.products.adminUpdateCategory.replace(":id", categoryId!),
           payload
         );
         return response.data;
@@ -248,7 +248,7 @@ export default function CategoryForm({ categoryId, onSuccess, onCancel }: Catego
       }
 
       const response = await securityAxios.post(
-        endpoints.products.updateCategory.replace(":id", categoryId!),
+        endpoints.products.adminUpdateCategory.replace(":id", categoryId!),
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );

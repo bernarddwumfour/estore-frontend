@@ -36,7 +36,9 @@ import {
   Activity,
   Box,
   User,
-  Globe
+  Globe,
+  MonitorDot,
+  Star
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -54,6 +56,16 @@ import Logo from '@/widgets/logo/Logo';
 // Navigation structure for e-commerce
 const SIDEBAR_LINKS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
+  {
+    icon: MonitorDot,
+    label: 'POS',
+    href: '/dashboard/pos'
+    // isCollapsible: true,
+    // children: [
+    //   // { icon: ChartArea, label: 'Analytics', href: '/dashboard/products/analytics' },
+    //   { icon: Layers, label: 'POS', href: '/dashboard/pos' },
+    // ]
+  },
   {
     icon: Package,
     label: 'Products',
@@ -95,6 +107,7 @@ const SIDEBAR_LINKS = [
     isCollapsible: true,
     children: [
       { icon: Gift, label: 'Promotions', href: '/dashboard/marketing/promotions' },
+      { icon: Star, label: 'Reviews', href: '/dashboard/marketing/reviews' },
       { icon: Mail, label: 'Email Campaigns', href: '/dashboard/marketing//email-campaigns' },
     ]
   },
@@ -104,7 +117,6 @@ const SIDEBAR_LINKS = [
     isCollapsible: true,
     children: [
       { icon: Settings, label: 'General', href: '/dashboard/settings/general' },
-      // { icon: CreditCard, label: 'Payment', href: '/dashboard/settings/payment' },
       // { icon: Truck, label: 'Shipping', href: '/dashboard/settings/shipping' },
       // { icon: FileText, label: 'Pages', href: '/dashboard/settings/pages' },
     ]

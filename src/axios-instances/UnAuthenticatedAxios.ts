@@ -43,13 +43,13 @@ const normalizeEndpoint = (config: InternalAxiosRequestConfig): InternalAxiosReq
   // Check if URL already has a token parameter (e.g., /verify-email/{token}/)
   const hasTokenParam = config.url.match(/\/[a-zA-Z0-9_-]+\/?$/);
 
-  if (
-    !config.url.endsWith("/") &&
-    !noTrailingSlashEndpoints.some(ep => config.url?.startsWith(ep)) &&
-    !hasTokenParam
-  ) {
-    config.url += "/";
-  }
+  // if (
+  //   !config.url.endsWith("/") &&
+  //   !noTrailingSlashEndpoints.some(ep => config.url?.startsWith(ep)) &&
+  //   !hasTokenParam
+  // ) {
+  //   config.url += "/";
+  // }
 
   return config;
 };

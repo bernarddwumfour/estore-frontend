@@ -49,19 +49,19 @@ export default function DashboardAnalyticsPage() {
         <TabsList className="bg-gray-100 dark:bg-gray-900/50">
           <TabsTrigger
             value="products"
-            className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200"
+            className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 dark:hover:text-gray-300"
           >
             Products
           </TabsTrigger>
           <TabsTrigger
             value="orders"
-            className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200"
+            className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 dark:hover:text-gray-300"
           >
             Orders
           </TabsTrigger>
           <TabsTrigger
             value="users"
-            className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200"
+            className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 dark:hover:text-gray-300"
           >
             Users
           </TabsTrigger>

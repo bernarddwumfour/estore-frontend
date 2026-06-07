@@ -63,6 +63,7 @@ interface DataTableProps<T> {
         icon?: React.ReactNode;
         variant?: 'default' | 'destructive';
         color?: 'emerald' | 'orange' | 'blue' | 'rose' | 'violet' | 'amber';
+        disabled?: boolean
     }[];
     bulkActionsMessage?: string;
     onSelectionChange?: (selectedItems: T[]) => void;
@@ -467,6 +468,7 @@ export function DataTable<T extends { id: string | number }>({
                                     size="sm"
                                     onClick={() => action.onClick(data.filter(d => selectedIds.has(d.id)))}
                                     className={cn("h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg", action.color && getButtonColorClasses(action.color))}
+                                    disabled={action.disabled}
                                 >
                                     {action.icon}{action.label}
                                 </Button>
@@ -487,6 +489,7 @@ export function DataTable<T extends { id: string | number }>({
                                                     setShowMoreBulkActions(false);
                                                 }}
                                                 className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg dark:hover:bg-gray-800/90", action.variant === 'destructive' && "text-rose-600 dark:text-rose-400")}
+                                                disabled={action.disabled}
                                             >
                                                 {action.icon}{action.label}
                                             </DropdownMenuItem>

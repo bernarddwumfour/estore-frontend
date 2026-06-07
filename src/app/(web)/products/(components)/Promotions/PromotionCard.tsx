@@ -18,7 +18,7 @@ export default function PromotionCard({ promotion }: PromotionCardProps) {
     return (
         <>
             <div
-                className="group relative cursor-pointer overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 aspect-[8/3] transition-all duration-300 hover:shadow-lg"
+                className="group relative cursor-pointer overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 aspect-[6/3] md:aspect-[8/3] transition-all duration-300 hover:shadow-lg"
                 onClick={() => setIsModalOpen(true)}
             >
                 {mainImage ? (

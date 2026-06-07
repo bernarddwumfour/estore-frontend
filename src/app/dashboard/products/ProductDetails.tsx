@@ -60,7 +60,7 @@ const fetchProductById = async (productId: string): Promise<ProductData> => {
     if (!productId) throw new Error("Product ID is required");
 
     const response = await securityAxios.get(
-        endpoints.products.getProductDetails.replace(":id", productId)
+        endpoints.products.AdminGetProductDetails.replace(":id", productId)
     );
 
     console.log("API Response:", response.data);

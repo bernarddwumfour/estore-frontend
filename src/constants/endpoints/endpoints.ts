@@ -43,37 +43,56 @@ export const endpoints = {
       inventory: '/products/admin/products/analytics/inventory',
       priceDistribution: '/products/admin/products/analytics/price-distribution',
       reviews: '/products/admin/products/analytics/reviews',
+
+    },
+
+    reviews: {
+      adminReviewsList: '/products/admin/reviews',
+      adminReviewApprove: '/products/admin/reviews/:id/approve',
+      adminReviewReject: '/products/admin/reviews/:id/reject',
+      adminReviewsBulkAction: '/products/admin/reviews/bulk-action',
+      adminOrderReviewResponse: '/products/admin/reviews/order',
+      orderReviewCreate: "/products/orders/:id/reviews/create",
+      productReviewCreate: "/products/:slug/reviews/create",
+      productReviewHelpful: "/products/reviews/product/:id/helpful",
+      getReviews: "/products/:slug/reviews",
+
+
     }
     ,
-    adminlistProducts: "/products/admin/products",
+    adminlistCategories: "/products/admin/categories",
+    adminGetCategoryDetails: "/products/admin/categories/:id",
+    adminUpdateCategory: "/products/admin/categories/:id/update",
+    adminAddCategory: "/products/admin/categories/create",
+    adminDeleteCategory: "/products/admin/categories/:id/delete",
+    adminBulkCategoryAction: "/products/admin/categories/bulk-action",
+
+
+    adminUpdateVariant: "/products/admin/variants/:id/update",
+    adminDeleteVariant: "/products/admin/variants/:id/delete",
+    adminGetVariantDetails: "/products/admin/variants/:id",
+    adminBulkVariantActions: "/products/admin/variants/bulk-action",
+    adminListVariants: "/products/admin/variants",
+    adminCreateVariant: "/products/admin/products/:id/variants",
+
+
+    adminListProducts: "/products/admin/products",
+    AdminGetProductDetails: "/products/admin/products/:id",
+    adminBulkProductActions: "/products/admin/products/bulk-action",
+    adminUpdateProduct: "/products/admin/:id/update",
+    adminAddProduct: "/products/admin/products/create",
+    adminDeleteProduct: "",
+
+
     listProductsWeb: "/products",
     listCategories: "/products/categories",
-    addProduct: "/products/admin/products/create",
-    updateProduct: "/products/admin/:id/update",
-    createVariant: "/products/admin/products/:id/variants",
-    getProductDetails: "/products/admin/products/:id",
     getProductDetailsWeb: "/products/:slug",
     listWishList: "/products/wishlist",
     addToWishList: "/products/wishlist",
     removeFromWishList: "/products/wishlist/:id",
     createReview: "/products/:slug/reviews/create",
-    getReviews: "/products/:slug/reviews",
-    bulkProductAction: "/products/admin/products/bulk-action",
-
-    listVariants: "/products/admin/variants",
-    updateVariant: "/products/admin/variants/:id/update",
-    deleteVariant: "/products/admin/variants/:id/delete",
-    getVariantDetails: "/products/admin/variants/:id",
-    bulkVariantAction: "/products/admin/variants/bulk-action",
-
-    adminlistCategories: "/products/admin/categories",
     listcategories: "/products/categories",
-    getCategoryDetails: "/products/admin/categories/:id",
-    addCategory: "/products/admin/categories/create",
-    updateCategory: "/products/admin/categories/:id/update",
-    deleteCategory: "/products/admin/categories/:id/delete",
-    bulkCategoryAction: "/products/admin/categories/bulk-action",
-    adminDeleteProduct: ""
+
   },
   promotions: {
     listPromotions: "/promotions",
@@ -86,6 +105,7 @@ export const endpoints = {
     pause: '/promotions/admin/promotions/:id/pause',
     refreshStock: '/promotions/admin/promotions/:id/refresh-stock',
     update: '/promotions/admin/promotions/:id/update',
+    delete: ""
   },
   orders: {
     analytics: {

@@ -57,7 +57,7 @@ interface VariantData {
 }
 
 const fetchVariantById = async (variantId: string): Promise<VariantData> => {
-    const response = await securityAxios.get(endpoints.products.getVariantDetails.replace(":id", variantId));
+    const response = await securityAxios.get(endpoints.products.adminGetVariantDetails.replace(":id", variantId));
     if (!response.data.success) {
         throw new Error(response.data.message || "Failed to fetch variant");
     }
@@ -66,7 +66,7 @@ const fetchVariantById = async (variantId: string): Promise<VariantData> => {
 
 // Bulk action for single variant
 const updateVariantStatus = async (variantId: string, action: string) => {
-    const response = await securityAxios.post(endpoints.products.bulkVariantAction, {
+    const response = await securityAxios.post(endpoints.products.adminBulkVariantActions, {
         action,
         variant_ids: [variantId],
     });
@@ -143,7 +143,7 @@ export default function VariantDetailPage() {
         if (confirm(`Delete variant "${variant.sku}"? This action cannot be undone.`)) {
             setIsSubmitting(true);
             try {
-                const response = await securityAxios.delete(endpoints.products.deleteVariant.replace(":id", variantId));
+                const response = await securityAxios.delete(endpoints.products.adminDeleteVariant.replace(":id", variantId));
                 if (response.data.success) {
                     toast.success(`Variant ${variant.sku} deleted successfully`);
                     router.push('/dashboard/variants');

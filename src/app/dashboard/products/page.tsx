@@ -1,12 +1,13 @@
 // app/dashboard/products/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
   Plus, Edit, Trash2, Eye, Copy,
   CheckCircle, XCircle, Star, TrendingUp, Sparkles,
-  Package, EyeOff, Archive, FileText, Upload, RefreshCw
+  Package, EyeOff, Archive, FileText, Upload, RefreshCw, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -22,8 +23,8 @@ import { DataTable } from '@/widgets/Customtable/DataTable';
 import ProductVariantsList from './ProductVariantsList';
 import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
 import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
-import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
-import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
+import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilterFromUrl';
+import { CustomSortFromUrl, SortConfig } from '@/widgets/CustomSort/CustomSortFromUrl';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 
 // Types
@@ -53,8 +54,35 @@ interface Product {
   };
 }
 
-// Fetch products with pagination and filters
-const fetchProducts = async (params?: any): Promise<{
+// Track loading states for individual products
+interface LoadingState {
+  [productId: string]: {
+    delete: boolean;
+    publish: boolean;
+    draft: boolean;
+    archive: boolean;
+    feature: boolean;
+    unfeature: boolean;
+    bestseller: boolean;
+    unbestseller: boolean;
+    new: boolean;
+    unnew: boolean;
+  };
+}
+
+// Fetch products with pagination - directly from URL params
+const fetchProducts = async (params: {
+  page: number;
+  limit: number;
+  search: string;
+  status: string;
+  is_featured: string;
+  is_bestseller: string;
+  is_new: string;
+  has_stock: string;
+  sort_by: string;
+  sort_order: string;
+}): Promise<{
   data: {
     products: Product[];
     total: number;
@@ -63,28 +91,25 @@ const fetchProducts = async (params?: any): Promise<{
 }> => {
   const queryParams = new URLSearchParams();
 
-  // Always include page and limit
-  if (params?.page) queryParams.append('page', params.page.toString());
-  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  if (params.page) queryParams.append('page', params.page.toString());
+  if (params.limit) queryParams.append('limit', params.limit.toString());
+  if (params.search) queryParams.append('search', params.search);
+  if (params.status) queryParams.append('status', params.status);
+  if (params.is_featured) queryParams.append('is_featured', params.is_featured);
+  if (params.is_bestseller) queryParams.append('is_bestseller', params.is_bestseller);
+  if (params.is_new) queryParams.append('is_new', params.is_new);
+  if (params.has_stock) queryParams.append('has_stock', params.has_stock);
+  if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+  if (params.sort_order) queryParams.append('sort_order', params.sort_order);
 
-  // Only add filters if they have values (not empty strings)
-  if (params?.search && params.search !== '') queryParams.append('search', params.search);
-  if (params?.status && params.status !== '') queryParams.append('status', params.status);
-  if (params?.is_featured && params.is_featured !== '') queryParams.append('is_featured', params.is_featured);
-  if (params?.is_bestseller && params.is_bestseller !== '') queryParams.append('is_bestseller', params.is_bestseller);
-  if (params?.is_new && params.is_new !== '') queryParams.append('is_new', params.is_new);
-  if (params?.has_stock && params.has_stock !== '') queryParams.append('has_stock', params.has_stock);
-  if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
-  if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
-
-  const url = `${endpoints.products.adminlistProducts}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  const url = `${endpoints.products.adminListProducts}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
   const response = await securityAxios.get(url);
   return response.data;
 };
 
 // Bulk action mutation
 const bulkProductAction = async (action: string, productIds: string[]) => {
-  const response = await securityAxios.post(endpoints.products.bulkProductAction, {
+  const response = await securityAxios.post(endpoints.products.adminBulkProductActions, {
     action,
     product_ids: productIds,
   });
@@ -153,6 +178,7 @@ const filterConfig: FilterConfig = {
   ],
   searchPlaceholder: 'Search by title, description, or SKU...',
   showSearch: true,
+  urlParamPrefix: 'product',
 };
 
 // Sort configuration
@@ -166,10 +192,14 @@ const sortConfig: SortConfig = {
   ],
   defaultSortBy: 'created_at',
   defaultSortOrder: 'desc',
+  urlParamPrefix: 'product',
 };
 
-export default function ProductsPage() {
-  const queryClient = useQueryClient();
+// Main content component that uses useSearchParams
+function ProductsPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // State for dialogs/sheets
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -178,19 +208,33 @@ export default function ProductsPage() {
   const [viewingVariantsFor, setViewingVariantsFor] = useState<Product | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  // Filter and pagination state
-  const [filters, setFilters] = useState({
-    search: '',
-    status: '',
-    is_featured: '',
-    is_bestseller: '',
-    is_new: '',
-    has_stock: '',
-    sort_by: 'created_at',
-    sort_order: 'desc',
-    page: 1,
-    limit: 20,
-  });
+  // Track loading states for individual products
+  const [loadingStates, setLoadingStates] = useState<LoadingState>({});
+
+  // Track which bulk action is currently loading
+  const [activeBulkAction, setActiveBulkAction] = useState<string | null>(null);
+
+  // Track refresh loading
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Build fetch params directly from URL
+  const fetchParams = useMemo(() => {
+    const sortBy = searchParams.get('product_sort_by') || 'created_at';
+    const sortOrder = searchParams.get('product_sort_order') || 'desc';
+
+    return {
+      page: Number(searchParams.get('page')) || 1,
+      limit: Number(searchParams.get('limit')) || 20,
+      search: searchParams.get('search') || '',
+      status: searchParams.get('product_status') || '',
+      is_featured: searchParams.get('product_is_featured') || '',
+      is_bestseller: searchParams.get('product_is_bestseller') || '',
+      is_new: searchParams.get('product_is_new') || '',
+      has_stock: searchParams.get('product_has_stock') || '',
+      sort_by: sortBy,
+      sort_order: sortOrder,
+    };
+  }, [searchParams]);
 
   // Confirmation dialog states
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -208,10 +252,43 @@ export default function ProductsPage() {
     onConfirm: () => { },
   });
 
-  // Query for products
+  const queryClient = useQueryClient();
+
+  // Helper function to invalidate all related queries
+  const invalidateProductQueries = () => {
+    queryClient.invalidateQueries({ queryKey: [endpoints.products.adminListProducts] });
+  };
+
+  // Set loading state for a specific product action
+  const setProductLoading = (productId: string, action: keyof LoadingState[string], isLoading: boolean) => {
+    setLoadingStates(prev => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        [action]: isLoading,
+      }
+    }));
+  };
+
+  // Check if any action is loading for a specific product
+  const isProductLoading = (productId: string) => {
+    const state = loadingStates[productId];
+    if (!state) return false;
+    return Object.values(state).some(isLoading => isLoading === true);
+  };
+
+  // Check if ANY action is loading globally (including bulk)
+  const isAnyActionLoading = () => {
+    if (activeBulkAction) return true;
+    return Object.values(loadingStates).some(rowState =>
+      rowState && Object.values(rowState).some(isLoading => isLoading === true)
+    );
+  };
+
+  // Query for products - uses fetchParams directly
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['admin-products', filters],
-    queryFn: () => fetchProducts(filters),
+    queryKey: [endpoints.products.adminListProducts, fetchParams],
+    queryFn: () => fetchProducts(fetchParams),
   });
 
   // Bulk action mutation
@@ -231,81 +308,79 @@ export default function ProductsPage() {
         toast.error(`${failed_count} failed: ${failedNames}`);
       }
 
+      invalidateProductQueries();
       refetch();
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
+    onSettled: () => {
+      setActiveBulkAction(null);
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Bulk action failed');
     },
   });
 
-  // Pagination handlers
+  // Pagination handlers - update URL
   const handlePageChange = (page: number) => {
-    setFilters({ ...filters, page });
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+    const params = new URLSearchParams(searchParams);
+    params.set('page', page.toString());
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const handleLimitChange = (limit: number) => {
-    setFilters({ ...filters, limit, page: 1 });
-  };
-
-  // Handle filter changes
-  const handleFilterChange = (newFilters: Record<string, any>) => {
-    setFilters({
-      ...filters,
-      ...newFilters,
-      page: 1,
-    });
-  };
-
-  // Handle sort changes
-  const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
-    setFilters({
-      ...filters,
-      sort_by: sortBy,
-      sort_order: sortOrder,
-      page: 1,
-    });
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+    const params = new URLSearchParams(searchParams);
+    params.set('limit', limit.toString());
+    params.set('page', '1');
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   // Refresh handler
-  const handleRefresh = () => {
-    refetch();
-    toast.success('Products refreshed');
+  const handleRefresh = async () => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast.success('Products refreshed');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
-  // Reset all filters and sort
-  const handleReset = () => {
-    setFilters({
-      search: '',
-      status: '',
-      is_featured: '',
-      is_bestseller: '',
-      is_new: '',
-      has_stock: '',
-      sort_by: 'created_at',
-      sort_order: 'desc',
-      page: 1,
-      limit: 20,
-    });
-  };
-
-  // Single action helpers with InfoDialog
+  // Single action helpers with loading states
   const handleStatusChange = (product: Product, newStatus: string) => {
-    const statusMap: Record<string, { title: string; message: string; variant: 'info' | 'error' }> = {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
+    const statusMap: Record<string, { title: string; message: string; variant: 'info' | 'error'; actionKey: keyof LoadingState[string] }> = {
       publish: {
         title: 'Publish Product',
         message: `Are you sure you want to publish "${product.title}"? It will be visible to customers.`,
-        variant: 'info'
+        variant: 'info',
+        actionKey: 'publish'
       },
       draft: {
         title: 'Move to Draft',
         message: `Are you sure you want to move "${product.title}" to draft? It will be hidden from customers.`,
-        variant: 'info'
+        variant: 'info',
+        actionKey: 'draft'
       },
       archive: {
         title: 'Archive Product',
         message: `Are you sure you want to archive "${product.title}"?`,
-        variant: 'info'
+        variant: 'info',
+        actionKey: 'archive'
       },
     };
 
@@ -317,7 +392,12 @@ export default function ProductsPage() {
         message: config.message,
         variant: config.variant,
         onConfirm: () => {
-          bulkActionMutation.mutate({ action: newStatus, ids: [product.id] });
+          setProductLoading(product.id, config.actionKey, true);
+          bulkActionMutation.mutate({ action: newStatus, ids: [product.id] }, {
+            onSettled: () => {
+              setProductLoading(product.id, config.actionKey, false);
+            }
+          });
           setConfirmDialog({ ...confirmDialog, open: false });
         },
         itemName: product.title,
@@ -326,8 +406,14 @@ export default function ProductsPage() {
   };
 
   const handleToggleFeatured = (product: Product) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     const action = product.is_featured ? 'unfeature' : 'feature';
     const actionText = product.is_featured ? 'Remove Featured' : 'Mark as Featured';
+    const actionKey = product.is_featured ? 'unfeature' : 'feature';
 
     setConfirmDialog({
       open: true,
@@ -335,7 +421,12 @@ export default function ProductsPage() {
       message: `Are you sure you want to ${actionText.toLowerCase()} "${product.title}"?`,
       variant: 'info',
       onConfirm: () => {
-        bulkActionMutation.mutate({ action, ids: [product.id] });
+        setProductLoading(product.id, actionKey, true);
+        bulkActionMutation.mutate({ action, ids: [product.id] }, {
+          onSettled: () => {
+            setProductLoading(product.id, actionKey, false);
+          }
+        });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
       itemName: product.title,
@@ -343,8 +434,14 @@ export default function ProductsPage() {
   };
 
   const handleToggleBestseller = (product: Product) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     const action = product.is_bestseller ? 'unbestseller' : 'bestseller';
     const actionText = product.is_bestseller ? 'Remove Bestseller' : 'Mark as Bestseller';
+    const actionKey = product.is_bestseller ? 'unbestseller' : 'bestseller';
 
     setConfirmDialog({
       open: true,
@@ -352,7 +449,12 @@ export default function ProductsPage() {
       message: `Are you sure you want to ${actionText.toLowerCase()} "${product.title}"?`,
       variant: 'info',
       onConfirm: () => {
-        bulkActionMutation.mutate({ action, ids: [product.id] });
+        setProductLoading(product.id, actionKey, true);
+        bulkActionMutation.mutate({ action, ids: [product.id] }, {
+          onSettled: () => {
+            setProductLoading(product.id, actionKey, false);
+          }
+        });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
       itemName: product.title,
@@ -360,8 +462,14 @@ export default function ProductsPage() {
   };
 
   const handleToggleNew = (product: Product) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     const action = product.is_new ? 'unnew' : 'new';
     const actionText = product.is_new ? 'Remove New' : 'Mark as New';
+    const actionKey = product.is_new ? 'unnew' : 'new';
 
     setConfirmDialog({
       open: true,
@@ -369,7 +477,12 @@ export default function ProductsPage() {
       message: `Are you sure you want to ${actionText.toLowerCase()} "${product.title}"?`,
       variant: 'info',
       onConfirm: () => {
-        bulkActionMutation.mutate({ action, ids: [product.id] });
+        setProductLoading(product.id, actionKey, true);
+        bulkActionMutation.mutate({ action, ids: [product.id] }, {
+          onSettled: () => {
+            setProductLoading(product.id, actionKey, false);
+          }
+        });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
       itemName: product.title,
@@ -377,21 +490,36 @@ export default function ProductsPage() {
   };
 
   const handleDelete = (product: Product) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Delete Product',
       message: `Are you sure you want to delete "${product.title}"? This action cannot be undone. All variants and images will also be deleted.`,
       variant: 'error',
       onConfirm: () => {
-        bulkActionMutation.mutate({ action: 'delete', ids: [product.id] });
+        setProductLoading(product.id, 'delete', true);
+        bulkActionMutation.mutate({ action: 'delete', ids: [product.id] }, {
+          onSettled: () => {
+            setProductLoading(product.id, 'delete', false);
+          }
+        });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
       itemName: product.title,
     });
   };
 
-  // Bulk actions with InfoDialog
+  // Bulk actions with loading state
   const handleBulkPublish = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Bulk Publish Products',
@@ -399,6 +527,7 @@ export default function ProductsPage() {
       variant: 'info',
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
+        setActiveBulkAction('publish');
         bulkActionMutation.mutate({ action: 'publish', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
@@ -406,6 +535,11 @@ export default function ProductsPage() {
   };
 
   const handleBulkDraft = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Bulk Move to Draft',
@@ -413,6 +547,7 @@ export default function ProductsPage() {
       variant: 'info',
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
+        setActiveBulkAction('draft');
         bulkActionMutation.mutate({ action: 'draft', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
@@ -420,6 +555,11 @@ export default function ProductsPage() {
   };
 
   const handleBulkArchive = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Bulk Archive Products',
@@ -427,6 +567,7 @@ export default function ProductsPage() {
       variant: 'info',
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
+        setActiveBulkAction('archive');
         bulkActionMutation.mutate({ action: 'archive', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
@@ -434,6 +575,11 @@ export default function ProductsPage() {
   };
 
   const handleBulkFeature = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Bulk Mark as Featured',
@@ -441,6 +587,7 @@ export default function ProductsPage() {
       variant: 'info',
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
+        setActiveBulkAction('feature');
         bulkActionMutation.mutate({ action: 'feature', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
@@ -448,6 +595,11 @@ export default function ProductsPage() {
   };
 
   const handleBulkUnfeature = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Bulk Remove Featured',
@@ -455,6 +607,7 @@ export default function ProductsPage() {
       variant: 'info',
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
+        setActiveBulkAction('unfeature');
         bulkActionMutation.mutate({ action: 'unfeature', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
@@ -462,6 +615,11 @@ export default function ProductsPage() {
   };
 
   const handleBulkBestseller = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Bulk Mark as Bestseller',
@@ -469,6 +627,7 @@ export default function ProductsPage() {
       variant: 'info',
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
+        setActiveBulkAction('bestseller');
         bulkActionMutation.mutate({ action: 'bestseller', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
@@ -476,6 +635,11 @@ export default function ProductsPage() {
   };
 
   const handleBulkUnbestseller = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Bulk Remove Bestseller',
@@ -483,6 +647,7 @@ export default function ProductsPage() {
       variant: 'info',
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
+        setActiveBulkAction('unbestseller');
         bulkActionMutation.mutate({ action: 'unbestseller', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
@@ -490,6 +655,11 @@ export default function ProductsPage() {
   };
 
   const handleBulkNew = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Bulk Mark as New',
@@ -497,6 +667,7 @@ export default function ProductsPage() {
       variant: 'info',
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
+        setActiveBulkAction('new');
         bulkActionMutation.mutate({ action: 'new', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
@@ -504,6 +675,11 @@ export default function ProductsPage() {
   };
 
   const handleBulkUnnew = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Bulk Remove New',
@@ -511,6 +687,7 @@ export default function ProductsPage() {
       variant: 'info',
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
+        setActiveBulkAction('unnew');
         bulkActionMutation.mutate({ action: 'unnew', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
@@ -518,6 +695,11 @@ export default function ProductsPage() {
   };
 
   const handleBulkDelete = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     setConfirmDialog({
       open: true,
       title: 'Bulk Delete Products',
@@ -525,6 +707,7 @@ export default function ProductsPage() {
       variant: 'error',
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
+        setActiveBulkAction('delete');
         bulkActionMutation.mutate({ action: 'delete', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
@@ -532,6 +715,11 @@ export default function ProductsPage() {
   };
 
   const handleBulkExport = (selectedItems: Product[]) => {
+    if (isAnyActionLoading()) {
+      toast.error('Please wait for current action to complete');
+      return;
+    }
+
     const exportData = selectedItems.map(item => ({
       title: item.title,
       status: item.status,
@@ -556,144 +744,194 @@ export default function ProductsPage() {
     toast.success(`Exported ${selectedItems.length} products`);
   };
 
-  // Define actions for each product
+  // Define actions for each product with loading states
   const getProductActions = (product: Product): ActionItem[] => {
-    const actions: ActionItem[] = [];
+    const isAnyLoading = isAnyActionLoading();
+    const isRowLoading = isProductLoading(product.id);
+    const isModifyDisabled = isAnyLoading;
 
-    actions.push({
-      label: 'Edit Product',
-      icon: <Edit size={14} />,
-      onClick: () => setEditingProduct(product),
-      color: 'blue',
-    });
-
-    actions.push({
-      label: 'Add Variant',
-      icon: <Plus size={14} />,
-      onClick: () => setAddingVariantTo(product),
-      color: 'violet',
-    });
-
-    actions.push({
-      label: 'View Details',
-      icon: <Eye size={14} />,
-      onClick: () => setViewingProduct(product),
-      color: 'emerald',
-    });
-
-    actions.push({
-      label: 'View Variants',
-      icon: <Package size={14} />,
-      onClick: () => setViewingVariantsFor(product),
-      color: 'amber',
-    });
-
-    actions.push({
-      label: product.is_featured ? 'Remove Featured' : 'Mark Featured',
-      icon: <Star size={14} />,
-      onClick: () => handleToggleFeatured(product),
-      color: 'amber',
-    });
-
-    actions.push({
-      label: product.is_bestseller ? 'Remove Bestseller' : 'Mark Bestseller',
-      icon: <TrendingUp size={14} />,
-      onClick: () => handleToggleBestseller(product),
-      color: 'orange',
-    });
-
-    actions.push({
-      label: product.is_new ? 'Remove New' : 'Mark New',
-      icon: <Sparkles size={14} />,
-      onClick: () => handleToggleNew(product),
-      color: 'emerald',
-    });
-
-    actions.push({
-      label: product.status === 'published' ? 'Move to Draft' : product.status === 'draft' ? 'Publish' : 'Restore from Archive',
-      icon: product.status === 'published' ? <FileText size={14} /> : product.status === 'draft' ? <CheckCircle size={14} /> : <Archive size={14} />,
-      onClick: () => {
-        if (product.status === 'published') handleStatusChange(product, 'draft');
-        else if (product.status === 'draft') handleStatusChange(product, 'publish');
-        else handleStatusChange(product, 'draft');
+    return [
+      {
+        label: 'View Details',
+        icon: <Eye size={14} />,
+        onClick: () => setViewingProduct(product),
+        color: 'emerald',
+        disabled: false,
       },
-      color: product.status === 'published' ? 'blue' : product.status === 'draft' ? 'emerald' : 'amber',
-    });
-
-    actions.push({
-      label: 'Delete Product',
-      icon: <Trash2 size={14} />,
-      variant: 'destructive',
-      onClick: () => handleDelete(product),
-    });
-
-    return actions;
+      {
+        label: 'Edit Product',
+        icon: <Edit size={14} />,
+        onClick: () => setEditingProduct(product),
+        color: 'blue',
+        disabled: isModifyDisabled,
+      },
+      {
+        label: 'Add Variant',
+        icon: <Plus size={14} />,
+        onClick: () => setAddingVariantTo(product),
+        color: 'violet',
+        disabled: isModifyDisabled,
+      },
+      {
+        label: 'View Variants',
+        icon: <Package size={14} />,
+        onClick: () => setViewingVariantsFor(product),
+        color: 'amber',
+        disabled: false,
+      },
+      {
+        label: product.is_featured ? 'Remove Featured' : 'Mark Featured',
+        icon: <Star size={14} />,
+        onClick: () => handleToggleFeatured(product),
+        color: 'amber',
+        disabled: isModifyDisabled,
+        loading: isRowLoading && (loadingStates[product.id]?.feature || loadingStates[product.id]?.unfeature),
+      },
+      {
+        label: product.is_bestseller ? 'Remove Bestseller' : 'Mark Bestseller',
+        icon: <TrendingUp size={14} />,
+        onClick: () => handleToggleBestseller(product),
+        color: 'orange',
+        disabled: isModifyDisabled,
+        loading: isRowLoading && (loadingStates[product.id]?.bestseller || loadingStates[product.id]?.unbestseller),
+      },
+      {
+        label: product.is_new ? 'Remove New' : 'Mark New',
+        icon: <Sparkles size={14} />,
+        onClick: () => handleToggleNew(product),
+        color: 'emerald',
+        disabled: isModifyDisabled,
+        loading: isRowLoading && (loadingStates[product.id]?.new || loadingStates[product.id]?.unnew),
+      },
+      {
+        label: product.status === 'published' ? 'Move to Draft' : product.status === 'draft' ? 'Publish' : 'Restore from Archive',
+        icon: product.status === 'published' ? <FileText size={14} /> : product.status === 'draft' ? <CheckCircle size={14} /> : <Archive size={14} />,
+        onClick: () => {
+          if (product.status === 'published') handleStatusChange(product, 'draft');
+          else if (product.status === 'draft') handleStatusChange(product, 'publish');
+          else handleStatusChange(product, 'draft');
+        },
+        color: product.status === 'published' ? 'blue' : product.status === 'draft' ? 'emerald' : 'amber',
+        disabled: isModifyDisabled,
+        loading: isRowLoading && (loadingStates[product.id]?.publish || loadingStates[product.id]?.draft || loadingStates[product.id]?.archive),
+      },
+      {
+        label: 'Delete Product',
+        icon: <Trash2 size={14} />,
+        variant: 'destructive',
+        onClick: () => handleDelete(product),
+        disabled: isModifyDisabled,
+        loading: isRowLoading && loadingStates[product.id]?.delete,
+      },
+    ];
   };
 
-  // Bulk actions
+  // Bulk actions array
   const bulkActions = [
-    { label: 'Publish Selected', icon: <CheckCircle size={14} />, onClick: handleBulkPublish, color: 'emerald' as const },
-    { label: 'Move to Draft', icon: <FileText size={14} />, onClick: handleBulkDraft, color: 'amber' as const },
-    { label: 'Archive Selected', icon: <Archive size={14} />, onClick: handleBulkArchive, color: 'blue' as const, variant: 'destructive' as const },
-    { label: 'Mark Featured', icon: <Star size={14} />, onClick: handleBulkFeature, color: 'violet' as const },
-    { label: 'Remove Featured', icon: <Star size={14} />, onClick: handleBulkUnfeature, color: 'blue' as const },
-    { label: 'Mark Bestseller', icon: <TrendingUp size={14} />, onClick: handleBulkBestseller, color: 'orange' as const },
-    { label: 'Remove Bestseller', icon: <TrendingUp size={14} />, onClick: handleBulkUnbestseller, color: 'amber' as const },
-    { label: 'Mark New', icon: <Sparkles size={14} />, onClick: handleBulkNew, color: 'emerald' as const },
-    { label: 'Remove New', icon: <Sparkles size={14} />, onClick: handleBulkUnnew, color: 'blue' as const },
-    { label: 'Delete Selected', icon: <Trash2 size={14} />, onClick: handleBulkDelete, color: 'rose' as const, variant: 'destructive' as const },
-    { label: 'Export Selected', icon: <Upload size={14} />, onClick: handleBulkExport, color: 'violet' as const },
+    {
+      label: 'Publish Selected',
+      icon: activeBulkAction === 'publish' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />,
+      onClick: handleBulkPublish,
+      color: 'emerald' as const,
+      disabled: isAnyActionLoading(),
+    },
+    {
+      label: 'Move to Draft',
+      icon: activeBulkAction === 'draft' ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />,
+      onClick: handleBulkDraft,
+      color: 'amber' as const,
+      disabled: isAnyActionLoading(),
+    },
+    {
+      label: 'Archive Selected',
+      icon: activeBulkAction === 'archive' ? <Loader2 size={14} className="animate-spin" /> : <Archive size={14} />,
+      onClick: handleBulkArchive,
+      color: 'blue' as const,
+      variant: 'destructive' as const,
+      disabled: isAnyActionLoading(),
+    },
+    {
+      label: 'Mark Featured',
+      icon: activeBulkAction === 'feature' ? <Loader2 size={14} className="animate-spin" /> : <Star size={14} />,
+      onClick: handleBulkFeature,
+      color: 'violet' as const,
+      disabled: isAnyActionLoading(),
+    },
+    {
+      label: 'Remove Featured',
+      icon: activeBulkAction === 'unfeature' ? <Loader2 size={14} className="animate-spin" /> : <Star size={14} />,
+      onClick: handleBulkUnfeature,
+      color: 'blue' as const,
+      disabled: isAnyActionLoading(),
+    },
+    {
+      label: 'Mark Bestseller',
+      icon: activeBulkAction === 'bestseller' ? <Loader2 size={14} className="animate-spin" /> : <TrendingUp size={14} />,
+      onClick: handleBulkBestseller,
+      color: 'orange' as const,
+      disabled: isAnyActionLoading(),
+    },
+    {
+      label: 'Remove Bestseller',
+      icon: activeBulkAction === 'unbestseller' ? <Loader2 size={14} className="animate-spin" /> : <TrendingUp size={14} />,
+      onClick: handleBulkUnbestseller,
+      color: 'amber' as const,
+      disabled: isAnyActionLoading(),
+    },
+    {
+      label: 'Mark New',
+      icon: activeBulkAction === 'new' ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />,
+      onClick: handleBulkNew,
+      color: 'emerald' as const,
+      disabled: isAnyActionLoading(),
+    },
+    {
+      label: 'Remove New',
+      icon: activeBulkAction === 'unnew' ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />,
+      onClick: handleBulkUnnew,
+      color: 'blue' as const,
+      disabled: isAnyActionLoading(),
+    },
+    {
+      label: 'Delete Selected',
+      icon: activeBulkAction === 'delete' ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />,
+      onClick: handleBulkDelete,
+      color: 'rose' as const,
+      variant: 'destructive' as const,
+      disabled: isAnyActionLoading(),
+    },
+    {
+      label: 'Export Selected',
+      icon: <Upload size={14} />,
+      onClick: handleBulkExport,
+      color: 'violet' as const,
+      disabled: isAnyActionLoading(),
+    },
   ];
 
   const products = data?.data?.products || [];
   const pagination = data?.data?.pagination;
 
-  // Error state - Keep UI visible
+  // Error state
   if (isError) {
     return (
       <div className="space-y-6">
-        {/* Header - Always visible */}
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Products</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Manage your product catalog</p>
         </div>
 
-        {/* Buttons - Always visible */}
         <div className="flex justify-between items-center">
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2" disabled={isAnyActionLoading()}>
             <Plus size={16} />
             New Product
           </Button>
-          <Button variant="outline" onClick={handleRefresh} className="gap-2">
-            <RefreshCw size={16} />
+          <Button variant="outline" onClick={handleRefresh} className="gap-2" disabled={isAnyActionLoading()}>
+            {isRefreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
             Refresh
           </Button>
         </div>
 
-        {/* Filters and Sort - Always visible */}
-        <div className="flex flex-wrap gap-32 items-start justify-between">
-          <div className="flex-1">
-            <CustomFilter
-              config={filterConfig}
-              filters={{
-                search: filters.search,
-                status: filters.status,
-                is_featured: filters.is_featured,
-                is_bestseller: filters.is_bestseller,
-                is_new: filters.is_new,
-                has_stock: filters.has_stock,
-              }}
-              onFilterChange={handleFilterChange}
-              onReset={handleReset}
-            />
-          </div>
-          <CustomSort
-            config={sortConfig}
-            onSortChange={handleSortChange}
-          />
-        </div>
-
-        {/* Error Message */}
         <div className="text-center py-12">
           <p className="text-red-600 dark:text-red-400">Error loading products: {error?.message}</p>
         </div>
@@ -703,49 +941,30 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Title and Description - Always visible */}
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Products</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">Manage your product catalog</p>
       </div>
 
-      {/* New Product Button and Refresh - Always visible */}
+      {/* Action Buttons */}
       <div className="flex justify-between items-center">
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2" disabled={isAnyActionLoading()}>
           <Plus size={16} />
           New Product
         </Button>
-        <Button
-          variant="outline"
-          onClick={handleRefresh}
-          className="gap-2"
-        >
-          <RefreshCw size={16} />
+        <Button variant="outline" onClick={handleRefresh} className="gap-2" disabled={isAnyActionLoading()}>
+          {isRefreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
           Refresh
         </Button>
       </div>
 
-      {/* Filters and Sort Row - Always visible and interactive */}
+      {/* Filters and Sort - CustomFilter and CustomSortFromUrl have their own Suspense internally */}
       <div className="flex flex-wrap gap-32 items-start justify-between">
         <div className="flex-1">
-          <CustomFilter
-            config={filterConfig}
-            filters={{
-              search: filters.search,
-              status: filters.status,
-              is_featured: filters.is_featured,
-              is_bestseller: filters.is_bestseller,
-              is_new: filters.is_new,
-              has_stock: filters.has_stock,
-            }}
-            onFilterChange={handleFilterChange}
-            onReset={handleReset}
-          />
+          <CustomFilter config={filterConfig} />
         </div>
-        <CustomSort
-          config={sortConfig}
-          onSortChange={handleSortChange}
-        />
+        <CustomSortFromUrl config={sortConfig} />
       </div>
 
       {/* Confirmation Dialog */}
@@ -761,8 +980,6 @@ export default function ProductsPage() {
         secondaryAction={() => setConfirmDialog({ ...confirmDialog, open: false })}
       />
 
-      {/* ==================== DIALOGS & SHEETS ==================== */}
-
       {/* Create Product Dialog */}
       <CustomDialog
         title="Create New Product"
@@ -774,8 +991,8 @@ export default function ProductsPage() {
         <ProductForm
           onSuccess={() => {
             setIsCreateDialogOpen(false);
+            invalidateProductQueries();
             refetch();
-            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
           }}
         />
       </CustomDialog>
@@ -793,8 +1010,8 @@ export default function ProductsPage() {
             productId={editingProduct.id}
             onSuccess={() => {
               setEditingProduct(null);
+              invalidateProductQueries();
               refetch();
-              queryClient.invalidateQueries({ queryKey: ['admin-products'] });
             }}
             onCancel={() => setEditingProduct(null)}
           />
@@ -814,8 +1031,8 @@ export default function ProductsPage() {
             productId={addingVariantTo.id}
             onSuccess={() => {
               setAddingVariantTo(null);
+              invalidateProductQueries();
               refetch();
-              queryClient.invalidateQueries({ queryKey: ['admin-products'] });
             }}
           />
         )}
@@ -856,7 +1073,7 @@ export default function ProductsPage() {
         )}
       </CustomSheet>
 
-      {/* Data Table or Skeleton - Only this shows loading state */}
+      {/* Data Table */}
       {isLoading ? (
         <TableSkeleton />
       ) : (
@@ -926,5 +1143,18 @@ export default function ProductsPage() {
         </>
       )}
     </div>
+  );
+}
+
+// Main exported component with Suspense boundary
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      </div>
+    }>
+      <ProductsPageContent />
+    </Suspense>
   );
 }

@@ -1,10 +1,11 @@
+// app/dashboard/logs/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
-    Eye, RefreshCw, Copy, Info,
-    Package, ShoppingCart, Users, Tag, Server
+    Eye, RefreshCw, Copy, Info, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,8 @@ import { endpoints } from '@/constants/endpoints/endpoints';
 import { ActionsDropdown, type ActionItem } from '@/widgets/ActionsDropdown/ActionsDropdown';
 import { DataTable } from '@/widgets/Customtable/DataTable';
 import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
-import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
-import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
+import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilterFromUrl';
+import { CustomSortFromUrl, SortConfig } from '@/widgets/CustomSort/CustomSortFromUrl';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 import Link from 'next/link';
 import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
@@ -37,7 +38,15 @@ interface LogEntry {
 }
 
 // Fetch logs with pagination - hardcoded to common
-const fetchLogs = async (params?: any): Promise<{
+const fetchLogs = async (params: {
+    page: number;
+    limit: number;
+    severity: string;
+    status_code: string;
+    search: string;
+    sort_by: string;
+    sort_order: string;
+}): Promise<{
     data: {
         logs: LogEntry[];
         total: number;
@@ -45,14 +54,14 @@ const fetchLogs = async (params?: any): Promise<{
     }
 }> => {
     const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
     queryParams.append('app_name', 'common');
-    if (params?.severity && params.severity !== '') queryParams.append('severity', params.severity);
-    if (params?.status_code && params.status_code !== '') queryParams.append('status_code', params.status_code);
-    if (params?.search && params.search !== '') queryParams.append('search', params.search);
-    if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
-    if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
+    if (params.severity) queryParams.append('severity', params.severity);
+    if (params.status_code) queryParams.append('status_code', params.status_code);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params.sort_order) queryParams.append('sort_order', params.sort_order);
 
     const url = `${endpoints.common.logs}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await securityAxios.get(url);
@@ -93,8 +102,9 @@ const filterConfig: FilterConfig = {
             width: '140px',
         },
     ],
-    searchPlaceholder: 'Description ,action ,user email...',
+    searchPlaceholder: 'Description, action, user email...',
     showSearch: true,
+    urlParamPrefix: 'log',
 };
 
 // Sort configuration
@@ -107,6 +117,7 @@ const sortConfig: SortConfig = {
     ],
     defaultSortBy: 'created_at',
     defaultSortOrder: 'desc',
+    urlParamPrefix: 'log',
 };
 
 // Severity badge mapping
@@ -118,85 +129,67 @@ const severityBadgeConfig: Record<string, 'emerald' | 'amber' | 'rose' | 'zinc'>
     DEBUG: 'zinc',
 };
 
-export default function LogsPage() {
+// Main content component that uses useSearchParams
+function LogsPageContent() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
     // State for dialogs
-    const [viewingLog, setViewingLog] = useState<LogEntry | null>(null);
-    const [viewingMetadata, setViewingMetadata] = useState<Record<string, any> | null>(null);
+    const [viewingLog, setViewingLog] = React.useState<LogEntry | null>(null);
+    const [viewingMetadata, setViewingMetadata] = React.useState<Record<string, any> | null>(null);
 
-    // Filter and pagination state
-    const [filters, setFilters] = useState({
-        page: 1,
-        limit: 20,
-    });
+    // Track refresh loading
+    const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-    // Track applied filters
-    const [appliedFilters, setAppliedFilters] = useState({
-        severity: '',
-        status_code: '',
-        search: '',
-        sort_by: 'created_at',
-        sort_order: 'desc',
-    });
+    // Build fetch params directly from URL
+    const fetchParams = useMemo(() => {
+        const sortBy = searchParams.get('log_sort_by') || 'created_at';
+        const sortOrder = searchParams.get('log_sort_order') || 'desc';
+
+        return {
+            page: Number(searchParams.get('page')) || 1,
+            limit: Number(searchParams.get('limit')) || 20,
+            severity: searchParams.get('log_severity') || '',
+            status_code: searchParams.get('log_status_code') || '',
+            search: searchParams.get('search') || '',
+            sort_by: sortBy,
+            sort_order: sortOrder,
+        };
+    }, [searchParams]);
 
     // Query for logs
     const { data, isLoading, isError, error, refetch } = useQuery({
-        queryKey: ['logs', filters.page, filters.limit, appliedFilters],
-        queryFn: () => fetchLogs({
-            page: filters.page,
-            limit: filters.limit,
-            ...appliedFilters,
-        }),
+        queryKey: ['logs', fetchParams],
+        queryFn: () => fetchLogs(fetchParams),
     });
 
-    // Pagination handlers
+    // Pagination handlers - update URL
     const handlePageChange = (page: number) => {
-        setFilters({ ...filters, page });
+        const params = new URLSearchParams(searchParams);
+        params.set('page', page.toString());
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
     const handleLimitChange = (limit: number) => {
-        setFilters({ page: 1, limit });
-    };
-
-    // Handle filter changes
-    const handleFilterChange = (newFilters: Record<string, any>) => {
-        setAppliedFilters({
-            ...appliedFilters,
-            severity: newFilters.severity || '',
-            status_code: newFilters.status_code || '',
-            search: newFilters.search || '',
-        });
-        setFilters({ ...filters, page: 1 });
-    };
-
-    // Handle sort changes
-    const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
-        setAppliedFilters({
-            ...appliedFilters,
-            sort_by: sortBy,
-            sort_order: sortOrder,
-        });
-        setFilters({ ...filters, page: 1 });
+        const params = new URLSearchParams(searchParams);
+        params.set('limit', limit.toString());
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
     // Refresh handler
-    const handleRefresh = () => {
-        refetch();
-        toast.success('Logs refreshed');
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await refetch();
+            toast.success('Logs refreshed');
+        } finally {
+            setIsRefreshing(false);
+        }
     };
 
-    // Reset all filters
-    const handleResetFilters = () => {
-        setAppliedFilters({
-            severity: '',
-            status_code: '',
-            search: '',
-            sort_by: 'created_at',
-            sort_order: 'desc',
-        });
-        setFilters({ page: 1, limit: filters.limit });
-    };
-
-    // Copy log
+    // Copy log (no API call)
     const handleCopyLog = (log: LogEntry) => {
         const logText = JSON.stringify({
             id: log.id,
@@ -216,7 +209,7 @@ export default function LogsPage() {
         toast.success('Log copied to clipboard');
     };
 
-    // Row actions
+    // Row actions - all actions are view-only, always enabled
     const getLogActions = (log: LogEntry): ActionItem[] => [
         {
             label: 'View Details',
@@ -250,29 +243,10 @@ export default function LogsPage() {
                 </div>
 
                 <div className="flex justify-end">
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                        <RefreshCw size={16} />
+                    <Button variant="outline" onClick={handleRefresh} className="gap-2" disabled={isRefreshing}>
+                        {isRefreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                         Refresh
                     </Button>
-                </div>
-
-                <div className="flex flex-wrap gap-4 items-start justify-between">
-                    <div className="flex-1">
-                        <CustomFilter
-                            config={filterConfig}
-                            filters={{
-                                severity: appliedFilters.severity,
-                                status_code: appliedFilters.status_code,
-                                search: appliedFilters.search,
-                            }}
-                            onFilterChange={handleFilterChange}
-                            onReset={handleResetFilters}
-                        />
-                    </div>
-                    <CustomSort
-                        config={sortConfig}
-                        onSortChange={handleSortChange}
-                    />
                 </div>
 
                 <div className="text-center py-12">
@@ -290,35 +264,23 @@ export default function LogsPage() {
             </div>
 
             <div className="flex justify-between items-center">
-
                 <Link href="/dashboard/logs?app=common">
                     <Button variant="outline" size="sm">
                         View Statistics
                     </Button>
                 </Link>
-                <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                    <RefreshCw size={16} />
+                <Button variant="outline" onClick={handleRefresh} className="gap-2" disabled={isRefreshing}>
+                    {isRefreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                     Refresh
                 </Button>
             </div>
 
+            {/* Filters and Sort - CustomFilter and CustomSortFromUrl have their own Suspense internally */}
             <div className="flex flex-wrap gap-4 items-start justify-between">
                 <div className="flex-1">
-                    <CustomFilter
-                        config={filterConfig}
-                        filters={{
-                            severity: appliedFilters.severity,
-                            status_code: appliedFilters.status_code,
-                            search: appliedFilters.search,
-                        }}
-                        onFilterChange={handleFilterChange}
-                        onReset={handleResetFilters}
-                    />
+                    <CustomFilter config={filterConfig} />
                 </div>
-                <CustomSort
-                    config={sortConfig}
-                    onSortChange={handleSortChange}
-                />
+                <CustomSortFromUrl config={sortConfig} />
             </div>
 
             {/* View Details Dialog */}
@@ -372,11 +334,11 @@ export default function LogsPage() {
                                 500: 'rose',
                             },
                         }}
-
                         emptyTitle="No Logs Found"
                         emptyDescription="No logs match your filter criteria. Try adjusting your filters."
                     />
 
+                    {/* Pagination */}
                     {pagination && pagination.total_pages > 1 && (
                         <CustomPagination
                             pagination={pagination}
@@ -389,5 +351,17 @@ export default function LogsPage() {
                 </>
             )}
         </div>
+    );
+}
+
+export default function LogsPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            </div>
+        }>
+            <LogsPageContent />
+        </Suspense>
     );
 }

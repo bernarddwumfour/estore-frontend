@@ -1,11 +1,13 @@
+// app/dashboard/promotions/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
     Plus, Edit, Trash2, Eye,
     CheckCircle, XCircle, Tag, Calendar,
-    Package, Archive, FileText, Upload, RefreshCw,
+    Package, Archive, FileText, Upload, RefreshCw, Loader2,
     Play, Pause, DollarSign, ShoppingBag
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,8 +20,8 @@ import { CustomSheet } from '@/widgets/CustomSheet/CustomSheet';
 import { DataTable } from '@/widgets/Customtable/DataTable';
 import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
 import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
-import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
-import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
+import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilterFromUrl';
+import { CustomSortFromUrl, SortConfig } from '@/widgets/CustomSort/CustomSortFromUrl';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 import PromotionForm from './PromotionForm';
 import Link from 'next/link';
@@ -67,8 +69,25 @@ interface Promotion {
     };
 }
 
-// Fetch promotions with pagination
-const fetchPromotions = async (params?: any): Promise<{
+// Track loading states for individual promotions
+interface LoadingState {
+    [promotionId: string]: {
+        delete: boolean;
+        activate: boolean;
+        pause: boolean;
+        refreshStock: boolean;
+    };
+}
+
+// Fetch promotions with pagination - directly from URL params
+const fetchPromotions = async (params: {
+    page: number;
+    limit: number;
+    search: string;
+    status: string;
+    sort_by: string;
+    sort_order: string;
+}): Promise<{
     data: {
         promotions: Promotion[];
         total: number;
@@ -76,12 +95,12 @@ const fetchPromotions = async (params?: any): Promise<{
     }
 }> => {
     const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.search && params.search !== '') queryParams.append('search', params.search);
-    if (params?.status && params.status !== '') queryParams.append('status', params.status);
-    if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
-    if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params.sort_order) queryParams.append('sort_order', params.sort_order);
 
     const url = `${endpoints.promotions.adminList}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await securityAxios.get(url);
@@ -113,6 +132,11 @@ const refreshStock = async (promotionId: string) => {
     return response.data;
 };
 
+const deletePromotion = async (promotionId: string) => {
+    const response = await securityAxios.delete(endpoints.promotions.delete.replace(':id', promotionId));
+    return response.data;
+};
+
 // Filter configuration
 const filterConfig: FilterConfig = {
     fields: [
@@ -132,6 +156,7 @@ const filterConfig: FilterConfig = {
     ],
     searchPlaceholder: 'Search by name or description...',
     showSearch: true,
+    urlParamPrefix: 'promo',
 };
 
 // Sort configuration
@@ -144,11 +169,14 @@ const sortConfig: SortConfig = {
     ],
     defaultSortBy: 'created_at',
     defaultSortOrder: 'desc',
+    urlParamPrefix: 'promo',
 };
 
-
-
-export default function PromotionsPage() {
+// Main content component that uses useSearchParams
+function PromotionsPageContent() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const queryClient = useQueryClient();
 
     // State for dialogs/sheets
@@ -156,19 +184,29 @@ export default function PromotionsPage() {
     const [viewingPromotion, setViewingPromotion] = useState<Promotion | null>(null);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-    // Filter and pagination state
-    const [filters, setFilters] = useState({
-        page: 1,
-        limit: 20,
-    });
+    // Track loading states for individual promotions
+    const [loadingStates, setLoadingStates] = useState<LoadingState>({});
 
-    // Track applied filters
-    const [appliedFilters, setAppliedFilters] = useState({
-        search: '',
-        status: '',
-        sort_by: 'created_at',
-        sort_order: 'desc',
-    });
+    // Track which bulk action is currently loading
+    const [activeBulkAction, setActiveBulkAction] = useState<string | null>(null);
+
+    // Track refresh loading
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Build fetch params directly from URL
+    const fetchParams = useMemo(() => {
+        const sortBy = searchParams.get('promo_sort_by') || 'created_at';
+        const sortOrder = searchParams.get('promo_sort_order') || 'desc';
+
+        return {
+            page: Number(searchParams.get('page')) || 1,
+            limit: Number(searchParams.get('limit')) || 20,
+            search: searchParams.get('search') || '',
+            status: searchParams.get('promo_status') || '',
+            sort_by: sortBy,
+            sort_order: sortOrder,
+        };
+    }, [searchParams]);
 
     // Confirmation dialog states
     const [confirmDialog, setConfirmDialog] = useState<{
@@ -186,14 +224,36 @@ export default function PromotionsPage() {
         onConfirm: () => { },
     });
 
+    // Set loading state for a specific promotion action
+    const setPromotionLoading = (promotionId: string, action: keyof LoadingState[string], isLoading: boolean) => {
+        setLoadingStates(prev => ({
+            ...prev,
+            [promotionId]: {
+                ...prev[promotionId],
+                [action]: isLoading,
+            }
+        }));
+    };
+
+    // Check if any action is loading for a specific promotion
+    const isPromotionLoading = (promotionId: string) => {
+        const state = loadingStates[promotionId];
+        if (!state) return false;
+        return Object.values(state).some(isLoading => isLoading === true);
+    };
+
+    // Check if ANY action is loading globally (including bulk)
+    const isAnyActionLoading = () => {
+        if (activeBulkAction) return true;
+        return Object.values(loadingStates).some(rowState =>
+            rowState && Object.values(rowState).some(isLoading => isLoading === true)
+        );
+    };
+
     // Query for promotions
     const { data, isLoading, isError, error, refetch } = useQuery({
-        queryKey: ['admin-promotions', filters.page, filters.limit, appliedFilters],
-        queryFn: () => fetchPromotions({
-            page: filters.page,
-            limit: filters.limit,
-            ...appliedFilters,
-        }),
+        queryKey: ['admin-promotions', fetchParams],
+        queryFn: () => fetchPromotions(fetchParams),
     });
 
     // Activate mutation
@@ -235,6 +295,19 @@ export default function PromotionsPage() {
         },
     });
 
+    // Delete mutation
+    const deleteMutation = useMutation({
+        mutationFn: deletePromotion,
+        onSuccess: () => {
+            toast.success('Promotion deleted successfully');
+            refetch();
+            queryClient.invalidateQueries({ queryKey: ['admin-promotions'] });
+        },
+        onError: (error: any) => {
+            toast.error(error?.response?.data?.message || 'Failed to delete promotion');
+        },
+    });
+
     // Bulk action mutation
     const bulkActionMutation = useMutation({
         mutationFn: ({ action, ids }: { action: string; ids: string[] }) =>
@@ -247,64 +320,65 @@ export default function PromotionsPage() {
             refetch();
             queryClient.invalidateQueries({ queryKey: ['admin-promotions'] });
         },
+        onSettled: () => {
+            setActiveBulkAction(null);
+        },
         onError: (error: any) => toast.error(error?.response?.data?.message || 'Bulk action failed'),
     });
 
-    // Pagination handlers
+    // Pagination handlers - update URL
     const handlePageChange = (page: number) => {
-        setFilters({ ...filters, page });
+        if (isAnyActionLoading()) {
+            toast.error('Please wait for current action to complete');
+            return;
+        }
+        const params = new URLSearchParams(searchParams);
+        params.set('page', page.toString());
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
     const handleLimitChange = (limit: number) => {
-        setFilters({ page: 1, limit });
-    };
-
-    // Handle filter changes
-    const handleFilterChange = (newFilters: Record<string, any>) => {
-        setAppliedFilters({
-            ...appliedFilters,
-            search: newFilters.search || '',
-            status: newFilters.status || '',
-        });
-        setFilters({ ...filters, page: 1 });
-    };
-
-    // Handle sort changes
-    const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
-        setAppliedFilters({
-            ...appliedFilters,
-            sort_by: sortBy,
-            sort_order: sortOrder,
-        });
-        setFilters({ ...filters, page: 1 });
+        if (isAnyActionLoading()) {
+            toast.error('Please wait for current action to complete');
+            return;
+        }
+        const params = new URLSearchParams(searchParams);
+        params.set('limit', limit.toString());
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
     // Refresh handler
-    const handleRefresh = () => {
-        refetch();
-        toast.success('Promotions refreshed');
-    };
-
-    // Reset all filters
-    const handleResetFilters = () => {
-        setAppliedFilters({
-            search: '',
-            status: '',
-            sort_by: 'created_at',
-            sort_order: 'desc',
-        });
-        setFilters({ page: 1, limit: filters.limit });
+    const handleRefresh = async () => {
+        if (isAnyActionLoading()) {
+            toast.error('Please wait for current action to complete');
+            return;
+        }
+        setIsRefreshing(true);
+        try {
+            await refetch();
+            toast.success('Promotions refreshed');
+        } finally {
+            setIsRefreshing(false);
+        }
     };
 
     // Single action helpers
     const handleActivate = (promotion: Promotion) => {
+        if (isAnyActionLoading()) return;
+
         setConfirmDialog({
             open: true,
             title: 'Activate Promotion',
             message: `Are you sure you want to activate "${promotion.name}"? All items must have sufficient stock.`,
             variant: 'info',
             onConfirm: () => {
-                activateMutation.mutate(promotion.id);
+                setPromotionLoading(promotion.id, 'activate', true);
+                activateMutation.mutate(promotion.id, {
+                    onSettled: () => {
+                        setPromotionLoading(promotion.id, 'activate', false);
+                    }
+                });
                 setConfirmDialog({ ...confirmDialog, open: false });
             },
             itemName: promotion.name,
@@ -312,13 +386,20 @@ export default function PromotionsPage() {
     };
 
     const handlePause = (promotion: Promotion) => {
+        if (isAnyActionLoading()) return;
+
         setConfirmDialog({
             open: true,
             title: 'Pause Promotion',
             message: `Are you sure you want to pause "${promotion.name}"? It will no longer be available to customers.`,
             variant: 'info',
             onConfirm: () => {
-                pauseMutation.mutate(promotion.id);
+                setPromotionLoading(promotion.id, 'pause', true);
+                pauseMutation.mutate(promotion.id, {
+                    onSettled: () => {
+                        setPromotionLoading(promotion.id, 'pause', false);
+                    }
+                });
                 setConfirmDialog({ ...confirmDialog, open: false });
             },
             itemName: promotion.name,
@@ -326,13 +407,20 @@ export default function PromotionsPage() {
     };
 
     const handleRefreshStock = (promotion: Promotion) => {
+        if (isAnyActionLoading()) return;
+
         setConfirmDialog({
             open: true,
             title: 'Refresh Stock',
             message: `Refresh stock availability for "${promotion.name}"?`,
             variant: 'info',
             onConfirm: () => {
-                refreshStockMutation.mutate(promotion.id);
+                setPromotionLoading(promotion.id, 'refreshStock', true);
+                refreshStockMutation.mutate(promotion.id, {
+                    onSettled: () => {
+                        setPromotionLoading(promotion.id, 'refreshStock', false);
+                    }
+                });
                 setConfirmDialog({ ...confirmDialog, open: false });
             },
             itemName: promotion.name,
@@ -340,13 +428,20 @@ export default function PromotionsPage() {
     };
 
     const handleDelete = (promotion: Promotion) => {
+        if (isAnyActionLoading()) return;
+
         setConfirmDialog({
             open: true,
             title: 'Delete Promotion',
             message: `Are you sure you want to delete "${promotion.name}"? This action cannot be undone.`,
             variant: 'error',
             onConfirm: () => {
-                bulkActionMutation.mutate({ action: 'delete', ids: [promotion.id] });
+                setPromotionLoading(promotion.id, 'delete', true);
+                deleteMutation.mutate(promotion.id, {
+                    onSettled: () => {
+                        setPromotionLoading(promotion.id, 'delete', false);
+                    }
+                });
                 setConfirmDialog({ ...confirmDialog, open: false });
             },
             itemName: promotion.name,
@@ -355,6 +450,8 @@ export default function PromotionsPage() {
 
     // Bulk actions
     const handleBulkActivate = (selectedItems: Promotion[]) => {
+        if (isAnyActionLoading()) return;
+
         setConfirmDialog({
             open: true,
             title: 'Bulk Activate Promotions',
@@ -362,6 +459,7 @@ export default function PromotionsPage() {
             variant: 'info',
             onConfirm: () => {
                 const ids = selectedItems.map(i => i.id);
+                setActiveBulkAction('activate');
                 bulkActionMutation.mutate({ action: 'activate', ids });
                 setConfirmDialog({ ...confirmDialog, open: false });
             },
@@ -369,6 +467,8 @@ export default function PromotionsPage() {
     };
 
     const handleBulkPause = (selectedItems: Promotion[]) => {
+        if (isAnyActionLoading()) return;
+
         setConfirmDialog({
             open: true,
             title: 'Bulk Pause Promotions',
@@ -376,6 +476,7 @@ export default function PromotionsPage() {
             variant: 'info',
             onConfirm: () => {
                 const ids = selectedItems.map(i => i.id);
+                setActiveBulkAction('pause');
                 bulkActionMutation.mutate({ action: 'pause', ids });
                 setConfirmDialog({ ...confirmDialog, open: false });
             },
@@ -383,6 +484,8 @@ export default function PromotionsPage() {
     };
 
     const handleBulkDelete = (selectedItems: Promotion[]) => {
+        if (isAnyActionLoading()) return;
+
         setConfirmDialog({
             open: true,
             title: 'Bulk Delete Promotions',
@@ -390,6 +493,7 @@ export default function PromotionsPage() {
             variant: 'error',
             onConfirm: () => {
                 const ids = selectedItems.map(i => i.id);
+                setActiveBulkAction('delete');
                 bulkActionMutation.mutate({ action: 'delete', ids });
                 setConfirmDialog({ ...confirmDialog, open: false });
             },
@@ -397,6 +501,8 @@ export default function PromotionsPage() {
     };
 
     const handleBulkExport = (selectedItems: Promotion[]) => {
+        if (isAnyActionLoading()) return;
+
         const exportData = selectedItems.map(item => ({
             name: item.name,
             bundle_price: item.bundle_price,
@@ -421,66 +527,71 @@ export default function PromotionsPage() {
 
     // Row actions
     const getPromotionActions = (promotion: Promotion): ActionItem[] => {
+        const isAnyLoading = isAnyActionLoading();
+        const isRowLoading = isPromotionLoading(promotion.id);
+        const isModifyDisabled = isAnyLoading;
+
         const actions: ActionItem[] = [];
 
-        // View Details - ALWAYS available for all statuses
         actions.push({
             label: 'View Details',
             icon: <Eye size={14} />,
             onClick: () => setViewingPromotion(promotion),
             color: 'blue',
+            disabled: false,
         });
 
-        // Edit - ONLY for draft (can't edit active/paused/ended promotions)
         if (promotion.status !== 'active') {
             actions.push({
                 label: 'Edit Promotion',
                 icon: <Edit size={14} />,
                 onClick: () => setEditingPromotion(promotion),
                 color: 'emerald',
+                disabled: isModifyDisabled,
             });
         }
 
-        // Activate (Play button) - for draft OR paused promotions
-        // A paused promotion can be reactivated
         if (promotion.status === 'draft' || promotion.status === 'paused') {
             actions.push({
                 label: 'Activate',
                 icon: <Play size={14} />,
                 onClick: () => handleActivate(promotion),
                 color: 'emerald',
+                disabled: isModifyDisabled,
+                loading: isRowLoading && loadingStates[promotion.id]?.activate,
             });
         }
 
-        // Pause - ONLY for active promotions
         if (promotion.status === 'active') {
             actions.push({
                 label: 'Pause',
                 icon: <Pause size={14} />,
                 onClick: () => handlePause(promotion),
                 color: 'amber',
+                disabled: isModifyDisabled,
+                loading: isRowLoading && loadingStates[promotion.id]?.pause,
             });
         }
 
-        // Refresh Stock - for active OR paused promotions
-        // Stock can be refreshed even when paused to check availability
         if (promotion.status === 'active' || promotion.status === 'paused') {
             actions.push({
                 label: 'Refresh Stock',
                 icon: <RefreshCw size={14} />,
                 onClick: () => handleRefreshStock(promotion),
                 color: 'blue',
+                disabled: isModifyDisabled,
+                loading: isRowLoading && loadingStates[promotion.id]?.refreshStock,
             });
         }
 
-        // Delete - ONLY for draft or ended promotions
-        // Cannot delete active or paused promotions
         if (promotion.status === 'draft' || promotion.status === 'ended') {
             actions.push({
                 label: 'Delete',
                 icon: <Trash2 size={14} />,
                 variant: 'destructive',
                 onClick: () => handleDelete(promotion),
+                disabled: isModifyDisabled,
+                loading: isRowLoading && loadingStates[promotion.id]?.delete,
             });
         }
 
@@ -489,10 +600,35 @@ export default function PromotionsPage() {
 
     // Bulk actions
     const bulkActions = [
-        { label: 'Activate Selected', icon: <Play size={14} />, onClick: handleBulkActivate, color: 'emerald' as const },
-        { label: 'Pause Selected', icon: <Pause size={14} />, onClick: handleBulkPause, color: 'amber' as const },
-        { label: 'Delete Selected', icon: <Trash2 size={14} />, onClick: handleBulkDelete, color: 'rose' as const, variant: 'destructive' as const },
-        { label: 'Export Selected', icon: <Upload size={14} />, onClick: handleBulkExport, color: 'blue' as const },
+        {
+            label: 'Activate Selected',
+            icon: activeBulkAction === 'activate' ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />,
+            onClick: handleBulkActivate,
+            color: 'emerald' as const,
+            disabled: isAnyActionLoading(),
+        },
+        {
+            label: 'Pause Selected',
+            icon: activeBulkAction === 'pause' ? <Loader2 size={14} className="animate-spin" /> : <Pause size={14} />,
+            onClick: handleBulkPause,
+            color: 'amber' as const,
+            disabled: isAnyActionLoading(),
+        },
+        {
+            label: 'Delete Selected',
+            icon: activeBulkAction === 'delete' ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />,
+            onClick: handleBulkDelete,
+            color: 'rose' as const,
+            variant: 'destructive' as const,
+            disabled: isAnyActionLoading(),
+        },
+        {
+            label: 'Export Selected',
+            icon: <Upload size={14} />,
+            onClick: handleBulkExport,
+            color: 'blue' as const,
+            disabled: isAnyActionLoading(),
+        },
     ];
 
     const promotions = data?.data?.promotions || [];
@@ -508,32 +644,14 @@ export default function PromotionsPage() {
                 </div>
 
                 <div className="flex justify-between items-center">
-                    <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+                    <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2" disabled={isAnyActionLoading()}>
                         <Plus size={16} />
                         New Promotion
                     </Button>
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                        <RefreshCw size={16} />
+                    <Button variant="outline" onClick={handleRefresh} className="gap-2" disabled={isAnyActionLoading()}>
+                        {isRefreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                         Refresh
                     </Button>
-                </div>
-
-                <div className="flex flex-wrap gap-64 items-start justify-between">
-                    <div className="flex-1">
-                        <CustomFilter
-                            config={filterConfig}
-                            filters={{
-                                search: appliedFilters.search,
-                                status: appliedFilters.status,
-                            }}
-                            onFilterChange={handleFilterChange}
-                            onReset={handleResetFilters}
-                        />
-                    </div>
-                    <CustomSort
-                        config={sortConfig}
-                        onSortChange={handleSortChange}
-                    />
                 </div>
 
                 <div className="text-center py-12">
@@ -553,33 +671,22 @@ export default function PromotionsPage() {
 
             {/* Buttons */}
             <div className="flex justify-between items-center">
-                <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+                <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2" disabled={isAnyActionLoading()}>
                     <Plus size={16} />
                     New Promotion
                 </Button>
-                <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                    <RefreshCw size={16} />
+                <Button variant="outline" onClick={handleRefresh} className="gap-2" disabled={isAnyActionLoading()}>
+                    {isRefreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                     Refresh
                 </Button>
             </div>
 
-            {/* Filters and Sort */}
+            {/* Filters and Sort - CustomFilter and CustomSortFromUrl have their own Suspense internally */}
             <div className="flex flex-wrap gap-64 items-start justify-between">
                 <div className="flex-1">
-                    <CustomFilter
-                        config={filterConfig}
-                        filters={{
-                            search: appliedFilters.search,
-                            status: appliedFilters.status,
-                        }}
-                        onFilterChange={handleFilterChange}
-                        onReset={handleResetFilters}
-                    />
+                    <CustomFilter config={filterConfig} />
                 </div>
-                <CustomSort
-                    config={sortConfig}
-                    onSortChange={handleSortChange}
-                />
+                <CustomSortFromUrl config={sortConfig} />
             </div>
 
             {/* Confirmation Dialog */}
@@ -644,7 +751,6 @@ export default function PromotionsPage() {
             >
                 {viewingPromotion && (
                     <div className="space-y-6 p-4">
-                        {/* Basic Info */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Name</label>
@@ -688,7 +794,6 @@ export default function PromotionsPage() {
                             </div>
                         </div>
 
-                        {/* Description */}
                         {viewingPromotion.description && (
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Description</label>
@@ -696,7 +801,6 @@ export default function PromotionsPage() {
                             </div>
                         )}
 
-                        {/* Items */}
                         {viewingPromotion.items.length > 0 && (
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Bundle Items</label>
@@ -722,7 +826,6 @@ export default function PromotionsPage() {
                             </div>
                         )}
 
-                        {/* Free Items */}
                         {viewingPromotion.free_items.length > 0 && (
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Free Items</label>
@@ -742,7 +845,6 @@ export default function PromotionsPage() {
                             </div>
                         )}
 
-                        {/* Images */}
                         {viewingPromotion.images.length > 0 && (
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Images</label>
@@ -783,7 +885,6 @@ export default function PromotionsPage() {
                                 ended: 'zinc',
                             },
                         }}
-
                         dots={{
                             has_stock: {
                                 true: 'emerald',
@@ -811,5 +912,18 @@ export default function PromotionsPage() {
                 </>
             )}
         </div>
+    );
+}
+
+// Main exported component with Suspense boundary
+export default function PromotionsPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            </div>
+        }>
+            <PromotionsPageContent />
+        </Suspense>
     );
 }

@@ -34,12 +34,12 @@ interface ProductVariantsListProps {
 }
 
 const fetchVariants = async (productId: string): Promise<Variant[]> => {
-    const response = await securityAxios.get(endpoints.products.getProductDetails.replace(':id', productId));
+    const response = await securityAxios.get(endpoints.products.AdminGetProductDetails.replace(':id', productId));
     return response.data.data.variants || [];
 };
 
 const deleteVariant = async (variantId: string) => {
-    const response = await securityAxios.delete(endpoints.products.deleteVariant.replace(':id', variantId));
+    const response = await securityAxios.delete(endpoints.products.adminDeleteVariant.replace(':id', variantId));
     return response.data;
 };
 

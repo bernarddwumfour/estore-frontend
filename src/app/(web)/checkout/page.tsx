@@ -9,6 +9,7 @@ import { useCartStore } from '@/app/lib/store/cart-store';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/use-auth';
 import UnAuthenticatedAxios from '@/axios-instances/UnAuthenticatedAxios';
+import SecurityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { useRouter } from 'next/navigation';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -172,12 +173,10 @@ export default function CheckoutPage() {
 
       setIsCalculatingShipping(true);
       try {
-        // Prepare items for shipping calculation (expand bundles)
         const shippingItems: any[] = [];
 
         for (const item of items) {
           if (item.isBundle && item.bundleItems) {
-            // Expand bundle items for weight calculation
             for (const bundleItem of item.bundleItems) {
               shippingItems.push({
                 variant_id: bundleItem.variantId,
@@ -192,6 +191,7 @@ export default function CheckoutPage() {
           }
         }
 
+        // Shipping calculation doesn't need auth
         const response = await UnAuthenticatedAxios.post(endpoints.orders.shippingOptions, {
           country_code: address.country,
           city: address.city,
@@ -307,10 +307,8 @@ export default function CheckoutPage() {
       items: [],
     };
 
-    // Process cart items - support both regular items and bundles
     for (const item of items) {
       if (item.isBundle && item.bundleId) {
-        // Handle bundle/promotion
         orderData.items.push({
           is_bundle: true,
           bundle_id: item.bundleId,
@@ -325,7 +323,6 @@ export default function CheckoutPage() {
           })) || [],
         });
       } else {
-        // Handle regular variant
         orderData.items.push({
           is_bundle: false,
           variant_id: item.variantId,
@@ -334,7 +331,6 @@ export default function CheckoutPage() {
       }
     }
 
-    // Add guest_info for non-authenticated users
     if (!isAuthenticated) {
       orderData.guest_info = {
         email: guestInfo.email,
@@ -344,7 +340,6 @@ export default function CheckoutPage() {
       };
     }
 
-    // Add billing address if separate
     if (formData.use_separate_billing) {
       orderData.billing_address = {
         ...formData.billing_address,
@@ -360,8 +355,13 @@ export default function CheckoutPage() {
     try {
       const orderData = prepareOrderData();
       console.log("Submitting order:", orderData);
+      console.log("Is authenticated:", isAuthenticated);
+      console.log("Using axios instance:", isAuthenticated ? "SecurityAxios" : "UnAuthenticatedAxios");
 
-      const response = await UnAuthenticatedAxios.post(endpoints.orders.createOrder, orderData);
+      // Use the appropriate axios instance based on authentication status
+      const axiosInstance = isAuthenticated ? SecurityAxios : UnAuthenticatedAxios;
+
+      const response = await axiosInstance.post(endpoints.orders.createOrder, orderData);
 
       if (response.status === 200 || response.status === 201) {
         const apiResponse = response.data;
@@ -709,7 +709,6 @@ export default function CheckoutPage() {
                       <CreditCard className="h-5 w-5" /> Billing Address
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Billing address fields - same as shipping */}
                       <Input
                         name="billing_address.first_name"
                         placeholder="First Name *"

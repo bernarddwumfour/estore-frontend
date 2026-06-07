@@ -29,7 +29,7 @@ const fetchVariants = async (search?: string): Promise<Variant[]> => {
     const queryParams = new URLSearchParams();
     if (search) queryParams.append('search', search);
     queryParams.append('limit', '50');
-    const response = await securityAxios.get(`${endpoints.products.listVariants}?${queryParams.toString()}`);
+    const response = await securityAxios.get(`${endpoints.products.adminListVariants}?${queryParams.toString()}`);
     return response.data.data?.variants || [];
 };
 

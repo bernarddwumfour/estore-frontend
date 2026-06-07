@@ -1,10 +1,11 @@
+// app/dashboard/users/logs/page.tsx
 'use client';
 
-import React, { ReactNode, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useMemo, Suspense } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
-    Eye, RefreshCw, Copy, Info,
-    Package, ShoppingCart, Users, Tag, Server
+    Eye, RefreshCw, Copy, Info, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -15,8 +16,8 @@ import { CustomSheet } from '@/widgets/CustomSheet/CustomSheet';
 import { DataTable } from '@/widgets/Customtable/DataTable';
 import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
 import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
-import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
-import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
+import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilterFromUrl';
+import { CustomSortFromUrl, SortConfig } from '@/widgets/CustomSort/CustomSortFromUrl';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
 import Link from 'next/link';
 
@@ -36,8 +37,16 @@ interface LogEntry {
     created_at: string;
 }
 
-// Fetch logs with pagination - always filtered by products app
-const fetchLogs = async (params?: any): Promise<{
+// Fetch logs with pagination - filtered by users app
+const fetchLogs = async (params: {
+    page: number;
+    limit: number;
+    severity: string;
+    status_code: string;
+    search: string;
+    sort_by: string;
+    sort_order: string;
+}): Promise<{
     data: {
         logs: LogEntry[];
         total: number;
@@ -45,15 +54,14 @@ const fetchLogs = async (params?: any): Promise<{
     }
 }> => {
     const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    // Always filter by products app
-    queryParams.append('app_name', 'products');
-    if (params?.severity && params.severity !== '') queryParams.append('severity', params.severity);
-    if (params?.status_code && params.status_code !== '') queryParams.append('status_code', params.status_code);
-    if (params?.search && params.search !== '') queryParams.append('search', params.search);
-    if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
-    if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    queryParams.append('app_name', 'users');
+    if (params.severity) queryParams.append('severity', params.severity);
+    if (params.status_code) queryParams.append('status_code', params.status_code);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+    if (params.sort_order) queryParams.append('sort_order', params.sort_order);
 
     const url = `${endpoints.common.logs}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await securityAxios.get(url);
@@ -69,13 +77,13 @@ const fetchLogDetail = async (logId: string): Promise<any> => {
 // Fetch stats
 const fetchLogStats = async (days?: number): Promise<any> => {
     const queryParams = new URLSearchParams();
-    queryParams.append('app_name', 'products');
+    queryParams.append('app_name', 'users');
     if (days) queryParams.append('days', days.toString());
     const response = await securityAxios.get(`${endpoints.common.logsStats}?${queryParams.toString()}`);
     return response.data;
 };
 
-// Filter configuration - No app filter since it's fixed to products
+// Filter configuration - No app filter since it's fixed to users
 const filterConfig: FilterConfig = {
     fields: [
         {
@@ -111,6 +119,7 @@ const filterConfig: FilterConfig = {
     ],
     searchPlaceholder: 'Search by description, action, or user email...',
     showSearch: true,
+    urlParamPrefix: 'log',
 };
 
 // Sort configuration
@@ -123,6 +132,7 @@ const sortConfig: SortConfig = {
     ],
     defaultSortBy: 'created_at',
     defaultSortOrder: 'desc',
+    urlParamPrefix: 'log',
 };
 
 // Severity badge mapping
@@ -134,8 +144,11 @@ const severityBadgeConfig: Record<string, 'emerald' | 'amber' | 'rose' | 'zinc'>
     DEBUG: 'zinc',
 };
 
-export default function ProductsLogsPage() {
-    const queryClient = useQueryClient();
+// Main content component that uses useSearchParams
+function UsersLogsPageContent() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     // State for sheets/dialogs
     const [viewingLog, setViewingLog] = useState<LogEntry | null>(null);
@@ -145,77 +158,71 @@ export default function ProductsLogsPage() {
     const [statsData, setStatsData] = useState<any>(null);
     const [statsLoading, setStatsLoading] = useState(false);
 
-    // Filter and pagination state
-    const [filters, setFilters] = useState({
-        page: 1,
-        limit: 20,
-    });
+    // Track refresh loading
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Track applied filters
-    const [appliedFilters, setAppliedFilters] = useState({
-        severity: '',
-        status_code: '',
-        search: '',
-        sort_by: 'created_at',
-        sort_order: 'desc',
-    });
+    // Build fetch params directly from URL
+    const fetchParams = useMemo(() => {
+        const sortBy = searchParams.get('log_sort_by') || 'created_at';
+        const sortOrder = searchParams.get('log_sort_order') || 'desc';
+
+        return {
+            page: Number(searchParams.get('page')) || 1,
+            limit: Number(searchParams.get('limit')) || 20,
+            severity: searchParams.get('log_severity') || '',
+            status_code: searchParams.get('log_status_code') || '',
+            search: searchParams.get('search') || '',
+            sort_by: sortBy,
+            sort_order: sortOrder,
+        };
+    }, [searchParams]);
 
     // Query for logs
     const { data, isLoading, isError, error, refetch } = useQuery({
-        queryKey: ['products-logs', filters.page, filters.limit, appliedFilters],
-        queryFn: () => fetchLogs({
-            page: filters.page,
-            limit: filters.limit,
-            ...appliedFilters,
-        }),
+        queryKey: ['users-logs', fetchParams],
+        queryFn: () => fetchLogs(fetchParams),
     });
 
-    // Pagination handlers
+    // Check if any action is loading
+    const isAnyActionLoading = () => {
+        return isRefreshing || isDetailLoading || statsLoading;
+    };
+
+    // Pagination handlers - update URL
     const handlePageChange = (page: number) => {
-        setFilters({ ...filters, page });
+        if (isAnyActionLoading()) {
+            toast.error('Please wait for current action to complete');
+            return;
+        }
+        const params = new URLSearchParams(searchParams);
+        params.set('page', page.toString());
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
     const handleLimitChange = (limit: number) => {
-        setFilters({ page: 1, limit });
-    };
-
-    // Handle filter changes
-    const handleFilterChange = (newFilters: Record<string, any>) => {
-        setAppliedFilters({
-            ...appliedFilters,
-            severity: newFilters.severity || '',
-            status_code: newFilters.status_code || '',
-            search: newFilters.search || '',
-        });
-        setFilters({ ...filters, page: 1 });
-    };
-
-    // Handle sort changes
-    const handleSortChange = (sortBy: string, sortOrder: 'asc' | 'desc') => {
-        setAppliedFilters({
-            ...appliedFilters,
-            sort_by: sortBy,
-            sort_order: sortOrder,
-        });
-        setFilters({ ...filters, page: 1 });
+        if (isAnyActionLoading()) {
+            toast.error('Please wait for current action to complete');
+            return;
+        }
+        const params = new URLSearchParams(searchParams);
+        params.set('limit', limit.toString());
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
     // Refresh handler
-    const handleRefresh = () => {
-        refetch();
-        toast.success('Product logs refreshed');
-    };
-
-    // Reset all filters
-    const handleResetFilters = () => {
-        setAppliedFilters({
-            severity: '',
-            status_code: '',
-            search: '',
-            sort_by: 'created_at',
-            sort_order: 'desc',
-        });
-        setFilters({ page: 1, limit: filters.limit });
+    const handleRefresh = async () => {
+        if (isAnyActionLoading()) {
+            toast.error('Please wait for current action to complete');
+            return;
+        }
+        setIsRefreshing(true);
+        try {
+            await refetch();
+            toast.success('Users logs refreshed');
+        } finally {
+            setIsRefreshing(false);
+        }
     };
 
     // View log details
@@ -233,7 +240,7 @@ export default function ProductsLogsPage() {
         }
     };
 
-    // Copy log
+    // Copy log (no API call)
     const handleCopyLog = (log: LogEntry) => {
         const logText = JSON.stringify({
             id: log.id,
@@ -268,7 +275,7 @@ export default function ProductsLogsPage() {
 
     // Build stats message for InfoDialog
     const getStatsMessage = () => {
-        if (!statsData) return '';
+        if (!statsData) return 'No statistics available';
         let message = `Total Logs: ${statsData.total_logs}\nError Rate: ${statsData.error_rate}%\n\nBy Severity:\n`;
         if (statsData.logs_by_severity) {
             message += Object.entries(statsData.logs_by_severity).map(([k, v]) => `${k}: ${v}`).join('\n');
@@ -276,19 +283,21 @@ export default function ProductsLogsPage() {
         return message;
     };
 
-    // Row actions
+    // Row actions - view actions always enabled
     const getLogActions = (log: LogEntry): ActionItem[] => [
         {
             label: 'View Details',
             icon: <Eye size={14} />,
             onClick: () => handleViewLog(log),
             color: 'blue',
+            disabled: false,
         },
         {
             label: 'Copy Log',
             icon: <Copy size={14} />,
             onClick: () => handleCopyLog(log),
             color: 'violet',
+            disabled: false,
         },
     ];
 
@@ -300,38 +309,26 @@ export default function ProductsLogsPage() {
         return (
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Products Logs</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Monitor product-related system activity</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Users Logs</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Monitor user-related system activity</p>
                 </div>
 
                 <div className="flex justify-between items-center">
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                        <RefreshCw size={16} />
-                        Refresh
-                    </Button>
-                    <Button onClick={handleViewStats} variant="outline" className="gap-2">
-                        <Info size={16} />
-                        Statistics
-                    </Button>
-                </div>
-
-                <div className="flex flex-wrap gap-64 items-start justify-between">
-                    <div className="flex-1">
-                        <CustomFilter
-                            config={filterConfig}
-                            filters={{
-                                severity: appliedFilters.severity,
-                                status_code: appliedFilters.status_code,
-                                search: appliedFilters.search,
-                            }}
-                            onFilterChange={handleFilterChange}
-                            onReset={handleResetFilters}
-                        />
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={handleRefresh} className="gap-2" disabled={isAnyActionLoading()}>
+                            {isRefreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                            Refresh
+                        </Button>
+                        <Button onClick={handleViewStats} variant="outline" className="gap-2" disabled={statsLoading}>
+                            {statsLoading ? <Loader2 size={16} className="animate-spin" /> : <Info size={16} />}
+                            Statistics
+                        </Button>
                     </div>
-                    <CustomSort
-                        config={sortConfig}
-                        onSortChange={handleSortChange}
-                    />
+                    <Link href="/dashboard/logs">
+                        <Button variant="outline" size="sm">
+                            All Logs
+                        </Button>
+                    </Link>
                 </div>
 
                 <div className="text-center py-12">
@@ -344,18 +341,18 @@ export default function ProductsLogsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Products Logs</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Monitor product-related system activity including inventory, variants, categories, and reviews</p>
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Users Logs</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Monitor user-related system activity including authentication, profiles, and permissions</p>
             </div>
 
             <div className="flex justify-between items-center">
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                        <RefreshCw size={16} />
+                    <Button variant="outline" onClick={handleRefresh} className="gap-2" disabled={isAnyActionLoading()}>
+                        {isRefreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                         Refresh
                     </Button>
-                    <Button onClick={handleViewStats} variant="outline" className="gap-2">
-                        <Info size={16} />
+                    <Button onClick={handleViewStats} variant="outline" className="gap-2" disabled={statsLoading}>
+                        {statsLoading ? <Loader2 size={16} className="animate-spin" /> : <Info size={16} />}
                         Statistics
                     </Button>
                 </div>
@@ -366,29 +363,18 @@ export default function ProductsLogsPage() {
                 </Link>
             </div>
 
+            {/* Filters and Sort - CustomFilter and CustomSortFromUrl have their own Suspense internally */}
             <div className="flex flex-wrap gap-64 items-start justify-between">
                 <div className="flex-1">
-                    <CustomFilter
-                        config={filterConfig}
-                        filters={{
-                            severity: appliedFilters.severity,
-                            status_code: appliedFilters.status_code,
-                            search: appliedFilters.search,
-                        }}
-                        onFilterChange={handleFilterChange}
-                        onReset={handleResetFilters}
-                    />
+                    <CustomFilter config={filterConfig} />
                 </div>
-                <CustomSort
-                    config={sortConfig}
-                    onSortChange={handleSortChange}
-                />
+                <CustomSortFromUrl config={sortConfig} />
             </div>
 
             <InfoDialog
                 open={statsDialogOpen}
                 onOpenChange={setStatsDialogOpen}
-                title="Products Log Statistics"
+                title="Users Log Statistics"
                 infoMessage={statsLoading ? "Loading statistics..." : getStatsMessage()}
                 variant="info"
                 primaryButtonText="Close"
@@ -405,7 +391,7 @@ export default function ProductsLogsPage() {
             >
                 {isDetailLoading ? (
                     <div className="flex justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+                        <Loader2 className="h-8 w-8 animate-spin text-gray-600 dark:text-gray-400" />
                     </div>
                 ) : (logDetailData || viewingLog) && (
                     <div className="space-y-4 p-4">
@@ -468,6 +454,7 @@ export default function ProductsLogsPage() {
                 )}
             </CustomSheet>
 
+            {/* Data Table */}
             {isLoading ? (
                 <TableSkeleton />
             ) : (
@@ -496,11 +483,11 @@ export default function ProductsLogsPage() {
                                 500: 'rose',
                             },
                         }}
-
-                        emptyTitle="No Product Logs Found"
-                        emptyDescription="No product-related logs match your filter criteria. Try adjusting your filters."
+                        emptyTitle="No User Logs Found"
+                        emptyDescription="No user-related logs match your filter criteria. Try adjusting your filters."
                     />
 
+                    {/* Pagination */}
                     {pagination && pagination.total_pages > 1 && (
                         <CustomPagination
                             pagination={pagination}
@@ -513,5 +500,18 @@ export default function ProductsLogsPage() {
                 </>
             )}
         </div>
+    );
+}
+
+// Main exported component with Suspense boundary
+export default function UsersLogsPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            </div>
+        }>
+            <UsersLogsPageContent />
+        </Suspense>
     );
 }
