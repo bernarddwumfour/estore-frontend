@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
     Eye, RefreshCw, Package, Truck, CheckCircle, XCircle,
-    MapPin, Calendar, Clock, Upload, Download, Filter
+    MapPin, Calendar, Clock, Upload, Download, Filter, Send
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,8 @@ interface ShipmentDetail {
     estimated_delivery: string | null;
     shipping_method: string;
     shipping_cost: number;
+    shipping_cost_actual: number | null;
+    service_level: string | null;
     weight: number | null;
     notes: string;
     created_at: string;
@@ -63,6 +65,7 @@ interface ShipmentDetail {
         status_display: string;
         location: string;
         description: string;
+        carrier_status: string;
         created_at: string;
     }>;
     shipping_address: {
@@ -95,6 +98,8 @@ interface ShipmentDetail {
         item_count: number;
         payment_status: string;
         payment_method: string;
+        order_status: string;
+        order_status_display: string;
     };
 }
 
@@ -128,6 +133,12 @@ const fetchShipmentDetail = async (id: string): Promise<ShipmentDetail> => {
     return response.data.data;
 };
 
+// Assign carrier and ship
+const assignCarrierAndShip = async (orderId: string, data: any) => {
+    const response = await securityAxios.post(`/orders/admin/shipments/${orderId}/assign-carrier-and-ship`, { ...data });
+    return response.data;
+};
+
 // Update shipment status
 const updateShipmentStatus = async (id: string, data: any) => {
     const response = await securityAxios.put(`/orders/admin/shipments/${id}/update-status`, data);
@@ -149,13 +160,16 @@ const filterConfig: FilterConfig = {
             placeholder: 'Shipment Status',
             options: [
                 { value: 'pending', label: 'Pending' },
+                { value: 'processing', label: 'Processing' },
                 { value: 'shipped', label: 'Shipped' },
+                { value: 'in_transit', label: 'In Transit' },
+                { value: 'out_for_delivery', label: 'Out for Delivery' },
                 { value: 'delivered', label: 'Delivered' },
-                { value: 'cancelled', label: 'Cancelled' },
+                { value: 'failed', label: 'Failed' },
                 { value: 'returned', label: 'Returned' },
             ],
             defaultValue: '',
-            width: '140px',
+            width: '150px',
         },
         {
             name: 'carrier',
@@ -190,23 +204,143 @@ const sortConfig: SortConfig = {
         { value: 'shipped_at', label: 'Shipped Date' },
         { value: 'delivered_at', label: 'Delivered Date' },
         { value: 'status', label: 'Status' },
+        { value: 'carrier', label: 'Carrier' },
     ],
     defaultSortBy: 'created_at',
     defaultSortOrder: 'desc',
 };
 
+// Assign Carrier Form Component
+function AssignCarrierForm({ shipment, onSuccess, onCancel }: { shipment: Shipment; onSuccess: () => void; onCancel: () => void }) {
+    const [carrier, setCarrier] = useState("");
+    const [trackingNumber, setTrackingNumber] = useState("");
+    const [trackingUrl, setTrackingUrl] = useState("");
+    const [shippingCostActual, setShippingCostActual] = useState("");
+    const [serviceLevel, setServiceLevel] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const carrierOptions = [
+        { value: "fedex", label: "FedEx" },
+        { value: "dhl", label: "DHL" },
+        { value: "ups", label: "UPS" },
+        { value: "usps", label: "USPS" },
+    ];
+
+    const handleSubmit = async () => {
+        if (!carrier || !trackingNumber) {
+            toast.error("Carrier and tracking number are required");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const response = await assignCarrierAndShip(shipment.order_id, {
+                carrier,
+                tracking_number: trackingNumber,
+                tracking_url: trackingUrl,
+                shipping_cost_actual: shippingCostActual ? parseFloat(shippingCostActual) : null,
+                service_level: serviceLevel,
+            });
+
+            if (response.success) {
+                toast.success(`Shipment assigned to ${carrier} and marked as shipped`);
+                onSuccess();
+            } else {
+                toast.error(response.message || "Failed to assign carrier");
+            }
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || "Failed to assign carrier");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Carrier *</label>
+                <select
+                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                    value={carrier}
+                    onChange={(e) => setCarrier(e.target.value)}
+                >
+                    <option value="">Select carrier</option>
+                    {carrierOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                </select>
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tracking Number *</label>
+                <input
+                    type="text"
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                    placeholder="Enter tracking number"
+                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                />
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tracking URL (Optional)</label>
+                <input
+                    type="url"
+                    value={trackingUrl}
+                    onChange={(e) => setTrackingUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Actual Shipping Cost (Optional)</label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        value={shippingCostActual}
+                        onChange={(e) => setShippingCostActual(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Service Level (Optional)</label>
+                    <input
+                        type="text"
+                        value={serviceLevel}
+                        onChange={(e) => setServiceLevel(e.target.value)}
+                        placeholder="e.g., Express, Standard"
+                        className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                    />
+                </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={onCancel}>Cancel</Button>
+                <Button onClick={handleSubmit} disabled={isSubmitting}>
+                    {isSubmitting ? "Processing..." : "Assign Carrier & Ship"}
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 // Update Status Form Component
 function UpdateShipmentStatusForm({ shipment, onSuccess, onCancel }: { shipment: Shipment; onSuccess: () => void; onCancel: () => void }) {
     const [selectedStatus, setSelectedStatus] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [trackingNumber, setTrackingNumber] = useState(shipment.tracking_number || "");
-    const [carrier, setCarrier] = useState(shipment.carrier || "");
     const [location, setLocation] = useState("");
     const [description, setDescription] = useState("");
+    const [carrierStatus, setCarrierStatus] = useState("");
 
     const statusOptions = [
+        { value: "processing", label: "Processing" },
+        { value: "in_transit", label: "In Transit" },
+        { value: "out_for_delivery", label: "Out for Delivery" },
         { value: "delivered", label: "Delivered" },
-        { value: "cancelled", label: "Cancelled" },
+        { value: "failed", label: "Failed" },
         { value: "returned", label: "Returned" },
     ];
 
@@ -220,14 +354,13 @@ function UpdateShipmentStatusForm({ shipment, onSuccess, onCancel }: { shipment:
         try {
             const response = await updateShipmentStatus(shipment.id, {
                 shipment_status: selectedStatus,
-                tracking_number: trackingNumber,
-                carrier: carrier,
                 location: location,
                 description: description,
+                carrier_status: carrierStatus,
             });
 
             if (response.success) {
-                toast.success(`Shipment status updated to ${selectedStatus}`);
+                toast.success(`Shipment status updated to ${selectedStatus.replace(/_/g, ' ')}`);
                 onSuccess();
             } else {
                 toast.error(response.message || "Failed to update status");
@@ -255,29 +388,6 @@ function UpdateShipmentStatusForm({ shipment, onSuccess, onCancel }: { shipment:
                 </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tracking Number</label>
-                    <input
-                        type="text"
-                        value={trackingNumber}
-                        onChange={(e) => setTrackingNumber(e.target.value)}
-                        placeholder="Enter tracking number"
-                        className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Carrier</label>
-                    <input
-                        type="text"
-                        value={carrier}
-                        onChange={(e) => setCarrier(e.target.value)}
-                        placeholder="e.g., FedEx, DHL, UPS"
-                        className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
-                    />
-                </div>
-            </div>
-
             <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Location (Optional)</label>
                 <input
@@ -290,11 +400,22 @@ function UpdateShipmentStatusForm({ shipment, onSuccess, onCancel }: { shipment:
             </div>
 
             <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Carrier Status (Optional)</label>
+                <input
+                    type="text"
+                    value={carrierStatus}
+                    onChange={(e) => setCarrierStatus(e.target.value)}
+                    placeholder="Status from carrier"
+                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                />
+            </div>
+
+            <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</label>
                 <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Additional details"
+                    placeholder="Additional details about this update"
                     rows={2}
                     className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
                 />
@@ -343,9 +464,12 @@ function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClo
     const getStatusColor = (status: string) => {
         const colors: Record<string, string> = {
             pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+            processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
             shipped: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+            in_transit: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+            out_for_delivery: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
             delivered: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-            cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+            failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
             returned: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
         };
         return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
@@ -353,7 +477,7 @@ function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClo
 
     return (
         <div className="space-y-6 p-4">
-            {/* Status Badge */}
+            {/* Status Badge and Tracking Link */}
             <div className="flex justify-between items-center">
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(shipment.status)}`}>
                     {shipment.status_display}
@@ -378,12 +502,14 @@ function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClo
                     <p className="font-medium text-gray-900 dark:text-white">{shipment.carrier || '—'}</p>
                 </div>
                 <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Shipping Method</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{shipment.shipping_method || '—'}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Service Level</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{shipment.service_level || '—'}</p>
                 </div>
                 <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Shipping Cost</p>
-                    <p className="font-medium text-gray-900 dark:text-white">${shipment.shipping_cost.toFixed(2)}</p>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                        {shipment.shipping_cost_actual ? `$${shipment.shipping_cost_actual.toFixed(2)}` : `$${shipment.shipping_cost.toFixed(2)} (estimated)`}
+                    </p>
                 </div>
                 <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Shipped Date</p>
@@ -397,6 +523,16 @@ function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClo
                         {shipment.delivered_at ? new Date(shipment.delivered_at).toLocaleDateString() : '—'}
                     </p>
                 </div>
+                <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Order Status</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{shipment.order_summary.order_status_display}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Estimated Delivery</p>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                        {shipment.estimated_delivery ? new Date(shipment.estimated_delivery).toLocaleDateString() : '—'}
+                    </p>
+                </div>
             </div>
 
             {/* Tracking History */}
@@ -407,7 +543,9 @@ function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClo
                         {shipment.tracking_history.map((event, index) => (
                             <div key={index} className="flex gap-3">
                                 <div className="relative">
-                                    <div className="w-3 h-3 rounded-full bg-orange-500 mt-1.5" />
+                                    <div className={`w-3 h-3 rounded-full ${event.status === 'delivered' ? 'bg-green-500' :
+                                        event.status === 'shipped' ? 'bg-indigo-500' : 'bg-orange-500'
+                                        } mt-1.5`} />
                                     {index !== shipment.tracking_history.length - 1 && (
                                         <div className="absolute top-5 left-1.5 w-0.5 h-full bg-gray-200 dark:bg-gray-700" />
                                     )}
@@ -420,9 +558,66 @@ function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClo
                                             <MapPin className="h-3 w-3" /> {event.location}
                                         </p>
                                     )}
+                                    {event.carrier_status && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                            Carrier: {event.carrier_status}
+                                        </p>
+                                    )}
                                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                                         {new Date(event.created_at).toLocaleString()}
                                     </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Order Summary */}
+            <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Order Summary</h3>
+                <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg space-y-2">
+                    <div className="flex justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Subtotal:</span>
+                        <span className="text-sm font-medium">{shipment.order_summary.currency} {shipment.order_summary.subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Shipping:</span>
+                        <span className="text-sm font-medium">{shipment.order_summary.currency} {shipment.order_summary.shipping_cost.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Tax:</span>
+                        <span className="text-sm font-medium">{shipment.order_summary.currency} {shipment.order_summary.tax_amount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Discount:</span>
+                        <span className="text-sm font-medium text-red-600">-{shipment.order_summary.currency} {shipment.order_summary.discount_amount.toFixed(2)}</span>
+                    </div>
+                    <div className="border-t pt-2 mt-2 flex justify-between">
+                        <span className="font-semibold">Total:</span>
+                        <span className="font-bold">{shipment.order_summary.currency} {shipment.order_summary.total.toFixed(2)}</span>
+                    </div>
+                    {/* <div className="flex justify-between text-xs text-gray-500">
+                        <span>Payment: {shipment.order_summary.payment_method_display || shipment.order_summary.payment_method}</span>
+                        <span>Status: {shipment.order_summary.payment_status_display || shipment.order_summary.payment_status}</span>
+                    </div> */}
+                </div>
+            </div>
+
+            {/* Order Items */}
+            {shipment.order_items && shipment.order_items.length > 0 && (
+                <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Order Items</h3>
+                    <div className="space-y-2">
+                        {shipment.order_items.map((item) => (
+                            <div key={item.id} className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg flex justify-between items-center">
+                                <div>
+                                    <p className="font-medium text-gray-900 dark:text-white">{item.product_title}</p>
+                                    <p className="text-xs text-gray-500">SKU: {item.sku} | Qty: {item.quantity}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm font-medium">{shipment.order_summary.currency} {(item.unit_price * item.quantity).toFixed(2)}</p>
+                                    <p className="text-xs text-gray-500">${item.unit_price.toFixed(2)} each</p>
                                 </div>
                             </div>
                         ))}
@@ -461,6 +656,7 @@ export default function ShipmentsPage() {
 
     // State for sheets/dialogs
     const [viewingShipment, setViewingShipment] = useState<Shipment | null>(null);
+    const [assigningCarrierFor, setAssigningCarrierFor] = useState<Shipment | null>(null);
     const [updatingStatusFor, setUpdatingStatusFor] = useState<Shipment | null>(null);
 
     // Filter and pagination state
@@ -572,6 +768,23 @@ export default function ShipmentsPage() {
     };
 
     // Bulk actions with confirmation
+    const handleBulkShip = (selectedItems: Shipment[]) => {
+        setConfirmDialog({
+            open: true,
+            title: 'Bulk Ship Orders',
+            message: `Are you sure you want to mark ${selectedItems.length} selected shipment${selectedItems.length !== 1 ? 's' : ''} as shipped? You'll need to add carrier info later.`,
+            variant: 'info',
+            onConfirm: () => {
+                const ids = selectedItems.map(s => s.id);
+                bulkUpdateMutation.mutate({
+                    shipment_ids: ids,
+                    shipment_status: 'shipped',
+                });
+                setConfirmDialog({ ...confirmDialog, open: false });
+            },
+        });
+    };
+
     const handleBulkDeliver = (selectedItems: Shipment[]) => {
         setConfirmDialog({
             open: true,
@@ -581,7 +794,7 @@ export default function ShipmentsPage() {
             onConfirm: () => {
                 const ids = selectedItems.map(s => s.id);
                 bulkUpdateMutation.mutate({
-                    order_ids: ids,
+                    shipment_ids: ids,
                     shipment_status: 'delivered',
                 });
                 setConfirmDialog({ ...confirmDialog, open: false });
@@ -598,7 +811,7 @@ export default function ShipmentsPage() {
             onConfirm: () => {
                 const ids = selectedItems.map(s => s.id);
                 bulkUpdateMutation.mutate({
-                    order_ids: ids,
+                    shipment_ids: ids,
                     shipment_status: 'cancelled',
                 });
                 setConfirmDialog({ ...confirmDialog, open: false });
@@ -639,12 +852,23 @@ export default function ShipmentsPage() {
             color: 'blue',
         });
 
-        if (shipment.status !== 'delivered' && shipment.status !== 'cancelled') {
+        // Show "Assign Carrier" for pending shipments (no carrier assigned yet)
+        if ((shipment.status === 'pending' || shipment.status === 'processing') && !shipment.tracking_number) {
+            actions.push({
+                label: 'Assign Carrier & Ship',
+                icon: <Send size={14} />,
+                onClick: () => setAssigningCarrierFor(shipment),
+                color: 'emerald',
+            });
+        }
+
+        // Show "Update Status" for shipments that are not delivered/cancelled
+        if (shipment.status !== 'delivered' && shipment.status !== 'failed' && shipment.status !== 'returned') {
             actions.push({
                 label: 'Update Status',
                 icon: <RefreshCw size={14} />,
                 onClick: () => setUpdatingStatusFor(shipment),
-                color: 'emerald',
+                color: 'violet',
             });
         }
 
@@ -660,6 +884,7 @@ export default function ShipmentsPage() {
 
     // Bulk actions
     const bulkActions = [
+        { label: 'Ship Selected', icon: <Truck size={14} />, onClick: handleBulkShip, color: 'violet' as const },
         { label: 'Mark as Delivered', icon: <CheckCircle size={14} />, onClick: handleBulkDeliver, color: 'emerald' as const },
         { label: 'Cancel Selected', icon: <XCircle size={14} />, onClick: handleBulkCancel, color: 'rose' as const, variant: 'destructive' as const },
         { label: 'Export Selected', icon: <Upload size={14} />, onClick: handleBulkExport, color: 'blue' as const },
@@ -765,6 +990,28 @@ export default function ShipmentsPage() {
                 secondaryAction={() => setConfirmDialog({ ...confirmDialog, open: false })}
             />
 
+            {/* Assign Carrier Dialog */}
+            <CustomDialog
+                title="Assign Carrier & Ship"
+                description={`Assign carrier and tracking for order ${assigningCarrierFor?.order_number || ''}`}
+                open={!!assigningCarrierFor}
+                onOpenChange={(open) => !open && setAssigningCarrierFor(null)}
+                contentWidth="max-w-md"
+            >
+                {assigningCarrierFor && (
+                    <AssignCarrierForm
+                        shipment={assigningCarrierFor}
+                        onSuccess={() => {
+                            setAssigningCarrierFor(null);
+                            refetch();
+                            queryClient.invalidateQueries({ queryKey: ['admin-shipments'] });
+                            queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+                        }}
+                        onCancel={() => setAssigningCarrierFor(null)}
+                    />
+                )}
+            </CustomDialog>
+
             {/* Update Status Dialog */}
             <CustomDialog
                 title="Update Shipment Status"
@@ -803,14 +1050,17 @@ export default function ShipmentsPage() {
                             />
                         )}
                         bulkActions={bulkActions}
-                        bulkActionsMessage="Select shipments to mark as delivered, cancel, or export"
+                        bulkActionsMessage="Select shipments to ship, deliver, cancel, or export"
                         excludeColumns={['id', 'customer_email', 'created_at', 'shipped_at', 'delivered_at', 'estimated_delivery']}
                         dots={{
                             status: {
                                 pending: 'amber',
+                                processing: 'blue',
                                 shipped: 'violet',
+                                in_transit: 'zinc',
+                                out_for_delivery: 'orange',
                                 delivered: 'emerald',
-                                cancelled: 'rose',
+                                failed: 'rose',
                                 returned: 'zinc'
                             },
                         }}
@@ -818,7 +1068,7 @@ export default function ShipmentsPage() {
                             order_number: (shipment: Shipment) => `/dashboard/orders/${shipment.order_number}`,
                         }}
                         emptyTitle="No Shipments Found"
-                        emptyDescription="Shipments will appear here once orders are shipped."
+                        emptyDescription="Shipments will appear here once orders are ready for shipping."
                         onSelectionChange={(selected) => console.log('Selected shipments:', selected.length)}
                     />
 

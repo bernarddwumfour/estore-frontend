@@ -31,7 +31,7 @@ export function CustomSelect({ selectField, setSelectField, items, placeholder, 
                 }
             }
         }}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
                 <SelectValue placeholder={placeholder || "Select an option"} />
             </SelectTrigger>
             <SelectContent className="z-[1000]">

@@ -50,6 +50,8 @@ const AddToWishList = ({ variantId, productTitle, className, iconSize }: AddToWi
   const handleWishlistAction = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    e.nativeEvent.stopImmediatePropagation();
+
 
     if (!user?.id) {
       setShowLoginDialog(true)

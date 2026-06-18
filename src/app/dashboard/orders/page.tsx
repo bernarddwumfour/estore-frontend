@@ -50,6 +50,8 @@ interface Order {
   items: any[];
   shipping_address: any;
   created_at: string;
+  ready_for_shipping_at?: string;
+  completed_at?: string;
 }
 
 // Fetch orders with pagination and filters
@@ -111,13 +113,15 @@ const filterConfig: FilterConfig = {
         { value: 'pending', label: 'Pending' },
         { value: 'confirmed', label: 'Confirmed' },
         { value: 'processing', label: 'Processing' },
+        { value: 'ready_for_shipping', label: 'Ready for Shipping' },
         { value: 'shipped', label: 'Shipped' },
         { value: 'delivered', label: 'Delivered' },
+        { value: 'completed', label: 'Completed' },
         { value: 'cancelled', label: 'Cancelled' },
         { value: 'refunded', label: 'Refunded' },
       ],
       defaultValue: '',
-      width: '140px',
+      width: '150px',
     },
     {
       name: 'payment_status',
@@ -139,6 +143,7 @@ const filterConfig: FilterConfig = {
       options: [
         { value: 'paystack', label: 'Paystack' },
         { value: 'pod', label: 'Pay on Delivery' },
+        { value: 'pos', label: 'Point of Sale' },
       ],
       defaultValue: '',
       width: '150px',
@@ -184,8 +189,10 @@ function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSucc
   const statusOptions = [
     { value: "confirmed", label: "Confirmed" },
     { value: "processing", label: "Processing" },
+    { value: "ready_for_shipping", label: "Ready for Shipping" },
     { value: "shipped", label: "Shipped" },
     { value: "delivered", label: "Delivered" },
+    { value: "completed", label: "Completed" },
     { value: "cancelled", label: "Cancelled" },
   ];
 
@@ -194,7 +201,7 @@ function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSucc
     try {
       const response = await updateOrderStatus(order.id, selectedStatus);
       if (response.success) {
-        toast.success(`Order status updated to ${selectedStatus}`);
+        toast.success(`Order status updated to ${selectedStatus.replace(/_/g, ' ')}`);
         onSuccess();
       } else {
         toast.error(response.message || "Failed to update status");
@@ -436,6 +443,20 @@ export default function OrdersPage() {
     });
   };
 
+  const handleBulkReadyForShipping = (selectedItems: Order[]) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Bulk Ready for Shipping',
+      message: `Are you sure you want to mark ${selectedItems.length} selected order${selectedItems.length !== 1 ? 's' : ''} as ready for shipping?`,
+      variant: 'info',
+      onConfirm: () => {
+        const ids = selectedItems.map(i => i.id);
+        bulkActionMutation.mutate({ action: 'ready_for_shipping', ids });
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
+  };
+
   const handleBulkShip = (selectedItems: Order[]) => {
     setConfirmDialog({
       open: true,
@@ -459,6 +480,20 @@ export default function OrdersPage() {
       onConfirm: () => {
         const ids = selectedItems.map(i => i.id);
         bulkActionMutation.mutate({ action: 'deliver', ids });
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
+  };
+
+  const handleBulkComplete = (selectedItems: Order[]) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Bulk Complete Orders',
+      message: `Are you sure you want to mark ${selectedItems.length} selected order${selectedItems.length !== 1 ? 's' : ''} as completed?`,
+      variant: 'info',
+      onConfirm: () => {
+        const ids = selectedItems.map(i => i.id);
+        bulkActionMutation.mutate({ action: 'complete', ids });
         setConfirmDialog({ ...confirmDialog, open: false });
       },
     });
@@ -554,8 +589,10 @@ export default function OrdersPage() {
   const bulkActions = [
     { label: 'Confirm Selected', icon: <CheckCircle size={14} />, onClick: handleBulkConfirm, color: 'emerald' as const },
     { label: 'Process Selected', icon: <RefreshCw size={14} />, onClick: handleBulkProcess, color: 'blue' as const },
+    { label: 'Ready for Shipping', icon: <Truck size={14} />, onClick: handleBulkReadyForShipping, color: 'violet' as const },
     { label: 'Ship Selected', icon: <Truck size={14} />, onClick: handleBulkShip, color: 'violet' as const },
     { label: 'Deliver Selected', icon: <PackageCheck size={14} />, onClick: handleBulkDeliver, color: 'emerald' as const },
+    { label: 'Complete Selected', icon: <CheckCircle size={14} />, onClick: handleBulkComplete, color: 'emerald' as const },
     { label: 'Cancel Selected', icon: <Ban size={14} />, onClick: handleBulkCancel, color: 'rose' as const, variant: 'destructive' as const },
     { label: 'Export Selected', icon: <Upload size={14} />, onClick: handleBulkExport, color: 'blue' as const },
   ];
@@ -664,8 +701,6 @@ export default function OrdersPage() {
         secondaryAction={() => setConfirmDialog({ ...confirmDialog, open: false })}
       />
 
-
-
       {/* Items Sheet */}
       <CustomSheet
         title="Order Items"
@@ -758,15 +793,17 @@ export default function OrdersPage() {
               />
             )}
             bulkActions={bulkActions}
-            bulkActionsMessage="Select orders to confirm, process, ship, deliver, cancel, or export"
+            bulkActionsMessage="Select orders to confirm, process, mark ready for shipping, ship, deliver, complete, cancel, or export"
             excludeColumns={['id', 'items', 'shipping_address', 'tax_amount', 'discount_amount', 'currency']}
             dots={{
               status: {
                 pending: 'amber',
                 confirmed: 'emerald',
                 processing: 'blue',
+                ready_for_shipping: 'amber',
                 shipped: 'violet',
                 delivered: 'emerald',
+                completed: 'emerald',
                 cancelled: 'rose',
                 refunded: 'zinc'
               },
@@ -780,7 +817,8 @@ export default function OrdersPage() {
             badges={{
               payment_method: {
                 paystack: 'blue',
-                pod: 'orange'
+                pod: 'orange',
+                pos: 'emerald'
               },
             }}
             links={{

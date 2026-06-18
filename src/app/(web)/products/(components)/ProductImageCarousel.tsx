@@ -36,6 +36,7 @@ export default function ProductImageCarousel({
   const handleBadgeClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    e.nativeEvent.stopImmediatePropagation();
 
     if (images.length > 1) {
       setCurrentImageIndex((prev) => (prev + 1) % images.length)

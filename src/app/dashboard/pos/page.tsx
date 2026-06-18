@@ -423,7 +423,7 @@ function ProductSearch({ onAddItem }: { onAddItem: (item: any) => void }) {
                     <TabsTrigger value="products" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 dark:hover:text-gray-300">Products</TabsTrigger>
                     <TabsTrigger value="promotions" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 dark:hover:text-gray-300">Bundles</TabsTrigger>
                 </TabsList>
-                <TabsContent value="products" className="flex-1 overflow-auto px-4 pb-4">
+                <TabsContent value="products" className="flex-1 overflow-scroll  max-h-[320px] px-4 pb-4">
                     {variantsLoading ? (
                         <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-gray-500 dark:text-gray-400" /></div>
                     ) : !debouncedSearch ? (

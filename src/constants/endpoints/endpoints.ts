@@ -79,13 +79,15 @@ export const endpoints = {
     adminListProducts: "/products/admin/products",
     AdminGetProductDetails: "/products/admin/products/:id",
     adminBulkProductActions: "/products/admin/products/bulk-action",
-    adminUpdateProduct: "/products/admin/:id/update",
+    adminUpdateProduct: "/products/admin/products/:id/update",
     adminAddProduct: "/products/admin/products/create",
     adminDeleteProduct: "",
 
 
     listProductsWeb: "/products",
+    searchProducts: "/products/search",
     listCategories: "/products/categories",
+    listBrands: "/products/brands",
     getProductDetailsWeb: "/products/:slug",
     listWishList: "/products/wishlist",
     addToWishList: "/products/wishlist",

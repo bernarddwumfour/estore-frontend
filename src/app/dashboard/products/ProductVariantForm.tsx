@@ -101,8 +101,8 @@ const createVariant = async (productId: string, data: FormData): Promise<any> =>
 
 // Update variant mutation
 const updateVariant = async (variantId: string, data: FormData): Promise<any> => {
-  const response = await securityAxios.put(
-    endpoints.products.adminUpdateVariant?.replace(":id", variantId) || `/api/products/admin/variants/${variantId}/update/`,
+  const response = await securityAxios.post(
+    endpoints.products.adminUpdateVariant?.replace(":id", variantId),
     data,
     { headers: { 'Content-Type': 'multipart/form-data' } }
   );

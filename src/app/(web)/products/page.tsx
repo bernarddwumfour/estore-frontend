@@ -3,7 +3,8 @@ import { Suspense } from 'react';
 import Categories from '@/widgets/categories/Categories';
 import ProductsGridSkeleton from './(components)/ProductsGridSkeleton';
 import ProductsGridWrapper from './(components)/ProductsGridWrapper';
-import PromotionsCarousel from './(components)/Promotions/PromotionsCarousel';
+import { AdvancedFilters } from '@/widgets/AdvancedFilters/AdvancedFilters';
+// import PromotionsCarousel from './(components)/Promotions/PromotionsCarousel';
 
 // Define types for the page props (searchParams is a Promise in Next.js 15+)
 interface PageProps {
@@ -32,15 +33,25 @@ export default async function Products({ searchParams }: PageProps) {
             </h3>
           </div>
 
-          <PromotionsCarousel />
+          {/* <PromotionsCarousel /> */}
         </div>
 
         {/* Pass the resolved object down to your component */}
         <Categories type='badge' searchParams={resolvedSearchParams} />
 
         <Suspense fallback={<ProductsGridSkeleton />}>
-          {/* Also pass them to the wrapper if it needs to filter products */}
-          <ProductsGridWrapper searchParams={resolvedSearchParams} />
+          {/* Products with Filters Sidebar */}
+          <div className="flex flex-col lg:flex-row gap-6 px-4 md:px-6 pt-6">
+            {/* Filters Sidebar - Hidden on mobile, shown on desktop */}
+            <div className="lg:sticky lg:top-32 lg:shadow-md lg:p-4 lg:rounded-md lg:h-fit lg:w-[280px] xl:w-[320px] flex-shrink-0">
+              <AdvancedFilters />
+            </div>
+
+            {/* Products Grid */}
+            <div className="flex-1 min-w-0">
+              <ProductsGridWrapper searchParams={resolvedSearchParams} />
+            </div>
+          </div>
         </Suspense>
       </div>
     </section>
