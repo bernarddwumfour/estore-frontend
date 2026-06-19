@@ -98,7 +98,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
               <ul className="space-y-6">
                 {items.map((item) => (
                   <li key={item.sku} className="flex items-start gap-4">
-                    <Link href={`/products/${item.slug}`} className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
+                    <Link href={!item.isBundle ? `/products/${item.slug}` : `/promotions/${item.slug}`} className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
                       <Image
                         width={88}
                         height={88}

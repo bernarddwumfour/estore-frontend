@@ -98,7 +98,7 @@ export const endpoints = {
   },
   promotions: {
     listPromotions: "/promotions",
-    promotionDetails: "/promotions/:id",
+    promotionDetails: "/promotions/:slug",
     adminDetails: "/promotions/admin/promotions/:id",
     adminList: '/promotions/admin/promotions',
     create: '/promotions/admin/promotions/create',

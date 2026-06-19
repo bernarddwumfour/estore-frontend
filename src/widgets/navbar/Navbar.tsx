@@ -85,7 +85,7 @@ export default function Navbar() {
                         </Link>
 
                         {/* Centered Desktop Navigation */}
-                        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+                        <div className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-600">
                             <Link href="/products" className="hover:text-slate-950 transition-colors">
                                 Products
                             </Link>
@@ -194,14 +194,14 @@ export default function Navbar() {
                             )}
 
                             {/* Instagram Icon */}
-                            <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hidden md:block p-1.5 sm:p-2 text-slate-700 hover:text-slate-950 transition-colors">
+                            <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hidden lg:block p-1.5 sm:p-2 text-slate-700 hover:text-slate-950 transition-colors">
                                 <Instagram className="h-5 w-5 sm:h-6 sm:w-6" />
                             </a>
 
                             {/* Mobile Menu Toggle */}
                             <button
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                className="md:hidden p-1.5 sm:p-2 text-slate-700 hover:bg-slate-50 rounded-md transition-colors"
+                                className="lg:hidden p-1.5 sm:p-2 text-slate-700 hover:bg-slate-50 rounded-md transition-colors"
                             >
                                 {mobileMenuOpen ? <X className="h-5 w-5 sm:h-6 sm:w-6" /> : <Menu className="h-5 w-5 sm:h-6 sm:w-6" />}
                             </button>
@@ -212,7 +212,7 @@ export default function Navbar() {
                 {/* Mobile Menu Dropdown */}
                 <div
                     className={cn(
-                        "md:hidden bg-white border-t border-slate-100 overflow-hidden transition-all duration-300 ease-in-out",
+                        "lg:hidden bg-white border-t border-slate-100 overflow-hidden transition-all duration-300 ease-in-out",
                         mobileMenuOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0",
                     )}
                 >
