@@ -62,6 +62,7 @@ const generateColumns = (
 
     columns.push({
       accessorKey: key,
+      id: key,
       header: ({ column }) => (
         <div  className="flex gap-4 items-center">
           <span className="whitespace-nowrap">

@@ -56,7 +56,7 @@ async function getProductDetail(slug: string): Promise<ProductDetailData | null>
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
     const apiPath = endpoints.products.getProductDetailsWeb.replace(":slug", slug)
 
-    const url = new URL(`${baseUrl.slice(0, -1)}${apiPath}`)
+    const url = new URL(`${baseUrl}${apiPath}`)
 
     const response = await fetch(url.toString(), {
       next: {

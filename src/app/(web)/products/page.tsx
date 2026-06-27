@@ -43,7 +43,7 @@ export default async function Products({ searchParams }: PageProps) {
           {/* Products with Filters Sidebar */}
           <div className="flex flex-col lg:flex-row gap-6 px-4 md:px-6 pt-6">
             {/* Filters Sidebar - Hidden on mobile, shown on desktop */}
-            <div className="lg:sticky lg:top-32 lg:shadow-md lg:p-4 lg:rounded-md lg:h-fit lg:w-[280px] xl:w-[320px] flex-shrink-0">
+            <div className="lg:sticky lg:top-32 lg:shadow-md lg:p-4 lg:rounded-md lg:h-fit lg:w-[280px] xl:w-[300px] flex-shrink-0">
               <AdvancedFilters />
             </div>
 

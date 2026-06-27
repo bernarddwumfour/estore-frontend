@@ -260,9 +260,16 @@ export function DataTable<T extends { id: string | number }>({
     const allKeys = useMemo(() => (data.length > 0 ? Object.keys(data[0]) : []), [data]);
     const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
 
+    // Depend on the *values* (joined keys), not array identity. `allKeys` and
+    // `excludeColumns` are recreated on every render (the latter defaults to a
+    // fresh []), so identity deps would re-run this effect -> setState -> re-render
+    // forever. Value-stable deps make it run only when the column set changes.
+    const allKeysKey = allKeys.join("|");
+    const excludeKey = excludeColumns.join("|");
     useEffect(() => {
         setVisibleColumns(allKeys.filter(k => !excludeColumns.includes(k)));
-    }, [allKeys, excludeColumns]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allKeysKey, excludeKey]);
 
     const exportToCSV = () => {
         if (data.length === 0) return;
@@ -552,7 +559,7 @@ export function DataTable<T extends { id: string | number }>({
                                         {actionsFirst && hasActions && <td className={cn("p-4 py-3 text-left h-px align-middle border-none", stickyActionsLeftClass)}>
                                             {renderActions ? renderActions(item) : (
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 transition-all rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"><MoreVertical size={14} className="text-gray-500 dark:text-gray-400" /></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuTrigger asChild><Button aria-label="Row actions" variant="ghost" size="icon" className="h-8 w-8 transition-all rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"><MoreVertical size={14} className="text-gray-500 dark:text-gray-400" /></Button></DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-2xl border-gray-200 dark:border-gray-800 bg-white dark:bg-black p-1">
                                                         {displayConfigs.map((config) => (
                                                             <DropdownMenuItem key={config.id} onClick={() => setActiveView({ data: config.getData(item), config, onClose: () => setActiveView(null) })} className="font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900">
@@ -573,7 +580,7 @@ export function DataTable<T extends { id: string | number }>({
                                         {!actionsFirst && hasActions && <td className={cn("p-4 py-3 text-right h-px align-middle border-none", stickyActionsRightClass)}>
                                             {renderActions ? renderActions(item) : (
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 transition-all rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"><MoreVertical size={14} className="text-gray-500 dark:text-gray-400" /></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuTrigger asChild><Button aria-label="Row actions" variant="ghost" size="icon" className="h-8 w-8 transition-all rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"><MoreVertical size={14} className="text-gray-500 dark:text-gray-400" /></Button></DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-2xl border-gray-200 dark:border-gray-800 bg-white dark:bg-black p-1">
                                                         {displayConfigs.map((config) => (
                                                             <DropdownMenuItem key={config.id} onClick={() => setActiveView({ data: config.getData(item), config, onClose: () => setActiveView(null) })} className="font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900">

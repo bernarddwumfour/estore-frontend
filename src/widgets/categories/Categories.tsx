@@ -31,7 +31,7 @@ interface CategoriesProps {
 
 async function getCategories() {
   try {
-    const url = new URL(`${process.env.NEXT_PUBLIC_API_BASE_URL?.slice(0, -1)}${endpoints.products.listCategories}`)
+    const url = new URL(`${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoints.products.listCategories}`)
 
     const response = await fetch(url.toString(), {
       next: {
