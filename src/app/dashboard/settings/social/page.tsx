@@ -167,8 +167,8 @@ function UsageCard() {
                 <div className="py-4 flex justify-center"><Loader2 className="animate-spin text-gray-400" size={18} /></div>
             ) : usage ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <StatTile icon={<Users size={12} />} label={`Accounts / ${usage.accounts_limit}`} value={usage.accounts_connected} />
-                    <StatTile icon={<Send size={12} />} label={`Posts / ${usage.posts_limit}`} value={usage.posts_this_month} />
+                    <StatTile icon={<Users size={12} />} label={usage.accounts_limit ? `Accounts / ${usage.accounts_limit}` : 'Accounts'} value={usage.accounts_connected} />
+                    <StatTile icon={<Send size={12} />} label={usage.posts_limit ? `Posts / ${usage.posts_limit}` : 'Posts this month'} value={usage.posts_this_month} />
                     <StatTile icon={<FolderKanban size={12} />} label="Profiles" value={usage.profiles} />
                     <StatTile icon={<Heart size={12} />} label="Platforms" value={CONNECT_PLATFORMS.length} />
                 </div>
