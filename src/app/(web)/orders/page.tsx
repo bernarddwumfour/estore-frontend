@@ -73,7 +73,7 @@ async function getOrders(page: number = 1, status: string = '') {
   }
 
   // Using native fetch for Next.js caching benefits
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '');
   console.log(`${baseUrl}${endpoints.orders.listUserOrders}`)
   const url = new URL(`${baseUrl}${endpoints.orders.listUserOrders}`);
   url.searchParams.append('page', page.toString());

@@ -50,7 +50,7 @@ function SectionHeading({ tag, children }: { tag: string; children: React.ReactN
 async function getHeroProducts(): Promise<ProductType[]> {
   try {
     const baseUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '') || "http://localhost:3000";
     const url = new URL(
       `${baseUrl.replace(/\/$/, "")}/${endpoints.products.listProductsWeb.replace(/^\//, "")}`
     );

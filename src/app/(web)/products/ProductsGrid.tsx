@@ -57,7 +57,7 @@ async function getProducts(filters: {
     if (!params.has('sort_order')) params.set('sort_order', 'desc')
 
     // Fix URL construction
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '') || 'http://localhost:3000'
     const apiPath = filters.endpoint || endpoints.products.listProductsWeb
 
     const fullUrl = `${baseUrl.replace(/\/$/, '')}/${apiPath.replace(/^\//, '')}`

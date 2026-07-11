@@ -13,7 +13,7 @@ interface Category {
 async function getCategories(): Promise<Category[]> {
   try {
     const url = new URL(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoints.products.listCategories}`
+      `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '')}${endpoints.products.listCategories}`
     );
     const res = await fetch(url.toString(), {
       next: { revalidate: 3600, tags: ["categories"] },

@@ -14,7 +14,7 @@ async function getProducts(category?: string, endpoint?: string) {
             category: category || "",
         });
 
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000";
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '') || "http://localhost:3000";
         const apiPath = endpoint || endpoints.products.listProductsWeb;
 
         const fullUrl = `${baseUrl.replace(/\/$/, "")}/${apiPath.replace(/^\//, "")}`;

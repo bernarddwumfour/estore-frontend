@@ -16,7 +16,7 @@ async function getActivePromotions(limit: number = 10): Promise<PromotionType[]>
             page: "1",
         });
 
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000";
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '') || "http://localhost:3000";
         const apiPath = endpoints.promotions.listPromotions;
 
         const fullUrl = `${baseUrl.replace(/\/$/, "")}/${apiPath.replace(/^\//, "")}`;
