@@ -7,6 +7,8 @@ import { useCartStore } from '@/app/lib/store/cart-store';
 import { Trash, Package, ChevronDown, ChevronUp, Gift, ShoppingCart, Home } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/templates/page-header';
+import { formatCurrency } from '@/lib/currency';
 
 export default function CartPage() {
   const {
@@ -46,21 +48,12 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-xl space-y-4 pb-6">
-          <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
-            Your Cart ({getTotalItems()})
-          </h2>
-          <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-            Checkout These Items To{" "}
-            <span className="text-slate-950 relative inline-block">
-              Make A Purchase.
-              <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
-            </span>
-          </h3>
-        </div>
-
+    <div className="min-h-screen bg-gray-50">
+      <PageHeader
+        subtitle={`Your Cart (${getTotalItems()})`}
+        title="Checkout These Items To Make A Purchase."
+      />
+      <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2">
@@ -99,12 +92,12 @@ export default function CartPage() {
                               }
                             </p>
                             <p className="text-sm text-gray-500 mt-2">
-                              ${item.price.toFixed(2)} each
+                              {formatCurrency(item.price)} each
                             </p>
                           </div>
 
                           <p className="text-lg font-semibold text-gray-900">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            {formatCurrency(item.price * item.quantity)}
                           </p>
                         </div>
 
@@ -173,7 +166,7 @@ export default function CartPage() {
                                 <div className="text-right">
                                   {bundleItem.price > 0 ? (
                                     <p className="text-sm font-medium text-gray-900">
-                                      ${(bundleItem.price * bundleItem.quantity).toFixed(2)}
+                                      {formatCurrency(bundleItem.price * bundleItem.quantity)}
                                     </p>
                                   ) : (
                                     <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
@@ -210,7 +203,7 @@ export default function CartPage() {
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-base">
                   <span className="text-gray-600">Subtotal ({getTotalItems()} items)</span>
-                  <span className="font-medium text-gray-900">${getTotalPrice().toFixed(2)}</span>
+                  <span className="font-medium text-gray-900">{formatCurrency(getTotalPrice())}</span>
                 </div>
                 <div className="flex justify-between text-base">
                   <span className="text-gray-600">Shipping</span>
@@ -220,7 +213,7 @@ export default function CartPage() {
               <div className="border-t border-gray-200 pt-6">
                 <div className="flex justify-between text-xl font-bold text-gray-900 mb-8">
                   <span>Total</span>
-                  <span>${getTotalPrice().toFixed(2)}</span>
+                  <span>{formatCurrency(getTotalPrice())}</span>
                 </div>
               </div>
 

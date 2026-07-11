@@ -1,14 +1,13 @@
-import Footer from "@/widgets/footer/Footer"
-import Navbar from "@/widgets/navbar/Navbar"
 import { ReactNode } from "react"
 import { WishlistInitializer } from "./WishlistInitializer"
 import NextTopLoader from 'nextjs-toploader';
+import { T } from "@/templates/registry"
 
 
 const layout = ({ children }: { children: ReactNode }) => {
     return (
         <div>
-            <Navbar />
+            <T.Navbar />
             <NextTopLoader
                 color="#080808"
                 initialPosition={0.08}
@@ -22,7 +21,7 @@ const layout = ({ children }: { children: ReactNode }) => {
             <main className="min-h-screen">
                 {children}
             </main>
-            <Footer />
+            <T.Footer />
 
         </div>
     )

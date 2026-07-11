@@ -8,6 +8,7 @@ import ProductDetailInteractive, { CartActions, ExpandableFeatures, ProductOptio
 import { Button } from '@/components/ui/button'
 import ReviewComponent from './ReviewComponent'
 import ProductReviews from './ProductReviews'
+import { formatCurrency } from '@/lib/currency'
 
 interface ProductDetailData {
   id: string;
@@ -171,15 +172,15 @@ export default async function ProductDetailPage({
               {/* Price - Server rendered for SEO */}
               <div className="flex items-baseline gap-4 mb-3">
                 <span className="text-xl md:text-3xl font-bold text-gray-900">
-                  ${defaultVariant.discounted_price.toFixed(2)}
+                  {formatCurrency(defaultVariant.discounted_price)}
                 </span>
                 {defaultVariant.discount_amount > 0 && (
                   <>
                     <span className="md:text-xl text-gray-500 line-through">
-                      ${defaultVariant.price.toFixed(2)}
+                      {formatCurrency(defaultVariant.price)}
                     </span>
                     <span className="text-sm font-medium text-red-600">
-                      Save ${defaultVariant.discount_amount.toFixed(2)} ({defaultVariant.discount_percentage.toFixed(1)}%)
+                      Save {formatCurrency(defaultVariant.discount_amount)} ({defaultVariant.discount_percentage.toFixed(1)}%)
                     </span>
                   </>
                 )}

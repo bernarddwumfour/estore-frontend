@@ -30,6 +30,13 @@ type User = {
   email_verified_at?: string;
   date_joined?: string;
   last_login?: string;
+  is_affiliate?: boolean;
+  affiliate_profile?: {
+    id: string;
+    referral_code: string;
+    level: string;
+    total_earnings: number;
+  };
 };
 
 // CHANGED: Added explicit Tokens type for better type safety

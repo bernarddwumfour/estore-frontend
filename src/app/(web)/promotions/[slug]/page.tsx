@@ -8,6 +8,7 @@ import { PromotionType } from "@/types/promotionTypes";
 import { ProductType } from "@/types/productTypes";
 import AddToCartButton from "./AddToCartButton";
 import Product from "../../products/Product";
+import { formatCurrency } from "@/lib/currency";
 // Define the type for the page props
 interface PageProps {
     params: Promise<{ slug: string }>;
@@ -147,14 +148,14 @@ export default async function PackageDetailPage({ params }: PageProps) {
                             <div className="flex items-baseline justify-between flex-wrap gap-2">
                                 <div>
                                     <span className="text-2xl font-bold text-slate-900">
-                                        ${promotion.bundle_price.toFixed(2)}
+                                        {formatCurrency(promotion.bundle_price)}
                                     </span>
                                     <span className="text-sm text-slate-400 line-through ml-3">
-                                        ${promotion.original_total.toFixed(2)}
+                                        {formatCurrency(promotion.original_total)}
                                     </span>
                                 </div>
                                 <span className="text-sm font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                                    Save ${promotion.savings_amount.toFixed(2)}
+                                    Save {formatCurrency(promotion.savings_amount)}
                                 </span>
                             </div>
 

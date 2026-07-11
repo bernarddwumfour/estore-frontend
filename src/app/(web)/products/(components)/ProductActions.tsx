@@ -11,6 +11,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { DialogTrigger } from '@radix-ui/react-dialog'
 import Image from 'next/image'
 import Link from 'next/link'
+import { formatCurrency } from '@/lib/currency'
 
 interface ProductActionsProps {
   product: ProductType
@@ -210,12 +211,12 @@ const ProductActions = ({
                             <dl className="mt-1 space-y-1 text-xs text-gray-600">
                               <div>
                                 <dt className="inline font-medium">Price:</dt>
-                                <dd className="inline ml-1">${item.price.toFixed(2)}</dd>
+                                <dd className="inline ml-1">{formatCurrency(item.price)}</dd>
                               </div>
                               <div>
                                 <dt className="inline font-medium">Total:</dt>
                                 <dd className="inline ml-1 font-medium text-gray-900">
-                                  ${(item.price * item.quantity).toFixed(2)}
+                                  {formatCurrency(item.price * item.quantity)}
                                 </dd>
                               </div>
                             </dl>
@@ -241,7 +242,7 @@ const ProductActions = ({
 
                           <div className="text-right">
                             <p className="text-sm font-medium text-gray-900">
-                              ${(item.price * item.quantity).toFixed(2)}
+                              {formatCurrency(item.price * item.quantity)}
                             </p>
                             <button
                               className="mt-2 text-gray-600 transition hover:text-red-600"
@@ -258,7 +259,7 @@ const ProductActions = ({
                     <div className="mt-4 border-t border-gray-200 pt-2">
                       <div className="flex justify-between text-base font-medium text-gray-900 mb-6">
                         <p>Subtotal</p>
-                        <p>${getTotalPrice().toFixed(2)}</p>
+                        <p>{formatCurrency(getTotalPrice())}</p>
                       </div>
 
                       <div className="space-y-3">

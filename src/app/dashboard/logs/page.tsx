@@ -21,6 +21,7 @@ import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { AlertMessage } from '@/widgets/alert-message/AlertMessage';
 import { useSearchParams, useRouter } from 'next/navigation';
+import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
 
 interface StatsData {
     period_days: number;
@@ -152,10 +153,7 @@ function LogStatsContent() {
         router.push(`/dashboard/logs/stats?${params.toString()}`);
     };
 
-    const handleRefresh = () => {
-        loadStats();
-        toast.success('Statistics refreshed');
-    };
+    const handleRefresh = () => loadStats();
 
     const severityData = Object.entries(statsData?.logs_by_severity || {})
         .filter(([_, count]) => count > 0)
@@ -199,10 +197,7 @@ function LogStatsContent() {
                             <option value={30}>Last 30 days</option>
                             <option value={90}>Last 90 days</option>
                         </select>
-                        <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                            <RefreshCw size={16} />
-                            Refresh
-                        </Button>
+                        <RefreshButton onRefresh={handleRefresh} successMessage="Statistics refreshed" />
                     </div>
                 </div>
 
@@ -242,10 +237,7 @@ function LogStatsContent() {
                             <option value={30}>Last 30 days</option>
                             <option value={90}>Last 90 days</option>
                         </select>
-                        <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                            <RefreshCw size={16} />
-                            Refresh
-                        </Button>
+                        <RefreshButton onRefresh={handleRefresh} successMessage="Statistics refreshed" />
                     </div>
                 </div>
 
@@ -281,10 +273,7 @@ function LogStatsContent() {
                             <option value={30}>Last 30 days</option>
                             <option value={90}>Last 90 days</option>
                         </select>
-                        <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                            <RefreshCw size={16} />
-                            Refresh
-                        </Button>
+                        <RefreshButton onRefresh={handleRefresh} successMessage="Statistics refreshed" />
                     </div>
                 </div>
 
@@ -320,10 +309,7 @@ function LogStatsContent() {
                         <option value={30}>Last 30 days</option>
                         <option value={90}>Last 90 days</option>
                     </select>
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                        <RefreshCw size={16} />
-                        Refresh
-                    </Button>
+                    <RefreshButton onRefresh={handleRefresh} successMessage="Statistics refreshed" />
                 </div>
             </div>
 

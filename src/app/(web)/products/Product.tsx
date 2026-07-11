@@ -4,6 +4,7 @@ import { BadgePercent, Star, Package, AlertCircle } from 'lucide-react'
 import ProductActions from './(components)/ProductActions'
 import { ProductType } from '@/types/productTypes'
 import ProductImageCarousel from './(components)/ProductImageCarousel'
+import { formatCurrency } from '@/lib/currency'
 
 interface ProductProps {
   product: ProductType
@@ -123,11 +124,11 @@ const Product = ({ product, isMinimal = false }: ProductProps) => {
               {hasDefaultVariant ? (
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <span className="text-base font-extrabold text-slate-950">
-                    ${defaultVariant.discounted_price?.toFixed(2) || defaultVariant.price?.toFixed(2)}
+                    {formatCurrency(defaultVariant.discounted_price ?? defaultVariant.price)}
                   </span>
                   {hasDiscount && (
                     <span className="text-xs text-slate-400 line-through font-medium">
-                      ${defaultVariant.price?.toFixed(2)}
+                      {formatCurrency(defaultVariant.price)}
                     </span>
                   )}
                 </div>
@@ -141,7 +142,7 @@ const Product = ({ product, isMinimal = false }: ProductProps) => {
             {/* Savings Badge - Hidden in minimal mode */}
             {hasDiscount && !isMinimal && (
               <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                Save ${(defaultVariant.price - defaultVariant.discounted_price).toFixed(2)}
+                Save {formatCurrency(defaultVariant.price - defaultVariant.discounted_price)}
               </span>
             )}
           </div>

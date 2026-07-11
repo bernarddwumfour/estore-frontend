@@ -23,6 +23,7 @@ import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/Cus
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilterFromUrl';
 import { CustomSortFromUrl, SortConfig } from '@/widgets/CustomSort/CustomSortFromUrl';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import { formatCurrency } from '@/lib/currency';
 import PromotionForm from './PromotionForm';
 import Link from 'next/link';
 
@@ -768,15 +769,15 @@ function PromotionsPageContent() {
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Bundle Price</label>
-                                <p className="text-gray-900 dark:text-white">${viewingPromotion.bundle_price.toFixed(2)}</p>
+                                <p className="text-gray-900 dark:text-white">{formatCurrency(viewingPromotion.bundle_price)}</p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Original Total</label>
-                                <p className="text-gray-900 dark:text-white line-through">${viewingPromotion.original_total.toFixed(2)}</p>
+                                <p className="text-gray-900 dark:text-white line-through">{formatCurrency(viewingPromotion.original_total)}</p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Savings</label>
-                                <p className="text-emerald-600 dark:text-emerald-400">${viewingPromotion.savings_amount.toFixed(2)} ({viewingPromotion.savings_percentage}%)</p>
+                                <p className="text-emerald-600 dark:text-emerald-400">{formatCurrency(viewingPromotion.savings_amount)} ({viewingPromotion.savings_percentage}%)</p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Stock Status</label>
@@ -817,8 +818,8 @@ function PromotionsPageContent() {
                                                 ))}
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-gray-900 dark:text-white">${item.original_price.toFixed(2)} each</p>
-                                                <p className="text-sm text-gray-500">Total: ${(item.original_price * item.quantity).toFixed(2)}</p>
+                                                <p className="text-gray-900 dark:text-white">{formatCurrency(item.original_price)} each</p>
+                                                <p className="text-sm text-gray-500">Total: {formatCurrency(item.original_price * item.quantity)}</p>
                                             </div>
                                         </div>
                                     ))}

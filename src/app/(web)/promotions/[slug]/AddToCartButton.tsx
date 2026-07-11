@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/app/lib/store/cart-store";
 import { toast } from "sonner";
 import { PromotionType } from "@/types/promotionTypes";
+import { formatCurrency } from "@/lib/currency";
 
 interface AddToCartButtonProps {
     promotion: PromotionType;
@@ -149,7 +150,7 @@ export default function AddToCartButton({
             <div className="flex justify-between items-center pt-3 border-t border-slate-200">
                 <span className="text-sm font-medium text-slate-700">Total:</span>
                 <span className="text-xl font-bold text-slate-900">
-                    ${totalPrice.toFixed(2)}
+                    {formatCurrency(totalPrice)}
                 </span>
             </div>
 

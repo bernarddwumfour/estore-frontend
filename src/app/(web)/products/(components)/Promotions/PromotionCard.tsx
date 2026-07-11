@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { PromotionType } from "@/types/promotionTypes";
+import { formatCurrency } from "@/lib/currency";
 
 interface PromotionCardProps {
     promotion: PromotionType;
@@ -41,7 +42,7 @@ export default function PromotionCard({ promotion }: PromotionCardProps) {
             {/* Optional: Hover overlay with more info */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-start p-4">
                 <div className="text-white">
-                    <p className="text-sm font-bold">Save ${promotion.savings_amount.toFixed(0)}</p>
+                    <p className="text-sm font-bold">Save {formatCurrency(promotion.savings_amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                     <p className="text-xs opacity-90">View Package →</p>
                 </div>
             </div>

@@ -1,15 +1,16 @@
 // app/orders/callback/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import securityAxios from '@/axios-instances/SecurityAxios';
+import UnAuthenticatedAxios from '@/axios-instances/UnAuthenticatedAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
+import { getAuthCookie } from '@/lib/providers/auth-provider';
+import { storeRecentOrder } from '@/lib/orders/recent-order';
 
 export default function PaymentCallbackPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const [error, setError] = useState<string | null>(null);
 
     const reference = searchParams.get('reference');
     const trxref = searchParams.get('trxref');
@@ -24,32 +25,38 @@ export default function PaymentCallbackPage() {
 
             try {
                 // Call your payment_callback endpoint
-                const response = await securityAxios.get(
+                const response = await UnAuthenticatedAxios.get(
                     `${endpoints.orders.paymentCallback}?reference=${paymentRef}`
                 );
 
                 if (response.data.success) {
-                    const orderId = response.data.data.order.id;
-                    router.push(`/orders/success?order_id=${orderId}&reference=${paymentRef}`);
+                    const order = response.data.data.order;
+                    const orderId = order.id;
+                    storeRecentOrder({
+                        order,
+                        isAuthenticated: !!getAuthCookie()?.tokens?.access_token,
+                        source: 'payment_callback',
+                        createdAt: new Date().toISOString(),
+                    });
+                    router.push(`/order-placed?order_id=${orderId}`);
                 } else {
                     router.push(`/orders/cancel?error=${response.data.message}`);
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const message =
+                    typeof err === 'object' &&
+                    err !== null &&
+                    'response' in err &&
+                    typeof (err as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+                        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                        : 'Payment processing failed';
                 console.error('Callback error:', err);
-                router.push(`/orders/cancel?error=${err?.response?.data?.message || 'Payment processing failed'}`);
+                router.push(`/orders/cancel?error=${message}`);
             }
         };
 
         processCallback();
     }, [paymentRef, router]);
-
-    if (error) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center text-red-600">{error}</div>
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen flex items-center justify-center">

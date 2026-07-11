@@ -32,6 +32,7 @@ import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter'
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
 import Link from 'next/link';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
 
 // Types
 interface StaffUser {
@@ -414,10 +415,7 @@ export default function StaffUsersPage() {
     };
 
     // Refresh handler
-    const handleRefresh = () => {
-        refetch();
-        toast.success('Staff list refreshed');
-    };
+    const handleRefresh = () => refetch();
 
     // Reset all filters
     const handleResetFilters = () => {
@@ -578,10 +576,7 @@ export default function StaffUsersPage() {
                         <Plus size={16} />
                         Add Staff Member
                     </Button>
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                        <RefreshCw size={16} />
-                        Refresh
-                    </Button>
+                    <RefreshButton onRefresh={handleRefresh} successMessage="Staff list refreshed" />
                 </div>
 
                 {/* Filters and Sort - Always visible */}
@@ -627,14 +622,7 @@ export default function StaffUsersPage() {
                     <Plus size={16} />
                     Add Staff Member
                 </Button>
-                <Button
-                    variant="outline"
-                    onClick={handleRefresh}
-                    className="gap-2"
-                >
-                    <RefreshCw size={16} />
-                    Refresh
-                </Button>
+                <RefreshButton onRefresh={handleRefresh} successMessage="Staff list refreshed" />
             </div>
 
             {/* Filters and Sort Row - Always visible and interactive */}

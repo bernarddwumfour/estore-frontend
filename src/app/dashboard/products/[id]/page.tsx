@@ -20,6 +20,7 @@ import ProductForm from '../ProductForm';
 import ProductVariantForm from '../ProductVariantForm';
 import ProductVariantsList from '../ProductVariantsList';
 import { Dispatch, SetStateAction, useState } from 'react';
+import { formatCurrency } from '@/lib/currency';
 
 interface Variant {
     id: string;
@@ -467,12 +468,12 @@ export default function ProductDetailPage() {
                                                         ))}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-sm text-gray-900 dark:text-white">${variant.price.toFixed(2)}</TableCell>
+                                                <TableCell className="text-sm text-gray-900 dark:text-white">{formatCurrency(variant.price)}</TableCell>
                                                 <TableCell className="text-sm text-gray-900 dark:text-white">
-                                                    {variant.discount_amount > 0 ? `-$${variant.discount_amount.toFixed(2)}` : "-"}
+                                                    {variant.discount_amount > 0 ? `-${formatCurrency(variant.discount_amount)}` : "-"}
                                                 </TableCell>
                                                 <TableCell className="font-semibold text-sm text-gray-900 dark:text-white">
-                                                    ${finalPrice.toFixed(2)}
+                                                    {formatCurrency(finalPrice)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <span className={`text-sm ${variant.stock === 0 ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>

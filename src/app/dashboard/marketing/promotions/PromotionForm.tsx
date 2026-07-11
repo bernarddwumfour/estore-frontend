@@ -31,6 +31,7 @@ import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
 import VariantSelector from './VariantSelector';
+import { formatCurrency } from '@/lib/currency';
 
 interface PromotionFormProps {
     promotionId?: string;
@@ -394,7 +395,7 @@ export default function PromotionForm({ promotionId, onSuccess, onCancel }: Prom
                                     </FormControl>
                                     {items.length > 0 && (
                                         <FormDescription>
-                                            Original: ${totalOriginalPrice.toFixed(2)} | Savings: ${savings.toFixed(2)} ({savingsPercentage}%)
+                                            Original: {formatCurrency(totalOriginalPrice)} | Savings: {formatCurrency(savings)} ({savingsPercentage}%)
                                         </FormDescription>
                                     )}
                                     <FormMessage />
@@ -488,8 +489,8 @@ export default function PromotionForm({ promotionId, onSuccess, onCancel }: Prom
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-gray-900 dark:text-white">${item.price.toFixed(2)} each</p>
-                                        <p className="text-sm text-gray-500">Total: ${(item.price * item.quantity).toFixed(2)}</p>
+                                        <p className="text-gray-900 dark:text-white">{formatCurrency(item.price)} each</p>
+                                        <p className="text-sm text-gray-500">Total: {formatCurrency(item.price * item.quantity)}</p>
                                         <Button
                                             type="button"
                                             variant="ghost"

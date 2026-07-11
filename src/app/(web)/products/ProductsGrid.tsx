@@ -1,6 +1,6 @@
 // app/(web)/products/(components)/ProductsGrid.tsx
 import { ProductType } from "@/types/productTypes"
-import Product from "./Product"
+import { T } from "@/templates/registry"
 import { endpoints } from "@/constants/endpoints/endpoints"
 
 interface ProductsGridProps {
@@ -200,7 +200,7 @@ export default async function ProductsGrid({
 
       <ul className="grid gap-2 md:gap-4 gap-y-12 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 px-4">
         {products.map((product: ProductType) => (
-          <Product product={product} key={product.id} />
+          <T.ProductCard product={product} key={product.id} />
         ))}
       </ul>
 

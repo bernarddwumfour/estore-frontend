@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { PageHeader } from "@/templates/page-header";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -24,6 +25,7 @@ import CancelOrderButton from './(components)/CancelOrderButton';
 import StatusFilter from './(components)/StatusFilter';
 import Pagination from './(components)/Pagination';
 import axios from 'axios';
+import { formatCurrency } from '@/lib/currency';
 
 async function getOrders(page: number = 1, status: string = '') {
   const cookieStore = await cookies();
@@ -157,13 +159,6 @@ const formatDate = (dateString: string) => {
   });
 };
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(amount);
-};
-
 interface MyOrdersPageProps {
   searchParams?: Promise<{
     page?: string;
@@ -193,24 +188,9 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
 
   if (orders.length === 0) {
     return (
-      <div className="bg-gray-50 min-h-screen py-32">
-        <div className="container mx-auto px-4">
-          <div className="max-w-xl space-y-4 mb-6">
-            <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
-              My Orders
-            </h2>
-            <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
-              Track and manage all    {" "}
-              <span className="text-slate-950 relative inline-block">
-                Your Purchases
-                <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
-              </span>
-            </h3>
-          </div>
-
-
-
-
+      <div className="bg-gray-50 min-h-screen">
+        <PageHeader subtitle="My Orders" title="Track and manage all Your Purchases" />
+        <div className="container mx-auto px-4 py-16">
           <StatusFilter currentStatus={statusFilter} />
 
           <div className="text-center bg-white py-12">
@@ -241,21 +221,9 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <div className="py-32 container mx-auto px-4">
-        {/* Header */}
-        <div className="max-w-xl space-y-4 pb-6 sm:pb-8 md:pb-10">
-          <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
-            My Orders
-          </h2>
-          <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
-            Track and manage all {" "}
-            <span className="text-slate-950 relative inline-block">
-              your purchases.
-              <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
-            </span>
-          </h3>
-        </div>
-
+      {/* Header (swaps per active template) */}
+      <PageHeader subtitle="My Orders" title="Track and manage all your purchases." />
+      <div className="container mx-auto px-4 py-16">
         {/* Status Filter */}
         <StatusFilter currentStatus={statusFilter} />
 
@@ -292,12 +260,23 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
                             Tracking: {order.tracking_number}
                           </div>
                         )}
+                        {order.discount_code && (
+                          <div className="flex items-center gap-2 text-green-700">
+                            <Receipt className="h-4 w-4" />
+                            Code: {order.discount_code}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-bold text-gray-900">
                         {formatCurrency(order.total)}
                       </div>
+                      {order.discount_amount > 0 && (
+                        <p className="text-sm text-green-600">
+                          Saved {formatCurrency(order.discount_amount)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -364,6 +343,12 @@ export default async function MyOrdersPage({ searchParams }: MyOrdersPageProps) 
                         <Receipt className="h-4 w-4" />
                         <span>Payment: {order.payment_method || 'Paid'}</span>
                       </div>
+                      {order.affiliate && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Receipt className="h-4 w-4" />
+                          <span>Affiliate code: {order.affiliate.referral_code || order.discount_code}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-3">

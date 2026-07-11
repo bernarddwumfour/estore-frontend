@@ -4,6 +4,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 
 interface OrderItem {
     id: string;
@@ -79,14 +80,14 @@ export default function OrderItemsList({ items, orderNumber }: OrderItemsListPro
                                     </div>
                                     <div className="text-right">
                                         <p className="text-2xl font-bold">
-                                            ${item.total_price.toFixed(2)}
+                                            {formatCurrency(item.total_price)}
                                         </p>
                                         <p className="text-sm text-muted-foreground">
-                                            {item.quantity} × ${item.unit_price.toFixed(2)}
+                                            {item.quantity} × {formatCurrency(item.unit_price)}
                                         </p>
                                         {item.discount_amount > 0 && (
                                             <p className="text-xs text-green-600">
-                                                Saved: ${item.discount_amount.toFixed(2)}
+                                                Saved: {formatCurrency(item.discount_amount)}
                                             </p>
                                         )}
                                     </div>
@@ -106,7 +107,7 @@ export default function OrderItemsList({ items, orderNumber }: OrderItemsListPro
                     <div className="space-y-2">
                         <div className="flex justify-between py-2">
                             <span className="text-muted-foreground">Subtotal</span>
-                            <span>${subtotal.toFixed(2)}</span>
+                            <span>{formatCurrency(subtotal)}</span>
                         </div>
                         <div className="flex justify-between py-2">
                             <span className="text-muted-foreground">Items</span>

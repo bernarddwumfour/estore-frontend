@@ -14,6 +14,7 @@ import { AdvancedFilters } from "../AdvancedFilters/AdvancedFilters"
 import { useDebounce } from "@/app/lib/hooks/use-debounce"
 import { endpoints } from "@/constants/endpoints/endpoints"
 import unAuthenticatedAxios from "@/axios-instances/UnAuthenticatedAxios"
+import { formatCurrency } from "@/lib/currency"
 
 interface SearchResult {
     id: string
@@ -346,7 +347,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                                                     </div>
                                                     <div className="text-right flex-shrink-0">
                                                         <div className="font-semibold text-sm text-slate-900">
-                                                            ${result.min_price.toFixed(2)}
+                                                            {formatCurrency(result.min_price)}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -464,7 +465,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                                                                 </div>
                                                                 <div className="text-right flex-shrink-0">
                                                                     <div className="font-semibold text-sm text-slate-900">
-                                                                        ${recent.product.min_price.toFixed(2)}
+                                                                        {formatCurrency(recent.product.min_price)}
                                                                     </div>
                                                                 </div>
                                                             </div>

@@ -20,6 +20,8 @@ import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter'
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
 import { useRouter } from 'next/navigation';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import { formatCurrency } from '@/lib/currency';
+import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
 
 // Types
 interface Transaction {
@@ -239,10 +241,7 @@ export default function TransactionsPage() {
     };
 
     // Refresh handler
-    const handleRefresh = () => {
-        refetch();
-        toast.success('Transactions refreshed');
-    };
+    const handleRefresh = () => refetch();
 
     // Export transactions
     const handleExport = (selectedItems: Transaction[]) => {
@@ -331,10 +330,7 @@ export default function TransactionsPage() {
 
                 {/* Refresh Button - Always visible */}
                 <div className="flex justify-end">
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                        <RefreshCw size={16} />
-                        Refresh
-                    </Button>
+                    <RefreshButton onRefresh={handleRefresh} successMessage="Transactions refreshed" />
                 </div>
 
                 {/* Filters and Sort - Always visible */}
@@ -384,7 +380,7 @@ export default function TransactionsPage() {
                             <div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Total Charges</p>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                    ${stats.total_charges.toFixed(2)}
+                                    {formatCurrency(stats.total_charges)}
                                 </p>
                             </div>
                             <TrendingUp className="h-8 w-8 text-emerald-500" />
@@ -395,7 +391,7 @@ export default function TransactionsPage() {
                             <div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Total Refunds</p>
                                 <p className="text-2xl font-bold text-rose-600">
-                                    ${stats.total_refunds.toFixed(2)}
+                                    {formatCurrency(stats.total_refunds)}
                                 </p>
                             </div>
                             <TrendingDown className="h-8 w-8 text-rose-500" />
@@ -406,7 +402,7 @@ export default function TransactionsPage() {
                             <div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Net Revenue</p>
                                 <p className="text-2xl font-bold text-blue-600">
-                                    ${stats.net_revenue.toFixed(2)}
+                                    {formatCurrency(stats.net_revenue)}
                                 </p>
                             </div>
                             <DollarSign className="h-8 w-8 text-blue-500" />
@@ -449,10 +445,7 @@ export default function TransactionsPage() {
 
             {/* Refresh Button - Always visible */}
             <div className="flex justify-end">
-                <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                    <RefreshCw size={16} />
-                    Refresh
-                </Button>
+                <RefreshButton onRefresh={handleRefresh} successMessage="Transactions refreshed" />
             </div>
 
             {/* Filters and Sort Row - Always visible and interactive */}
@@ -561,7 +554,7 @@ export default function TransactionsPage() {
                         <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                             <div className={`text-3xl font-bold ${viewingTransaction.transaction_type === 'refund' ? 'text-rose-600' : 'text-emerald-600'}`}>
                                 {viewingTransaction.transaction_type === 'refund' ? '-' : '+'}
-                                ${viewingTransaction.amount.toFixed(2)} {viewingTransaction.currency}
+                                {formatCurrency(viewingTransaction.amount)}
                             </div>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                 {new Date(viewingTransaction.created_at).toLocaleString()}

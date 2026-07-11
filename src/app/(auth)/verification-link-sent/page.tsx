@@ -4,8 +4,8 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import Logo from "@/widgets/logo/Logo";
+import { CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { AuthShell } from "@/templates/auth-shell";
 import Spinner from "@/widgets/loaders/Spinner";
 import { Mail, CheckCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -45,28 +45,20 @@ function EmailVerification(){
   // If no email in URL — fallback
   if (!email) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
-        <Card className="w-full max-w-md p-8 text-center">
+      <AuthShell>
+        <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Something went wrong</h2>
-          <p className="text-gray-600 mb-8">We couldn't find your email address.</p>
+          <p className="text-gray-600 mb-8">We couldn&apos;t find your email address.</p>
           <Link href="/login">
             <Button>Back to Login</Button>
           </Link>
-        </Card>
-      </div>
+        </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-20">
-      <div className="container mx-auto px-4 max-w-2xl">
-        {/* Logo */}
-        <div className="flex justify-center py-6">
-          <Logo />
-        </div>
-
-        {/* Main Card */}
-        <Card className="shadow-lg">
+    <AuthShell>
           <CardHeader className="text-center pb-8">
             <div className="mx-auto w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-6">
               <Mail className="h-10 w-10 text-blue-600" />
@@ -125,13 +117,11 @@ function EmailVerification(){
               </Link>
             </div>
           </CardContent>
-        </Card>
 
         {/* Footer Note */}
-        <div className="text-center mt-12 text-sm text-gray-500">
+        <div className="text-center mt-8 text-sm text-gray-500">
           <p>Need help? Contact us at support@yourstore.com</p>
         </div>
-      </div>
-    </div>
+    </AuthShell>
   );
 }

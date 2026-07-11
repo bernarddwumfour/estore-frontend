@@ -17,10 +17,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 // import { useToast } from "@/hooks/use-toast";
-import Logo from "@/widgets/logo/Logo";
+import { AuthShell } from "@/templates/auth-shell";
 // import { endpoints } from "@/endpoints/endpoints";
 // import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
 import Spinner from "@/widgets/loaders/Spinner";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/use-auth";
@@ -64,11 +63,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items- flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <div className="flex justify-center py-6">
-        <Logo />
-      </div>
-      <Card className="w-full max-w-md space-y-8 shadow-md p-4  rounded-lg">
+    <AuthShell>
         <div className="text-center">
           <h2 className="mt-2 text-xl font-bold tracking-tight">
             Sign in to your account
@@ -160,7 +155,6 @@ export default function LoginPage() {
             </Button>
           </form>
         </Form>
-      </Card>
-    </div>
+    </AuthShell>
   );
 }

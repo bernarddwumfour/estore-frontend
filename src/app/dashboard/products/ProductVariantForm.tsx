@@ -101,7 +101,7 @@ const createVariant = async (productId: string, data: FormData): Promise<any> =>
 
 // Update variant mutation
 const updateVariant = async (variantId: string, data: FormData): Promise<any> => {
-  const response = await securityAxios.post(
+  const response = await securityAxios.put(
     endpoints.products.adminUpdateVariant?.replace(":id", variantId),
     data,
     { headers: { 'Content-Type': 'multipart/form-data' } }
@@ -226,10 +226,10 @@ export default function ProductVariantForm({ productId: propProductId, variantId
         discount_amount: variantData.discount_amount || 0,
         is_default: variantData.is_default || false,
         low_stock_threshold: variantData.low_stock_threshold || 5,
-        weight: variantData.weight,
-        height: variantData.height,
-        width: variantData.width,
-        depth: variantData.depth,
+        weight: variantData.weight ?? variantData.dimensions?.weight,
+        height: variantData.height ?? variantData.dimensions?.height,
+        width: variantData.width ?? variantData.dimensions?.width,
+        depth: variantData.depth ?? variantData.dimensions?.depth,
       });
 
       // Set attribute selections for update mode
@@ -260,14 +260,37 @@ export default function ProductVariantForm({ productId: propProductId, variantId
     }
   }, [variantData, productData, form, isUpdateMode]);
 
+  const invalidateVariantCaches = (updatedVariantId?: string, updatedProductId?: string) => {
+    const productIdToInvalidate =
+      updatedProductId ||
+      currentProductId ||
+      propProductId ||
+      form.getValues("product_id") ||
+      variantData?.product?.id;
+
+    queryClient.invalidateQueries({ queryKey: [endpoints.products.adminListProducts] });
+    queryClient.invalidateQueries({ queryKey: [endpoints.products.adminListVariants] });
+    queryClient.invalidateQueries({ queryKey: [endpoints.products.AdminGetProductDetails] });
+    queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-variants'] });
+
+    if (productIdToInvalidate) {
+      queryClient.invalidateQueries({ queryKey: ["product-detail", productIdToInvalidate] });
+      queryClient.invalidateQueries({ queryKey: [endpoints.products.AdminGetProductDetails, productIdToInvalidate] });
+    }
+
+    if (updatedVariantId) {
+      queryClient.invalidateQueries({ queryKey: ["variant-detail", updatedVariantId] });
+      queryClient.invalidateQueries({ queryKey: [endpoints.products.adminGetVariantDetails, updatedVariantId] });
+    }
+  };
+
   // Create mutation
   const createMutation = useMutation({
     mutationFn: ({ productId, data }: { productId: string; data: FormData }) => createVariant(productId, data),
-    onSuccess: () => {
+    onSuccess: (_response, variables) => {
       toast.success("Variant created successfully");
-      queryClient.invalidateQueries({ queryKey: [endpoints.products.adminListProducts] });
-      queryClient.invalidateQueries({ queryKey: [endpoints.products.AdminGetProductDetails] });
-      queryClient.invalidateQueries({ queryKey: [endpoints.products.adminListVariants] });
+      invalidateVariantCaches(undefined, variables.productId);
 
       form.reset({
         product_id: propProductId || "",
@@ -309,13 +332,9 @@ export default function ProductVariantForm({ productId: propProductId, variantId
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: ({ variantId, data }: { variantId: string; data: FormData }) => updateVariant(variantId, data),
-    onSuccess: () => {
+    onSuccess: (_response, variables) => {
       toast.success("Variant updated successfully");
-      // Invalidate all product and variant related queries
-      queryClient.invalidateQueries({ queryKey: [endpoints.products.adminListProducts] });
-      queryClient.invalidateQueries({ queryKey: [endpoints.products.AdminGetProductDetails] });
-      queryClient.invalidateQueries({ queryKey: [endpoints.products.adminListVariants] });
-      queryClient.invalidateQueries({ queryKey: [endpoints.products.adminGetVariantDetails, variantId] });
+      invalidateVariantCaches(variables.variantId);
 
       onSuccess?.();
     },

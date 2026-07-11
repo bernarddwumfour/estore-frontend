@@ -20,6 +20,8 @@ import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { usePosCartStore } from '@/app/lib/store/pos-cart-store';
+import { formatCurrency } from '@/lib/currency';
 
 // Types
 interface Variant {
@@ -165,7 +167,9 @@ const deleteAddress = async (customerId: string, addressId: string): Promise<{ s
 const createPosOrder = async (orderData: any): Promise<{ success: boolean; data?: any; message?: string }> => {
     try {
         const response = await securityAxios.post('/orders/admin/pos/orders/create', orderData);
-        return { success: true, data: response.data };
+        // Unwrap the response envelope ({ data: { order }, message }) so callers
+        // get { order } directly — matches createAddress() in this file.
+        return { success: true, data: response.data?.data };
     } catch (error: any) {
         return {
             success: false,
@@ -256,9 +260,9 @@ function PosCart({ cart, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout
                                         <div>
                                             <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{item.title}</p>
                                             {item.isBundle && <Badge className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 mt-1">Bundle</Badge>}
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">${item.price.toFixed(2)} each</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatCurrency(item.price)} each</p>
                                         </div>
-                                        <p className="font-semibold text-sm text-gray-900 dark:text-white">${(item.price * item.quantity).toFixed(2)}</p>
+                                        <p className="font-semibold text-sm text-gray-900 dark:text-white">{formatCurrency(item.price * item.quantity)}</p>
                                     </div>
                                     <div className="flex items-center justify-between mt-2">
                                         <div className="flex items-center gap-2">
@@ -300,7 +304,7 @@ function PosCart({ cart, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
-                            <span className="font-medium text-gray-900 dark:text-white">${subtotal.toFixed(2)}</span>
+                            <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(subtotal)}</span>
                         </div>
                         {isLoadingShipping ? (
                             <div className="flex justify-between text-sm">
@@ -313,7 +317,7 @@ function PosCart({ cart, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout
                         ) : shippingCost !== null && shippingCost > 0 && selectedAddress && (
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-600 dark:text-gray-400">Shipping</span>
-                                <span className="font-medium text-emerald-600 dark:text-emerald-400">+${shippingCost.toFixed(2)}</span>
+                                <span className="font-medium text-emerald-600 dark:text-emerald-400">+{formatCurrency(shippingCost)}</span>
                             </div>
                         )}
                         {!isLoadingShipping && selectedAddress && shippingCost === 0 && (
@@ -331,7 +335,7 @@ function PosCart({ cart, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout
                         <Separator className="bg-gray-200 dark:bg-gray-800" />
                         <div className="flex justify-between text-lg font-bold">
                             <span className="text-gray-900 dark:text-white">Total</span>
-                            <span className="text-gray-900 dark:text-white">${total.toFixed(2)}</span>
+                            <span className="text-gray-900 dark:text-white">{formatCurrency(total)}</span>
                         </div>
                     </div>
                     <Button onClick={onCheckout} className="w-full" size="lg">
@@ -348,6 +352,10 @@ function ProductSearch({ onAddItem }: { onAddItem: (item: any) => void }) {
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [activeTab, setActiveTab] = useState('products');
+
+    // Subscribe to the POS cart so cards reflect what's already in the order.
+    const cartItems = usePosCartStore((s) => s.items);
+    const getCartQty = (sku: string) => cartItems.find((i) => i.sku === sku)?.quantity ?? 0;
 
     const { data: variants, isLoading: variantsLoading } = useQuery({
         queryKey: ['pos-variants', debouncedSearch],
@@ -366,6 +374,11 @@ function ProductSearch({ onAddItem }: { onAddItem: (item: any) => void }) {
     }, [search]);
 
     const handleAddVariant = (variant: Variant) => {
+        // Don't let the cashier add more than is in stock.
+        if (getCartQty(variant.sku) >= variant.stock) {
+            toast.error(`Only ${variant.stock} in stock for ${variant.product.title}`);
+            return;
+        }
         onAddItem({
             id: variant.product.id,
             sku: variant.sku,
@@ -437,13 +450,28 @@ function ProductSearch({ onAddItem }: { onAddItem: (item: any) => void }) {
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Try a different search term</p>
                         </div>
                     ) : (
-                        <div className="space-y-2">
-                            {variants?.map((variant) => (
+                        <div className="space-y-2 py-2">
+                            {variants?.map((variant) => {
+                                const inCartQty = getCartQty(variant.sku);
+                                const inCart = inCartQty > 0;
+                                const atMax = inCartQty >= variant.stock;
+                                return (
                                 <div
                                     key={variant.id}
-                                    className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
+                                    className={`relative flex items-center gap-3 p-3 border rounded-lg transition-colors ${
+                                        atMax
+                                            ? 'border-amber-500 dark:border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 cursor-not-allowed opacity-70'
+                                            : inCart
+                                                ? 'border-emerald-500 dark:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 cursor-pointer'
+                                                : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer'
+                                    }`}
                                     onClick={() => handleAddVariant(variant)}
                                 >
+                                    {inCart && (
+                                        <span className={`absolute -top-2 -right-2 z-10 min-w-[20px] h-5 px-1.5 rounded-full text-white text-[11px] font-semibold flex items-center justify-center shadow ${atMax ? 'bg-amber-600' : 'bg-emerald-600'}`}>
+                                            {inCartQty}
+                                        </span>
+                                    )}
                                     <div className="relative w-12 h-12 flex-shrink-0 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-800">
                                         {variant.images[0] ? (
                                             <Image src={variant.images[0].url} alt={variant.product.title} fill className="object-cover" />
@@ -461,13 +489,19 @@ function ProductSearch({ onAddItem }: { onAddItem: (item: any) => void }) {
                                                 <span key={key}>{key}: {val}</span>
                                             ))}
                                         </div>
+                                        {atMax ? (
+                                            <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-0.5">Max stock reached ({variant.stock})</p>
+                                        ) : inCart && (
+                                            <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{inCartQty} in cart</p>
+                                        )}
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-semibold text-sm text-gray-900 dark:text-white">${variant.discounted_price.toFixed(2)}</p>
+                                        <p className="font-semibold text-sm text-gray-900 dark:text-white">{formatCurrency(variant.discounted_price)}</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">Stock: {variant.stock}</p>
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </TabsContent>
@@ -480,13 +514,25 @@ function ProductSearch({ onAddItem }: { onAddItem: (item: any) => void }) {
                             <p className="text-sm text-gray-500 dark:text-gray-400">No active promotions</p>
                         </div>
                     ) : (
-                        <div className="space-y-2">
-                            {promotions?.filter(p => p.has_stock).map((promotion) => (
+                        <div className="space-y-2 py-2">
+                            {promotions?.filter(p => p.has_stock).map((promotion) => {
+                                const inCartQty = getCartQty(`bundle_${promotion.id}`);
+                                const inCart = inCartQty > 0;
+                                return (
                                 <div
                                     key={promotion.id}
-                                    className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
+                                    className={`relative flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                                        inCart
+                                            ? 'border-emerald-500 dark:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                                            : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                                    }`}
                                     onClick={() => handleAddPromotion(promotion)}
                                 >
+                                    {inCart && (
+                                        <span className="absolute -top-2 -right-2 z-10 min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-600 text-white text-[11px] font-semibold flex items-center justify-center shadow">
+                                            {inCartQty}
+                                        </span>
+                                    )}
                                     <div className="relative w-12 h-12 flex-shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950">
                                         {promotion.images[0] ? (
                                             <Image src={promotion.images[0].url} alt={promotion.name} fill className="object-contain" />
@@ -499,13 +545,17 @@ function ProductSearch({ onAddItem }: { onAddItem: (item: any) => void }) {
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{promotion.name}</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">{promotion.items.length + promotion.free_items.length} items in bundle</p>
+                                        {inCart && (
+                                            <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{inCartQty} in cart</p>
+                                        )}
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-semibold text-sm text-gray-900 dark:text-white">${promotion.bundle_price.toFixed(2)}</p>
-                                        <p className="text-xs text-emerald-600 dark:text-emerald-400">Save ${promotion.savings_amount.toFixed(2)}</p>
+                                        <p className="font-semibold text-sm text-gray-900 dark:text-white">{formatCurrency(promotion.bundle_price)}</p>
+                                        <p className="text-xs text-emerald-600 dark:text-emerald-400">Save {formatCurrency(promotion.savings_amount)}</p>
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </TabsContent>
@@ -697,7 +747,7 @@ function AddressManager({ customerId, onAddressSelect, onClose, cartItems }: { c
                                                             </p>
                                                         )}
                                                         {!isLoadingShipping && shippingData && selectedAddressId === address.id && (
-                                                            <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-2 font-medium">Shipping: ${shippingData.shipping_cost.toFixed(2)}</p>
+                                                            <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-2 font-medium">Shipping: {formatCurrency(shippingData.shipping_cost)}</p>
                                                         )}
                                                     </div>
                                                     <div className="flex gap-2">
@@ -830,7 +880,7 @@ function CustomerManager({ onSelectCustomer, selectedCustomer, cartItems }: { on
         setShowAddressManager(false);
         if (address && cost !== undefined) {
             onSelectCustomer(selectedCustomer, address, cost);
-            toast.success(`Address selected - Shipping: $${cost.toFixed(2)}`);
+            toast.success(`Address selected - Shipping: ${formatCurrency(cost)}`);
         }
     };
 
@@ -865,7 +915,7 @@ function CustomerManager({ onSelectCustomer, selectedCustomer, cartItems }: { on
                                     <p className="text-sm text-gray-600 dark:text-gray-400">{selectedAddress.first_name} {selectedAddress.last_name}</p>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">{selectedAddress.address_line1}</p>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">{selectedAddress.city}, {selectedAddress.postal_code}</p>
-                                    <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1 font-medium">Shipping: ${shippingCost.toFixed(2)}</p>
+                                    <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1 font-medium">Shipping: {formatCurrency(shippingCost)}</p>
                                 </div>
                             )}
                         </div>
@@ -972,13 +1022,6 @@ function PosPaymentMethod({ value, onChange }: { value: string; onChange: (value
                         </div>
                         <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-600 dark:border-amber-400">Pay on Delivery</Badge>
                     </label>
-                    <label className="flex items-center p-3 border border-gray-200 dark:border-gray-800 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <input type="radio" name="payment" value="paystack" checked={value === 'paystack'} onChange={(e) => onChange(e.target.value)} className="mr-3" />
-                        <div className="flex-1">
-                            <p className="font-medium text-gray-900 dark:text-white">Paystack</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Card, Mobile Money, Bank Transfer</p>
-                        </div>
-                    </label>
                 </div>
             </CardContent>
         </Card>
@@ -1013,7 +1056,17 @@ function GuestCheckout() {
 export default function POSPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
-    const [cart, setCart] = useState<CartItem[]>([]);
+
+    // POS cart lives in a persisted zustand store so it survives refreshes.
+    // Treat it as empty until rehydration completes to avoid a hydration mismatch.
+    const cartItems = usePosCartStore((s) => s.items);
+    const cartHydrated = usePosCartStore((s) => s.hasHydrated);
+    const addCartItem = usePosCartStore((s) => s.addItem);
+    const updateCartQuantity = usePosCartStore((s) => s.updateQuantity);
+    const removeCartItem = usePosCartStore((s) => s.removeItem);
+    const clearPosCart = usePosCartStore((s) => s.clearCart);
+    const cart = cartHydrated ? cartItems : [];
+
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
     const [shippingCost, setShippingCost] = useState<number | null>(null);
@@ -1120,7 +1173,7 @@ export default function POSPage() {
             toast.success('Order created successfully!');
             setLastOrder(result.data?.order);
             setShowReceipt(true);
-            setCart([]);
+            clearPosCart();
             if (customerMode === 'customer') {
                 setSelectedCustomer(null);
                 setSelectedAddress(null);
@@ -1134,25 +1187,81 @@ export default function POSPage() {
     };
 
     const handleAddToCart = (item: CartItem) => {
-        setCart(prev => {
-            const existing = prev.find(i => i.sku === item.sku);
-            if (existing) return prev.map(i => i.sku === item.sku ? { ...i, quantity: i.quantity + 1 } : i);
-            return [...prev, { ...item, quantity: 1 }];
-        });
+        addCartItem(item);
     };
 
     const handleUpdateQuantity = (sku: string, quantity: number) => {
-        if (quantity <= 0) setCart(prev => prev.filter(i => i.sku !== sku));
-        else setCart(prev => prev.map(i => i.sku === sku ? { ...i, quantity } : i));
+        updateCartQuantity(sku, quantity);
     };
 
     const handleRemoveItem = (sku: string) => {
-        setCart(prev => prev.filter(i => i.sku !== sku));
+        removeCartItem(sku);
         toast.success('Item removed from cart');
     };
 
     const handleClearCart = () => {
-        if (cart.length > 0) { setCart([]); toast.success('Cart cleared'); }
+        if (cart.length > 0) { clearPosCart(); toast.success('Cart cleared'); }
+    };
+
+    const formatMoney = (amount: number) => formatCurrency(amount);
+
+    // Print just the receipt (window.print() would print the entire dashboard).
+    const handlePrintReceipt = () => {
+        if (!lastOrder) return;
+        const o = lastOrder;
+        const rows: string[] = [];
+        (o.items || []).forEach((it: any) => {
+            rows.push(`<tr><td>${it.quantity} &times; ${it.product_title}</td><td class="r">${formatMoney(it.total_price)}</td></tr>`);
+        });
+        (o.bundles || []).forEach((b: any) => {
+            rows.push(`<tr><td><strong>${b.bundle_name || 'Bundle'}</strong></td><td class="r">${formatMoney(b.total)}</td></tr>`);
+            (b.items || []).forEach((it: any) => {
+                rows.push(`<tr><td class="sub">${it.quantity} &times; ${it.product_title}</td><td></td></tr>`);
+            });
+        });
+
+        const html = `<!doctype html><html><head><title>Receipt ${o.order_number}</title>
+            <style>
+                * { font-family: ui-monospace, 'Courier New', monospace; }
+                body { width: 300px; margin: 0 auto; padding: 16px; color: #000; }
+                h1 { font-size: 16px; text-align: center; margin: 0 0 4px; }
+                .muted { color: #555; font-size: 11px; text-align: center; margin: 0; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                td { padding: 2px 0; vertical-align: top; }
+                .r { text-align: right; white-space: nowrap; }
+                .sub { padding-left: 12px; color: #666; font-size: 11px; }
+                hr { border: none; border-top: 1px dashed #999; margin: 8px 0; }
+                .row { display: flex; justify-content: space-between; font-size: 12px; }
+                .total { font-weight: bold; font-size: 14px; }
+                .meta { font-size: 11px; color: #333; margin: 2px 0; }
+            </style></head><body>
+            <h1>Store Receipt</h1>
+            <p class="muted">Order #${o.order_number}</p>
+            <p class="muted">${o.created_at ? new Date(o.created_at).toLocaleString() : ''}</p>
+            <hr/>
+            <p class="meta">Customer: ${o.customer_name || 'Guest'}</p>
+            ${o.customer_email ? `<p class="meta">${o.customer_email}</p>` : ''}
+            <p class="meta">Fulfilment: ${o.shipping_method || '—'}</p>
+            <hr/>
+            <table>${rows.join('')}</table>
+            <hr/>
+            <div class="row"><span>Subtotal</span><span>${formatMoney(o.subtotal)}</span></div>
+            <div class="row"><span>Shipping</span><span>${formatMoney(o.shipping_cost)}</span></div>
+            ${Number(o.tax_amount) ? `<div class="row"><span>Tax</span><span>${formatMoney(o.tax_amount)}</span></div>` : ''}
+            ${Number(o.discount_amount) ? `<div class="row"><span>Discount</span><span>-${formatMoney(o.discount_amount)}</span></div>` : ''}
+            <div class="row total"><span>Total</span><span>${formatMoney(o.total)}</span></div>
+            <hr/>
+            <p class="meta">Payment: ${(o.payment_method || '').replace('_', ' ')} (${o.payment_status})</p>
+            <p class="muted">Thank you!</p>
+            </body></html>`;
+
+        const w = window.open('', 'PRINT', 'height=640,width=400');
+        if (!w) { toast.error('Allow pop-ups to print the receipt'); return; }
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        w.print();
+        w.close();
     };
 
     return (
@@ -1204,36 +1313,132 @@ export default function POSPage() {
 
                 {/* Receipt Dialog */}
                 <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-                    <DialogContent className="sm:max-w-md bg-white dark:bg-black border-gray-200 dark:border-gray-800">
+                    <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto bg-white dark:bg-black border-gray-200 dark:border-gray-800">
                         <DialogHeader>
                             <DialogTitle className="text-gray-900 dark:text-white">Order Completed!</DialogTitle>
                             <DialogDescription className="text-gray-500 dark:text-gray-400">
                                 Order #{lastOrder?.order_number} has been created successfully.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-4">
-                            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-                                <div className="flex justify-between mb-2">
-                                    <span className="text-gray-600 dark:text-gray-400">Order Number:</span>
-                                    <span className="font-medium text-gray-900 dark:text-white">{lastOrder?.order_number}</span>
+
+                        {lastOrder ? (
+                            <div className="space-y-4">
+                                {/* Meta */}
+                                <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600 dark:text-gray-400">Order Number</span>
+                                        <span className="font-medium text-gray-900 dark:text-white">{lastOrder.order_number}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600 dark:text-gray-400">Date</span>
+                                        <span className="font-medium text-gray-900 dark:text-white">
+                                            {lastOrder.created_at ? new Date(lastOrder.created_at).toLocaleString() : '—'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600 dark:text-gray-400">Customer</span>
+                                        <span className="font-medium text-gray-900 dark:text-white">{lastOrder.customer_name || 'Guest'}</span>
+                                    </div>
+                                    {lastOrder.customer_email && (
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">Email</span>
+                                            <span className="font-medium text-gray-900 dark:text-white truncate max-w-[60%]">{lastOrder.customer_email}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600 dark:text-gray-400">Fulfilment</span>
+                                        <span className="font-medium text-gray-900 dark:text-white">{lastOrder.shipping_method || '—'}</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between mb-2">
-                                    <span className="text-gray-600 dark:text-gray-400">Total Amount:</span>
-                                    <span className="font-medium text-gray-900 dark:text-white">${lastOrder?.total?.toFixed(2)}</span>
+
+                                {/* Line items */}
+                                <div className="border border-gray-200 dark:border-gray-800 rounded-lg divide-y divide-gray-100 dark:divide-gray-800">
+                                    {(lastOrder.items || []).map((it: any) => (
+                                        <div key={it.id} className="flex justify-between gap-3 p-3 text-sm">
+                                            <span className="text-gray-700 dark:text-gray-300">
+                                                <span className="text-gray-500 dark:text-gray-500">{it.quantity} × </span>{it.product_title}
+                                            </span>
+                                            <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                                                {formatMoney(it.total_price)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    {(lastOrder.bundles || []).map((b: any) => (
+                                        <div key={b.bundle_id} className="p-3 text-sm">
+                                            <div className="flex justify-between gap-3">
+                                                <span className="font-medium text-gray-900 dark:text-white flex items-center gap-1">
+                                                    <Tag className="h-3 w-3" />{b.bundle_name || 'Bundle'}
+                                                </span>
+                                                <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                                                    {formatMoney(b.total)}
+                                                </span>
+                                            </div>
+                                            {(b.items || []).map((it: any, idx: number) => (
+                                                <div key={idx} className="pl-4 text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                                    {it.quantity} × {it.product_title}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                                    {(!lastOrder.items?.length && !lastOrder.bundles?.length) && (
+                                        <div className="p-3 text-sm text-gray-500">No items</div>
+                                    )}
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600 dark:text-gray-400">Payment Method:</span>
-                                    <span className="font-medium text-gray-900 dark:text-white capitalize">{paymentMethod.replace('_', ' ')}</span>
+
+                                {/* Totals */}
+                                <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg space-y-1.5 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
+                                        <span className="text-gray-900 dark:text-white">{formatMoney(lastOrder.subtotal)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600 dark:text-gray-400">Shipping</span>
+                                        <span className="text-gray-900 dark:text-white">{formatMoney(lastOrder.shipping_cost)}</span>
+                                    </div>
+                                    {Number(lastOrder.tax_amount) > 0 && (
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">Tax</span>
+                                            <span className="text-gray-900 dark:text-white">{formatMoney(lastOrder.tax_amount)}</span>
+                                        </div>
+                                    )}
+                                    {Number(lastOrder.discount_amount) > 0 && (
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">Discount</span>
+                                            <span className="text-emerald-600 dark:text-emerald-400">-{formatMoney(lastOrder.discount_amount)}</span>
+                                        </div>
+                                    )}
+                                    <Separator className="my-2" />
+                                    <div className="flex justify-between text-base font-semibold">
+                                        <span className="text-gray-900 dark:text-white">Total</span>
+                                        <span className="text-gray-900 dark:text-white">{formatMoney(lastOrder.total)}</span>
+                                    </div>
+                                </div>
+
+                                {/* Payment */}
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-gray-600 dark:text-gray-400 capitalize">
+                                        {(lastOrder.payment_method || '').replace('_', ' ')}
+                                    </span>
+                                    <Badge variant="outline" className={
+                                        lastOrder.payment_status === 'paid'
+                                            ? 'text-emerald-600 dark:text-emerald-400 border-emerald-600 dark:border-emerald-400'
+                                            : 'text-amber-600 dark:text-amber-400 border-amber-600 dark:border-amber-400'
+                                    }>
+                                        {lastOrder.payment_status}
+                                    </Badge>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <Button onClick={() => router.push(`/dashboard/orders/${lastOrder.id}`)} className="flex-1">View Order</Button>
+                                    <Button variant="outline" onClick={handlePrintReceipt} className="gap-2 border-gray-200 dark:border-gray-800">
+                                        <Printer className="h-4 w-4" />
+                                        Print
+                                    </Button>
                                 </div>
                             </div>
-                            <div className="flex gap-3">
-                                <Button onClick={() => router.push(`/dashboard/orders/${lastOrder?.id}`)} className="flex-1">View Order</Button>
-                                <Button variant="outline" onClick={() => window.print()} className="gap-2 border-gray-200 dark:border-gray-800">
-                                    <Printer className="h-4 w-4" />
-                                    Print
-                                </Button>
-                            </div>
-                        </div>
+                        ) : (
+                            <div className="py-8 text-center text-sm text-gray-500">Order details unavailable.</div>
+                        )}
                     </DialogContent>
                 </Dialog>
 

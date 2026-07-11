@@ -19,7 +19,7 @@ export default function TermsOfService() {
   
             <h2 className="text-xl font-bold text-gray-900 mt-10 mb-4">Orders & Payment</h2>
             <ul className="list-disc pl-6 space-y-2 text-gray-700 mb-6">
-              <li>All prices are in USD and include applicable taxes</li>
+              <li>All prices are in Ghana cedis (GHS) and include applicable taxes</li>
               <li>We reserve the right to refuse or cancel any order</li>
               <li>Payment is processed securely via Stripe</li>
             </ul>

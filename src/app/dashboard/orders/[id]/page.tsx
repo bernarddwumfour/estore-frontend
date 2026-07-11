@@ -9,7 +9,7 @@ import { endpoints } from "@/constants/endpoints/endpoints";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Package, MapPin, CreditCard, Truck, CheckCircle, ArrowLeft, Loader2, DollarSign, Phone, Mail, User, Hash, PackageCheck, XCircle, Timer, ShoppingBag, Eye, ShoppingCart, Edit, Trash2, Gift } from "lucide-react";
+import { Clock, Package, MapPin, CreditCard, Truck, CheckCircle, CheckCheck, ArrowLeft, Loader2, DollarSign, Phone, Mail, User, Hash, PackageCheck, XCircle, Timer, ShoppingBag, Eye, ShoppingCart, Edit, Trash2, Gift, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 import { DataTable } from '@/widgets/Customtable/DataTable';
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { Dispatch, SetStateAction, useState } from 'react';
 import { CustomSelect, selectField } from '@/widgets/custom-select/CustomSelect';
 import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
+import { formatCurrency } from '@/lib/currency';
 
 interface OrderItem {
     id: string;
@@ -74,11 +75,15 @@ interface OrderData {
     shipping_cost: number;
     tax_amount: number;
     discount_amount: number;
+    discount_code?: string | null;
+    affiliate_commission_amount?: number;
     total: number;
     currency: string;
     item_count: number;
     shipping_method: string;
+    is_pickup: boolean;
     carrier: string;
+    tracking_number?: string | null;
     customer_note: string;
     admin_note: string;
     items: OrderItem[];
@@ -89,16 +94,26 @@ interface OrderData {
     updated_at: string;
     paid_at: string | null;
     confirmed_at: string | null;
+    processing_at: string | null;
+    ready_for_shipping_at: string | null;
     shipped_at: string | null;
     delivered_at: string | null;
+    completed_at: string | null;
     cancelled_at: string | null;
+    affiliate?: {
+        id: string;
+        email: string;
+        name: string;
+        referral_code: string;
+        commission_amount: number;
+    } | null;
 }
 
 interface TimelineEvent {
     label: string;
     date: string | null;
     icon: React.ReactNode;
-    status: 'completed' | 'current' | 'pending' | 'cancelled';
+    status: 'completed' | 'current' | 'pending' | 'cancelled' | 'skipped';
 }
 
 const fetchOrderById = async (orderId: string): Promise<OrderData> => {
@@ -119,6 +134,32 @@ const fetchOrderById = async (orderId: string): Promise<OrderData> => {
 function OrderTimeline({ order }: { order: OrderData }) {
     const isCancelled = order.status === 'cancelled';
 
+    // Fulfilment rails: pickup orders skip the shipping stages entirely.
+    const shippingRail = ['pending', 'confirmed', 'processing', 'ready_for_shipping', 'shipped', 'delivered', 'completed'];
+    const pickupRail = ['pending', 'confirmed', 'processing', 'completed'];
+    const rail = order.is_pickup ? pickupRail : shippingRail;
+    const reachedIndex = rail.indexOf(order.status);
+
+    // A step before the current status with no timestamp was skipped.
+    const stepStatus = (status: string, date: string | null): TimelineEvent['status'] => {
+        if (date) return 'completed';
+        const index = rail.indexOf(status);
+        if (order.status === status) return 'current';
+        if (reachedIndex >= 0 && index >= 0 && index < reachedIndex) return 'skipped';
+        return isCancelled ? 'cancelled' : 'pending';
+    };
+
+    const stepConfig: { status: string; label: string; date: string | null; icon: React.ReactNode }[] = [
+        { status: 'confirmed', label: 'Order Confirmed', date: order.confirmed_at, icon: <CheckCircle className="h-4 w-4" /> },
+        { status: 'processing', label: 'Processing', date: order.processing_at, icon: <Timer className="h-4 w-4" /> },
+        ...(order.is_pickup ? [] : [
+            { status: 'ready_for_shipping', label: 'Ready for Shipping', date: order.ready_for_shipping_at, icon: <PackageCheck className="h-4 w-4" /> },
+            { status: 'shipped', label: 'Shipped', date: order.shipped_at, icon: <Truck className="h-4 w-4" /> },
+            { status: 'delivered', label: 'Delivered', date: order.delivered_at, icon: <CheckCircle className="h-4 w-4" /> },
+        ]),
+        { status: 'completed', label: 'Completed', date: order.completed_at, icon: <CheckCheck className="h-4 w-4" /> },
+    ];
+
     const timelineEvents: TimelineEvent[] = [
         {
             label: 'Order Placed',
@@ -132,36 +173,12 @@ function OrderTimeline({ order }: { order: OrderData }) {
             icon: <CreditCard className="h-4 w-4" />,
             status: order.paid_at ? 'completed' : isCancelled ? 'cancelled' : 'pending',
         },
-        {
-            label: 'Order Confirmed',
-            date: order.confirmed_at,
-            icon: <CheckCircle className="h-4 w-4" />,
-            status: order.confirmed_at ? 'completed' : isCancelled ? 'cancelled' : 'pending',
-        },
-        {
-            label: 'Processing',
-            date: null,
-            icon: <Timer className="h-4 w-4" />,
-            status: order.status === 'processing' ? 'current' :
-                ['shipped', 'delivered'].includes(order.status) ? 'completed' :
-                    isCancelled ? 'cancelled' : 'pending',
-        },
-        {
-            label: 'Shipped',
-            date: order.shipped_at,
-            icon: <Truck className="h-4 w-4" />,
-            status: order.shipped_at ? 'completed' :
-                order.status === 'shipped' ? 'current' :
-                    isCancelled ? 'cancelled' : 'pending',
-        },
-        {
-            label: 'Delivered',
-            date: order.delivered_at,
-            icon: <PackageCheck className="h-4 w-4" />,
-            status: order.delivered_at ? 'completed' :
-                order.status === 'delivered' ? 'current' :
-                    isCancelled ? 'cancelled' : 'pending',
-        },
+        ...stepConfig.map(step => ({
+            label: step.label,
+            date: step.date,
+            icon: step.icon,
+            status: stepStatus(step.status, step.date),
+        })),
     ];
 
     if (isCancelled) {
@@ -181,6 +198,8 @@ function OrderTimeline({ order }: { order: OrderData }) {
                 return 'bg-gray-900 border-gray-900 dark:bg-white dark:border-white ring-4 ring-gray-900/20 dark:ring-white/30';
             case 'cancelled':
                 return 'bg-red-500 border-red-500 dark:bg-red-600 dark:border-red-600';
+            case 'skipped':
+                return 'bg-amber-400 border-amber-400 dark:bg-amber-600 dark:border-amber-600';
             default:
                 return 'bg-gray-300 border-gray-300 dark:bg-gray-700 dark:border-gray-700';
         }
@@ -191,6 +210,7 @@ function OrderTimeline({ order }: { order: OrderData }) {
             case 'completed': return 'text-green-600 dark:text-green-400';
             case 'current': return 'text-gray-900 dark:text-white';
             case 'cancelled': return 'text-red-600 dark:text-red-400';
+            case 'skipped': return 'text-amber-600 dark:text-amber-400';
             default: return 'text-gray-500 dark:text-gray-400';
         }
     };
@@ -244,6 +264,9 @@ function OrderTimeline({ order }: { order: OrderData }) {
                                         {event.status === 'current' && (
                                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">In progress...</p>
                                         )}
+                                        {event.status === 'skipped' && (
+                                            <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">Skipped</p>
+                                        )}
                                         {event.status === 'cancelled' && event.label === 'Cancelled' && (
                                             <p className="text-sm text-red-600 dark:text-red-400 mt-1">Order has been cancelled</p>
                                         )}
@@ -272,7 +295,7 @@ function BundleItems({ bundles }: { bundles: BundleItem[] }) {
                             Bundle: {bundle.bundle_name}
                         </CardTitle>
                         <CardDescription className="text-amber-600/70 dark:text-amber-500/70">
-                            Bundle total: ${bundle.total.toFixed(2)}
+                            Bundle total: {formatCurrency(bundle.total)}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -307,12 +330,20 @@ export default function OrderDetailPage() {
     const [selectedStatus, setSelectedStatus] = useState<selectField | undefined>();
     const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<selectField | undefined>();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [skipConflict, setSkipConflict] = useState<{
+        current_status: string;
+        requested_status: string;
+        skipped_statuses: string[];
+    } | null>(null);
 
+    // shipped/delivered are managed through the shipment: marking the order
+    // ready_for_shipping creates a pending shipment, dispatched from the
+    // Shipments page.
     const statusOptions: selectField[] = [
         { id: 'confirmed', label: 'Confirmed', value: 'confirmed' },
         { id: 'processing', label: 'Processing', value: 'processing' },
-        { id: 'shipped', label: 'Shipped', value: 'shipped' },
-        { id: 'delivered', label: 'Delivered', value: 'delivered' },
+        { id: 'ready_for_shipping', label: 'Ready for Shipping', value: 'ready_for_shipping' },
+        { id: 'completed', label: 'Completed', value: 'completed' },
         { id: 'cancelled', label: 'Cancelled', value: 'cancelled' },
     ];
 
@@ -357,8 +388,10 @@ export default function OrderDetailPage() {
             case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 border-yellow-200 dark:border-yellow-900";
             case "confirmed": return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-900";
             case "processing": return "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 border-purple-200 dark:border-purple-900";
+            case "ready_for_shipping": return "bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-900";
             case "shipped": return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900";
             case "delivered": return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-900";
+            case "completed": return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900";
             case "cancelled": return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-900";
             case "refunded": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300 border-gray-200 dark:border-gray-800";
             default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300 border-gray-200 dark:border-gray-800";
@@ -375,7 +408,7 @@ export default function OrderDetailPage() {
         }
     };
 
-    const handleUpdateStatus = async () => {
+    const handleUpdateStatus = async (skipBehavior?: 'skip' | 'complete') => {
         if (!selectedStatus) {
             toast.error("Please select a status");
             return;
@@ -385,22 +418,54 @@ export default function OrderDetailPage() {
         try {
             const response = await securityAxios.put(
                 endpoints.orders.updateStatus.replace(":id", orderId),
-                { status: selectedStatus.value }
+                {
+                    status: selectedStatus.value,
+                    ...(skipBehavior ? { skip_behavior: skipBehavior } : {}),
+                }
             );
 
             if (response.data.success) {
-                toast.success(`Order status updated to ${selectedStatus.label}`);
+                toast.success(
+                    selectedStatus.value === 'ready_for_shipping'
+                        ? 'Order ready for shipping — shipment created, track it on the Shipments page'
+                        : `Order status updated to ${selectedStatus.label}`
+                );
                 setUpdatingStatus(false);
                 setSelectedStatus(undefined);
+                setSkipConflict(null);
                 queryClient.invalidateQueries({ queryKey: ["order-detail", orderId] });
                 queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
             } else {
                 toast.error(response.data.message || "Failed to update status");
             }
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || "Failed to update status");
+            const errors = error?.response?.data?.errors;
+            if (error?.response?.status === 409 && errors?.code === 'steps_skipped') {
+                setSkipConflict(errors);
+            } else {
+                toast.error(error?.response?.data?.message || "Failed to update status");
+            }
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleVerifyPayment = async () => {
+        toast.info('Checking payment with Paystack...');
+        try {
+            const response = await securityAxios.post(
+                endpoints.orders.verifyOrderPayment.replace(':id', orderId)
+            );
+            if (response.data.success) {
+                toast.success(response.data.message || 'Payment verified — order marked as paid');
+            } else {
+                toast.error(response.data.message || 'Payment verification failed');
+            }
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Payment verification failed');
+        } finally {
+            queryClient.invalidateQueries({ queryKey: ["order-detail", orderId] });
+            queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
         }
     };
 
@@ -458,7 +523,7 @@ export default function OrderDetailPage() {
 
         actions.push({
             label: 'Update Status',
-            icon: <PackageCheck />,
+            icon: <RefreshCw />,
             onClick: () => setUpdatingStatus(true),
             color: 'emerald',
         });
@@ -469,6 +534,17 @@ export default function OrderDetailPage() {
             onClick: () => setUpdatingPayment(true),
             color: 'orange',
         });
+
+        // Reconcile with Paystack when the redirect/webhook never confirmed it
+        if (orderData.payment_method === 'paystack' &&
+            ['pending', 'failed'].includes(orderData.payment_status)) {
+            actions.push({
+                label: 'Verify Payment',
+                icon: <ShieldCheck />,
+                onClick: handleVerifyPayment,
+                color: 'emerald',
+            });
+        }
 
         actions.push({
             label: 'Edit Order',
@@ -483,7 +559,7 @@ export default function OrderDetailPage() {
     const itemActions = [
         {
             label: 'View Product',
-            icon: <Package size={14} />,
+            icon: <Eye size={14} />,
             onClick: (item: OrderItem) => {
                 window.open(`/dashboard/products/${item.product_slug}`, '_blank');
             },
@@ -595,6 +671,12 @@ export default function OrderDetailPage() {
                             <p className="font-medium text-gray-900 dark:text-white">{order.item_count} {order.item_count === 1 ? 'Item' : 'Items'}</p>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Shipping: {order.shipping_method || 'Standard'}</p>
                             {order.carrier && <p className="text-sm text-gray-500 dark:text-gray-400">Carrier: {order.carrier}</p>}
+                            {order.discount_code && <p className="text-sm text-green-600 dark:text-green-400">Code: {order.discount_code}</p>}
+                            {order.affiliate && (
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Affiliate: {order.affiliate.name || order.affiliate.email}
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -607,7 +689,7 @@ export default function OrderDetailPage() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                {order.currency} {order.total.toFixed(2)}
+                                {formatCurrency(order.total)}
                             </p>
                         </CardContent>
                     </Card>
@@ -623,26 +705,50 @@ export default function OrderDetailPage() {
                         <div className="space-y-2">
                             <div className="flex justify-between py-2">
                                 <span className="text-sm text-gray-500 dark:text-gray-400">Subtotal</span>
-                                <span className="text-sm text-gray-900 dark:text-white">{order.currency} {order.subtotal.toFixed(2)}</span>
+                                <span className="text-sm text-gray-900 dark:text-white">{formatCurrency(order.subtotal)}</span>
                             </div>
                             <div className="flex justify-between py-2">
                                 <span className="text-sm text-gray-500 dark:text-gray-400">Shipping</span>
-                                <span className="text-sm text-gray-900 dark:text-white">{order.currency} {order.shipping_cost.toFixed(2)}</span>
+                                <span className="text-sm text-gray-900 dark:text-white">{formatCurrency(order.shipping_cost)}</span>
                             </div>
                             <div className="flex justify-between py-2">
                                 <span className="text-sm text-gray-500 dark:text-gray-400">Tax</span>
-                                <span className="text-sm text-gray-900 dark:text-white">{order.currency} {order.tax_amount.toFixed(2)}</span>
+                                <span className="text-sm text-gray-900 dark:text-white">{formatCurrency(order.tax_amount)}</span>
                             </div>
                             {order.discount_amount > 0 && (
                                 <div className="flex justify-between py-2 text-green-600 dark:text-green-400">
                                     <span className="text-sm">Discount</span>
-                                    <span className="text-sm">-{order.currency} {order.discount_amount.toFixed(2)}</span>
+                                    <span className="text-sm">-{formatCurrency(order.discount_amount)}</span>
                                 </div>
+                            )}
+                            {order.discount_code && (
+                                <div className="flex justify-between py-2">
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Applied Code</span>
+                                    <span className="text-sm font-mono text-gray-900 dark:text-white">{order.discount_code}</span>
+                                </div>
+                            )}
+                            {order.affiliate && (
+                                <>
+                                    <div className="flex justify-between py-2">
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">Affiliate</span>
+                                        <span className="text-sm text-gray-900 dark:text-white">{order.affiliate.name || order.affiliate.email}</span>
+                                    </div>
+                                    <div className="flex justify-between py-2">
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">Referral Code</span>
+                                        <span className="text-sm font-mono text-gray-900 dark:text-white">{order.affiliate.referral_code}</span>
+                                    </div>
+                                    <div className="flex justify-between py-2">
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">Affiliate Commission</span>
+                                        <span className="text-sm text-gray-900 dark:text-white">
+                                            {formatCurrency(order.affiliate_commission_amount || order.affiliate.commission_amount || 0)}
+                                        </span>
+                                    </div>
+                                </>
                             )}
                             <Separator className="my-2 bg-gray-200 dark:bg-gray-800" />
                             <div className="flex justify-between py-2 font-bold">
                                 <span className="text-base text-gray-900 dark:text-white">Total</span>
-                                <span className="text-base text-gray-900 dark:text-white">{order.currency} {order.total.toFixed(2)}</span>
+                                <span className="text-base text-gray-900 dark:text-white">{formatCurrency(order.total)}</span>
                             </div>
                         </div>
                     </CardContent>
@@ -785,33 +891,70 @@ export default function OrderDetailPage() {
                 title="Update Order Status"
                 description={`Update status for order ${order.order_number}`}
                 open={updatingStatus}
-                onOpenChange={(open) => !open && setUpdatingStatus(false)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setUpdatingStatus(false);
+                        setSkipConflict(null);
+                    }
+                }}
                 contentWidth="max-w-md"
             >
-                <div className="space-y-4">
-                    <CustomSelect
-                        selectField={selectedStatus}
-                        setSelectField={setSelectedStatus as Dispatch<SetStateAction<string | selectField | undefined>>}
-                        items={statusOptions}
-                        placeholder="Select status"
-                    />
-                    <div className="flex justify-end gap-2 pt-4">
-                        <Button
-                            variant="outline"
-                            onClick={() => setUpdatingStatus(false)}
-                            className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleUpdateStatus}
-                            disabled={isSubmitting || !selectedStatus}
-                            className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-lg"
-                        >
-                            {isSubmitting ? "Updating..." : "Update Status"}
-                        </Button>
+                {skipConflict ? (
+                    <div className="space-y-4">
+                        <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3 text-sm text-gray-700 dark:text-gray-300">
+                            <p>
+                                Moving this order from{' '}
+                                <strong>{skipConflict.current_status.replace(/_/g, ' ')}</strong> to{' '}
+                                <strong>{skipConflict.requested_status.replace(/_/g, ' ')}</strong> skips:{' '}
+                                <strong>{skipConflict.skipped_statuses.map(s => s.replace(/_/g, ' ')).join(', ')}</strong>.
+                            </p>
+                            <p className="mt-1">You can skip those steps or mark them as completed.</p>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="outline" onClick={() => setSkipConflict(null)} disabled={isSubmitting}>
+                                Back
+                            </Button>
+                            <Button variant="outline" onClick={() => handleUpdateStatus('skip')} disabled={isSubmitting}>
+                                Skip steps
+                            </Button>
+                            <Button
+                                onClick={() => handleUpdateStatus('complete')}
+                                disabled={isSubmitting}
+                                className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-lg"
+                            >
+                                {isSubmitting ? "Updating..." : "Mark steps as completed"}
+                            </Button>
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="space-y-4">
+                        <CustomSelect
+                            selectField={selectedStatus}
+                            setSelectField={setSelectedStatus as Dispatch<SetStateAction<string | selectField | undefined>>}
+                            items={statusOptions}
+                            placeholder="Select status"
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Marking an order ready for shipping creates its shipment — dispatch and delivery are managed on the Shipments page.
+                        </p>
+                        <div className="flex justify-end gap-2 pt-4">
+                            <Button
+                                variant="outline"
+                                onClick={() => setUpdatingStatus(false)}
+                                className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={() => handleUpdateStatus()}
+                                disabled={isSubmitting || !selectedStatus}
+                                className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-lg"
+                            >
+                                {isSubmitting ? "Updating..." : "Update Status"}
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </CustomDialog>
 
             {/* Update Payment Dialog */}

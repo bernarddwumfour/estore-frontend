@@ -4,8 +4,8 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
-    Eye, RefreshCw, Package, Truck, CheckCircle, XCircle,
-    MapPin, Calendar, Clock, Upload, Download, Filter, Send
+    Eye, RefreshCw, Truck, CheckCircle,
+    MapPin, Calendar, Clock, Download, Filter, Pencil, FileText, Ban
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDr
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import { formatCurrency } from '@/lib/currency';
+import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
 
 // Types
 interface Shipment {
@@ -133,15 +135,12 @@ const fetchShipmentDetail = async (id: string): Promise<ShipmentDetail> => {
     return response.data.data;
 };
 
-// Assign carrier and ship
-const assignCarrierAndShip = async (orderId: string, data: any) => {
-    const response = await securityAxios.post(`/orders/admin/shipments/${orderId}/assign-carrier-and-ship`, { ...data });
-    return response.data;
-};
-
-// Update shipment status
+// Update shipment status and/or carrier/tracking
 const updateShipmentStatus = async (id: string, data: any) => {
-    const response = await securityAxios.put(`/orders/admin/shipments/${id}/update-status`, data);
+    const response = await securityAxios.put(
+        endpoints.orders.updateShipmentStatus.replace(':id', id),
+        data
+    );
     return response.data;
 };
 
@@ -160,13 +159,10 @@ const filterConfig: FilterConfig = {
             placeholder: 'Shipment Status',
             options: [
                 { value: 'pending', label: 'Pending' },
-                { value: 'processing', label: 'Processing' },
                 { value: 'shipped', label: 'Shipped' },
-                { value: 'in_transit', label: 'In Transit' },
-                { value: 'out_for_delivery', label: 'Out for Delivery' },
                 { value: 'delivered', label: 'Delivered' },
-                { value: 'failed', label: 'Failed' },
-                { value: 'returned', label: 'Returned' },
+                { value: 'cancelled', label: 'Cancelled' },
+                { value: 'refunded', label: 'Refunded' },
             ],
             defaultValue: '',
             width: '150px',
@@ -210,21 +206,12 @@ const sortConfig: SortConfig = {
     defaultSortOrder: 'desc',
 };
 
-// Assign Carrier Form Component
+// Assign Carrier Form Component — updates carrier/tracking on the existing
+// shipment (status untouched) via the update-status endpoint.
 function AssignCarrierForm({ shipment, onSuccess, onCancel }: { shipment: Shipment; onSuccess: () => void; onCancel: () => void }) {
-    const [carrier, setCarrier] = useState("");
-    const [trackingNumber, setTrackingNumber] = useState("");
-    const [trackingUrl, setTrackingUrl] = useState("");
-    const [shippingCostActual, setShippingCostActual] = useState("");
-    const [serviceLevel, setServiceLevel] = useState("");
+    const [carrier, setCarrier] = useState(shipment.carrier || "");
+    const [trackingNumber, setTrackingNumber] = useState(shipment.tracking_number || "");
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const carrierOptions = [
-        { value: "fedex", label: "FedEx" },
-        { value: "dhl", label: "DHL" },
-        { value: "ups", label: "UPS" },
-        { value: "usps", label: "USPS" },
-    ];
 
     const handleSubmit = async () => {
         if (!carrier || !trackingNumber) {
@@ -234,16 +221,13 @@ function AssignCarrierForm({ shipment, onSuccess, onCancel }: { shipment: Shipme
 
         setIsSubmitting(true);
         try {
-            const response = await assignCarrierAndShip(shipment.order_id, {
+            const response = await updateShipmentStatus(shipment.id, {
                 carrier,
                 tracking_number: trackingNumber,
-                tracking_url: trackingUrl,
-                shipping_cost_actual: shippingCostActual ? parseFloat(shippingCostActual) : null,
-                service_level: serviceLevel,
             });
 
             if (response.success) {
-                toast.success(`Shipment assigned to ${carrier} and marked as shipped`);
+                toast.success(`Carrier ${carrier} assigned`);
                 onSuccess();
             } else {
                 toast.error(response.message || "Failed to assign carrier");
@@ -259,16 +243,13 @@ function AssignCarrierForm({ shipment, onSuccess, onCancel }: { shipment: Shipme
         <div className="space-y-4">
             <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Carrier *</label>
-                <select
-                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                <input
+                    type="text"
                     value={carrier}
                     onChange={(e) => setCarrier(e.target.value)}
-                >
-                    <option value="">Select carrier</option>
-                    {carrierOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                </select>
+                    placeholder="e.g. DHL"
+                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                />
             </div>
 
             <div className="space-y-2">
@@ -282,45 +263,101 @@ function AssignCarrierForm({ shipment, onSuccess, onCancel }: { shipment: Shipme
                 />
             </div>
 
+            <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={onCancel}>Cancel</Button>
+                <Button onClick={handleSubmit} disabled={isSubmitting}>
+                    {isSubmitting ? "Saving..." : "Assign Carrier"}
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+// Mark as Shipped Form — dispatches a pending shipment; carrier and tracking
+// number are optional and can be filled in here.
+function MarkAsShippedForm({ shipment, onSuccess, onCancel }: { shipment: Shipment; onSuccess: () => void; onCancel: () => void }) {
+    const [carrier, setCarrier] = useState(shipment.carrier || "");
+    const [trackingNumber, setTrackingNumber] = useState(shipment.tracking_number || "");
+    const [location, setLocation] = useState("");
+    const [description, setDescription] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async () => {
+        setIsSubmitting(true);
+        try {
+            const response = await updateShipmentStatus(shipment.id, {
+                shipment_status: 'shipped',
+                carrier,
+                tracking_number: trackingNumber,
+                location,
+                description,
+            });
+
+            if (response.success) {
+                toast.success(`Shipment for order ${shipment.order_number} marked as shipped`);
+                onSuccess();
+            } else {
+                toast.error(response.message || "Failed to mark shipment as shipped");
+            }
+        } catch (error: any) {
+            const errors = error?.response?.data?.errors;
+            const firstError = errors && typeof errors === 'object' ? Object.values(errors)[0] : null;
+            toast.error(String(firstError || error?.response?.data?.message || "Failed to mark shipment as shipped"));
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
             <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tracking URL (Optional)</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Carrier (Optional)</label>
                 <input
-                    type="url"
-                    value={trackingUrl}
-                    onChange={(e) => setTrackingUrl(e.target.value)}
-                    placeholder="https://..."
+                    type="text"
+                    value={carrier}
+                    onChange={(e) => setCarrier(e.target.value)}
+                    placeholder="e.g. DHL"
                     className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
                 />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Actual Shipping Cost (Optional)</label>
-                    <input
-                        type="number"
-                        step="0.01"
-                        value={shippingCostActual}
-                        onChange={(e) => setShippingCostActual(e.target.value)}
-                        placeholder="0.00"
-                        className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Service Level (Optional)</label>
-                    <input
-                        type="text"
-                        value={serviceLevel}
-                        onChange={(e) => setServiceLevel(e.target.value)}
-                        placeholder="e.g., Express, Standard"
-                        className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
-                    />
-                </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tracking Number (Optional)</label>
+                <input
+                    type="text"
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                    placeholder="Enter tracking number"
+                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                />
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Location (Optional)</label>
+                <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Dispatch location"
+                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                />
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</label>
+                <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Additional details about the dispatch"
+                    rows={2}
+                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                />
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={onCancel}>Cancel</Button>
                 <Button onClick={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? "Processing..." : "Assign Carrier & Ship"}
+                    {isSubmitting ? "Shipping..." : "Mark as Shipped"}
                 </Button>
             </div>
         </div>
@@ -333,16 +370,19 @@ function UpdateShipmentStatusForm({ shipment, onSuccess, onCancel }: { shipment:
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [location, setLocation] = useState("");
     const [description, setDescription] = useState("");
-    const [carrierStatus, setCarrierStatus] = useState("");
 
+    // delivered only from shipped; refunded from shipped/delivered;
+    // cancelled from pending/shipped (pending -> shipped goes via Mark as Shipped)
     const statusOptions = [
-        { value: "processing", label: "Processing" },
-        { value: "in_transit", label: "In Transit" },
-        { value: "out_for_delivery", label: "Out for Delivery" },
         { value: "delivered", label: "Delivered" },
-        { value: "failed", label: "Failed" },
-        { value: "returned", label: "Returned" },
-    ];
+        { value: "cancelled", label: "Cancelled" },
+        { value: "refunded", label: "Refunded" },
+    ].filter(opt => {
+        if (opt.value === 'delivered') return shipment.status === 'shipped';
+        if (opt.value === 'refunded') return ['shipped', 'delivered'].includes(shipment.status);
+        if (opt.value === 'cancelled') return ['pending', 'shipped'].includes(shipment.status);
+        return true;
+    });
 
     const handleSubmit = async () => {
         if (!selectedStatus) {
@@ -356,7 +396,6 @@ function UpdateShipmentStatusForm({ shipment, onSuccess, onCancel }: { shipment:
                 shipment_status: selectedStatus,
                 location: location,
                 description: description,
-                carrier_status: carrierStatus,
             });
 
             if (response.success) {
@@ -395,17 +434,6 @@ function UpdateShipmentStatusForm({ shipment, onSuccess, onCancel }: { shipment:
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="Current location"
-                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
-                />
-            </div>
-
-            <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Carrier Status (Optional)</label>
-                <input
-                    type="text"
-                    value={carrierStatus}
-                    onChange={(e) => setCarrierStatus(e.target.value)}
-                    placeholder="Status from carrier"
                     className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
                 />
             </div>
@@ -463,14 +491,11 @@ function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClo
 
     const getStatusColor = (status: string) => {
         const colors: Record<string, string> = {
-            pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-            processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+            pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
             shipped: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
-            in_transit: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-            out_for_delivery: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
             delivered: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-            failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-            returned: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+            cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+            refunded: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
         };
         return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     };
@@ -508,7 +533,7 @@ function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClo
                 <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Shipping Cost</p>
                     <p className="font-medium text-gray-900 dark:text-white">
-                        {shipment.shipping_cost_actual ? `$${shipment.shipping_cost_actual.toFixed(2)}` : `$${shipment.shipping_cost.toFixed(2)} (estimated)`}
+                        {shipment.shipping_cost_actual ? formatCurrency(shipment.shipping_cost_actual) : `${formatCurrency(shipment.shipping_cost)} (estimated)`}
                     </p>
                 </div>
                 <div>
@@ -579,23 +604,23 @@ function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClo
                 <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg space-y-2">
                     <div className="flex justify-between">
                         <span className="text-sm text-gray-600 dark:text-gray-400">Subtotal:</span>
-                        <span className="text-sm font-medium">{shipment.order_summary.currency} {shipment.order_summary.subtotal.toFixed(2)}</span>
+                        <span className="text-sm font-medium">{formatCurrency(shipment.order_summary.subtotal)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-sm text-gray-600 dark:text-gray-400">Shipping:</span>
-                        <span className="text-sm font-medium">{shipment.order_summary.currency} {shipment.order_summary.shipping_cost.toFixed(2)}</span>
+                        <span className="text-sm font-medium">{formatCurrency(shipment.order_summary.shipping_cost)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-sm text-gray-600 dark:text-gray-400">Tax:</span>
-                        <span className="text-sm font-medium">{shipment.order_summary.currency} {shipment.order_summary.tax_amount.toFixed(2)}</span>
+                        <span className="text-sm font-medium">{formatCurrency(shipment.order_summary.tax_amount)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-sm text-gray-600 dark:text-gray-400">Discount:</span>
-                        <span className="text-sm font-medium text-red-600">-{shipment.order_summary.currency} {shipment.order_summary.discount_amount.toFixed(2)}</span>
+                        <span className="text-sm font-medium text-red-600">-{formatCurrency(shipment.order_summary.discount_amount)}</span>
                     </div>
                     <div className="border-t pt-2 mt-2 flex justify-between">
                         <span className="font-semibold">Total:</span>
-                        <span className="font-bold">{shipment.order_summary.currency} {shipment.order_summary.total.toFixed(2)}</span>
+                        <span className="font-bold">{formatCurrency(shipment.order_summary.total)}</span>
                     </div>
                     {/* <div className="flex justify-between text-xs text-gray-500">
                         <span>Payment: {shipment.order_summary.payment_method_display || shipment.order_summary.payment_method}</span>
@@ -616,8 +641,8 @@ function ShipmentDetailView({ shipmentId, onClose }: { shipmentId: string; onClo
                                     <p className="text-xs text-gray-500">SKU: {item.sku} | Qty: {item.quantity}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-sm font-medium">{shipment.order_summary.currency} {(item.unit_price * item.quantity).toFixed(2)}</p>
-                                    <p className="text-xs text-gray-500">${item.unit_price.toFixed(2)} each</p>
+                                    <p className="text-sm font-medium">{formatCurrency(item.unit_price * item.quantity)}</p>
+                                    <p className="text-xs text-gray-500">{formatCurrency(item.unit_price)} each</p>
                                 </div>
                             </div>
                         ))}
@@ -657,6 +682,7 @@ export default function ShipmentsPage() {
     // State for sheets/dialogs
     const [viewingShipment, setViewingShipment] = useState<Shipment | null>(null);
     const [assigningCarrierFor, setAssigningCarrierFor] = useState<Shipment | null>(null);
+    const [markingShippedFor, setMarkingShippedFor] = useState<Shipment | null>(null);
     const [updatingStatusFor, setUpdatingStatusFor] = useState<Shipment | null>(null);
 
     // Filter and pagination state
@@ -749,10 +775,7 @@ export default function ShipmentsPage() {
     };
 
     // Refresh handler
-    const handleRefresh = () => {
-        refetch();
-        toast.success('Shipments refreshed');
-    };
+    const handleRefresh = () => refetch();
 
     // Reset all filters
     const handleResetFilters = () => {
@@ -767,24 +790,7 @@ export default function ShipmentsPage() {
         setFilters({ page: 1, limit: filters.limit });
     };
 
-    // Bulk actions with confirmation
-    const handleBulkShip = (selectedItems: Shipment[]) => {
-        setConfirmDialog({
-            open: true,
-            title: 'Bulk Ship Orders',
-            message: `Are you sure you want to mark ${selectedItems.length} selected shipment${selectedItems.length !== 1 ? 's' : ''} as shipped? You'll need to add carrier info later.`,
-            variant: 'info',
-            onConfirm: () => {
-                const ids = selectedItems.map(s => s.id);
-                bulkUpdateMutation.mutate({
-                    shipment_ids: ids,
-                    shipment_status: 'shipped',
-                });
-                setConfirmDialog({ ...confirmDialog, open: false });
-            },
-        });
-    };
-
+    // Bulk actions with confirmation (backend keys bulk updates by order id)
     const handleBulkDeliver = (selectedItems: Shipment[]) => {
         setConfirmDialog({
             open: true,
@@ -792,9 +798,9 @@ export default function ShipmentsPage() {
             message: `Are you sure you want to mark ${selectedItems.length} selected shipment${selectedItems.length !== 1 ? 's' : ''} as delivered?`,
             variant: 'info',
             onConfirm: () => {
-                const ids = selectedItems.map(s => s.id);
+                const ids = selectedItems.map(s => s.order_id);
                 bulkUpdateMutation.mutate({
-                    shipment_ids: ids,
+                    order_ids: ids,
                     shipment_status: 'delivered',
                 });
                 setConfirmDialog({ ...confirmDialog, open: false });
@@ -806,12 +812,12 @@ export default function ShipmentsPage() {
         setConfirmDialog({
             open: true,
             title: 'Bulk Cancel Shipments',
-            message: `Are you sure you want to cancel ${selectedItems.length} selected shipment${selectedItems.length !== 1 ? 's' : ''}?`,
+            message: `Are you sure you want to cancel ${selectedItems.length} selected shipment${selectedItems.length !== 1 ? 's' : ''}? This also cancels the orders.`,
             variant: 'error',
             onConfirm: () => {
-                const ids = selectedItems.map(s => s.id);
+                const ids = selectedItems.map(s => s.order_id);
                 bulkUpdateMutation.mutate({
-                    shipment_ids: ids,
+                    order_ids: ids,
                     shipment_status: 'cancelled',
                 });
                 setConfirmDialog({ ...confirmDialog, open: false });
@@ -852,18 +858,28 @@ export default function ShipmentsPage() {
             color: 'blue',
         });
 
-        // Show "Assign Carrier" for pending shipments (no carrier assigned yet)
-        if ((shipment.status === 'pending' || shipment.status === 'processing') && !shipment.tracking_number) {
+        // Dispatch a pending shipment (carrier/tracking optional)
+        if (shipment.status === 'pending') {
             actions.push({
-                label: 'Assign Carrier & Ship',
-                icon: <Send size={14} />,
+                label: 'Mark as Shipped',
+                icon: <Truck size={14} />,
+                onClick: () => setMarkingShippedFor(shipment),
+                color: 'emerald',
+            });
+        }
+
+        // Assign/update carrier and tracking on active shipments
+        if (shipment.status === 'shipped') {
+            actions.push({
+                label: shipment.tracking_number ? 'Update Carrier' : 'Assign Carrier',
+                icon: <Pencil size={14} />,
                 onClick: () => setAssigningCarrierFor(shipment),
                 color: 'emerald',
             });
         }
 
-        // Show "Update Status" for shipments that are not delivered/cancelled
-        if (shipment.status !== 'delivered' && shipment.status !== 'failed' && shipment.status !== 'returned') {
+        // Show "Update Status" while there is still a transition available
+        if (['pending', 'shipped', 'delivered'].includes(shipment.status)) {
             actions.push({
                 label: 'Update Status',
                 icon: <RefreshCw size={14} />,
@@ -874,7 +890,7 @@ export default function ShipmentsPage() {
 
         actions.push({
             label: 'View Order',
-            icon: <Package size={14} />,
+            icon: <FileText size={14} />,
             onClick: () => router.push(`/dashboard/orders/${shipment.order_number}`),
             color: 'violet',
         });
@@ -884,10 +900,9 @@ export default function ShipmentsPage() {
 
     // Bulk actions
     const bulkActions = [
-        { label: 'Ship Selected', icon: <Truck size={14} />, onClick: handleBulkShip, color: 'violet' as const },
         { label: 'Mark as Delivered', icon: <CheckCircle size={14} />, onClick: handleBulkDeliver, color: 'emerald' as const },
-        { label: 'Cancel Selected', icon: <XCircle size={14} />, onClick: handleBulkCancel, color: 'rose' as const, variant: 'destructive' as const },
-        { label: 'Export Selected', icon: <Upload size={14} />, onClick: handleBulkExport, color: 'blue' as const },
+        { label: 'Cancel Selected', icon: <Ban size={14} />, onClick: handleBulkCancel, color: 'rose' as const, variant: 'destructive' as const },
+        { label: 'Export Selected', icon: <Download size={14} />, onClick: handleBulkExport, color: 'blue' as const },
     ];
 
     const shipments = data?.data?.shipments || [];
@@ -905,10 +920,7 @@ export default function ShipmentsPage() {
 
                 {/* Refresh Button - Always visible */}
                 <div className="flex justify-end">
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                        <RefreshCw size={16} />
-                        Refresh
-                    </Button>
+                    <RefreshButton onRefresh={handleRefresh} successMessage="Shipments refreshed" />
                 </div>
 
                 {/* Filters and Sort - Always visible */}
@@ -950,10 +962,7 @@ export default function ShipmentsPage() {
 
             {/* Refresh Button - Always visible */}
             <div className="flex justify-end">
-                <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                    <RefreshCw size={16} />
-                    Refresh
-                </Button>
+                <RefreshButton onRefresh={handleRefresh} successMessage="Shipments refreshed" />
             </div>
 
             {/* Filters and Sort Row - Always visible and interactive */}
@@ -990,9 +999,31 @@ export default function ShipmentsPage() {
                 secondaryAction={() => setConfirmDialog({ ...confirmDialog, open: false })}
             />
 
+            {/* Mark as Shipped Dialog */}
+            <CustomDialog
+                title="Mark as Shipped"
+                description={`Dispatch the shipment for order ${markingShippedFor?.order_number || ''} — this marks the order as shipped`}
+                open={!!markingShippedFor}
+                onOpenChange={(open) => !open && setMarkingShippedFor(null)}
+                contentWidth="max-w-md"
+            >
+                {markingShippedFor && (
+                    <MarkAsShippedForm
+                        shipment={markingShippedFor}
+                        onSuccess={() => {
+                            setMarkingShippedFor(null);
+                            refetch();
+                            queryClient.invalidateQueries({ queryKey: ['admin-shipments'] });
+                            queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+                        }}
+                        onCancel={() => setMarkingShippedFor(null)}
+                    />
+                )}
+            </CustomDialog>
+
             {/* Assign Carrier Dialog */}
             <CustomDialog
-                title="Assign Carrier & Ship"
+                title="Assign Carrier"
                 description={`Assign carrier and tracking for order ${assigningCarrierFor?.order_number || ''}`}
                 open={!!assigningCarrierFor}
                 onOpenChange={(open) => !open && setAssigningCarrierFor(null)}
@@ -1050,18 +1081,15 @@ export default function ShipmentsPage() {
                             />
                         )}
                         bulkActions={bulkActions}
-                        bulkActionsMessage="Select shipments to ship, deliver, cancel, or export"
+                        bulkActionsMessage="Select shipments to deliver, cancel, or export"
                         excludeColumns={['id', 'customer_email', 'created_at', 'shipped_at', 'delivered_at', 'estimated_delivery']}
                         dots={{
                             status: {
                                 pending: 'amber',
-                                processing: 'blue',
                                 shipped: 'violet',
-                                in_transit: 'zinc',
-                                out_for_delivery: 'orange',
                                 delivered: 'emerald',
-                                failed: 'rose',
-                                returned: 'zinc'
+                                cancelled: 'rose',
+                                refunded: 'zinc'
                             },
                         }}
                         links={{

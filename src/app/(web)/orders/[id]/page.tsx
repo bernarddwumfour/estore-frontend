@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
+import { PageHeader } from '@/templates/page-header';
 import {
   Home, ArrowLeft, Package, Calendar, Truck, CheckCircle,
   XCircle, MapPin, CreditCard, Phone, Mail, Download, Printer,
@@ -25,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from '@/lib/currency';
 
 // Helper functions
 const getStatusColor = (status: string) => {
@@ -487,12 +489,6 @@ export default function OrderDetailsPage() {
     }
   }, [orderId, fetchOrderDetails]);
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: order?.currency || 'USD',
-    }).format(amount);
-
   const canReviewOrder = order && (order.status === 'delivered' || order.status === 'completed') && !existingOrderReview;
 
   // Loading state
@@ -572,27 +568,20 @@ export default function OrderDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 py-16">
-        {/* Page Header with Checkout-style heading */}
-        <div className="max-w-xl space-y-4 pb-8">
-          <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
-            Order Details
-          </h2>
-          <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-            Order #{order.order_number}{" "}
-            <span className="text-slate-950 relative inline-block">
-              Details
-              <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
-            </span>
-          </h3>
-        </div>
-
+    <div className="min-h-screen bg-gray-50">
+      {/* Page header (swaps per active template) */}
+      <PageHeader subtitle="Order Details" title={`Order #${order.order_number} Details`} />
+      <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
               {order.status_display || order.status}
             </span>
+            {order.discount_code && (
+              <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                Code: {order.discount_code}
+              </Badge>
+            )}
             {canReviewOrder && (
               <Button
                 size="sm"
@@ -820,6 +809,18 @@ export default function OrderDetailsPage() {
                       <span>-{formatCurrency(order.discount_amount)}</span>
                     </div>
                   )}
+                  {order.discount_code && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Applied Code</span>
+                      <span className="font-medium font-mono">{order.discount_code}</span>
+                    </div>
+                  )}
+                  {order.affiliate && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Affiliate</span>
+                      <span className="font-medium">{order.affiliate.name || order.affiliate.email}</span>
+                    </div>
+                  )}
                   <div className="border-t pt-3 mt-3">
                     <div className="flex justify-between font-bold text-lg">
                       <span>Total</span>
@@ -896,6 +897,12 @@ export default function OrderDetailsPage() {
                       {order.payment_status_display || order.payment_status}
                     </span>
                   </div>
+                  {order.affiliate && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Affiliate Referral:</span>
+                      <span className="font-medium font-mono">{order.affiliate.referral_code}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 text-xs text-gray-600">

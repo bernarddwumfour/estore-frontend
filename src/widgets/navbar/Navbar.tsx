@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Instagram, User, Menu, X, Laptop, ShoppingBag, LayoutDashboard, LogOut, Handbag, User2, LogIn, Heart, Search } from "lucide-react"
+import { Instagram, User, Menu, X, Laptop, ShoppingBag, LayoutDashboard, LogOut, Handbag, User2, LogIn, Heart, Search, BadgePercent } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Cart from "../cart/Cart"
 import { useCartStore } from "@/app/lib/store/cart-store"
@@ -165,6 +165,14 @@ export default function Navbar() {
                                                 </div>
                                             </Link>
                                         </DropdownMenuItem>
+                                        {user?.is_affiliate && (
+                                            <DropdownMenuItem asChild className="cursor-pointer">
+                                                <Link href="/affiliate" className="flex items-center justify-between py-2">
+                                                    <span>Affiliate Earnings</span>
+                                                    <BadgePercent size={16} />
+                                                </Link>
+                                            </DropdownMenuItem>
+                                        )}
                                         <DropdownMenuItem asChild className="cursor-pointer">
                                             <Link href="/profile" className="flex items-center justify-between py-2">
                                                 <div>

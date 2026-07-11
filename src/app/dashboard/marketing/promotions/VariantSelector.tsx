@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
+import { formatCurrency } from '@/lib/currency';
 
 interface Variant {
     id: string;
@@ -76,7 +77,7 @@ export default function VariantSelector({ onSelect, onClose }: VariantSelectorPr
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="font-medium">${variant.price.toFixed(2)}</p>
+                                <p className="font-medium">{formatCurrency(variant.price)}</p>
                                 <p className="text-sm text-gray-500">Stock: {variant.stock}</p>
                                 <Button size="sm" variant="ghost" className="mt-1">
                                     <Plus size={14} className="mr-1" />

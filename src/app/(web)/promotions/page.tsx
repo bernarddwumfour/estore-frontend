@@ -4,6 +4,7 @@ import unAuthenticatedAxios from "@/axios-instances/UnAuthenticatedAxios";
 import Link from "next/link";
 import Image from "next/image";
 import { Package, Clock, Gift } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 
 interface PackageCardProps {
     id: string;
@@ -93,7 +94,7 @@ export default async function PackagesPage() {
                                         )}
                                         {/* Badge */}
                                         <div className="absolute top-3 right-3 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                                            Save ${pkg.savings_amount.toFixed(2)}
+                                            Save {formatCurrency(pkg.savings_amount)}
                                         </div>
                                     </div>
 
@@ -128,10 +129,10 @@ export default async function PackagesPage() {
                                         {/* Price */}
                                         <div className="flex items-baseline gap-2 pt-2 border-t border-slate-100">
                                             <span className="text-xl font-bold text-slate-900">
-                                                ${pkg.bundle_price.toFixed(2)}
+                                                {formatCurrency(pkg.bundle_price)}
                                             </span>
                                             <span className="text-sm text-slate-400 line-through">
-                                                ${pkg.original_total.toFixed(2)}
+                                                {formatCurrency(pkg.original_total)}
                                             </span>
                                         </div>
                                     </div>

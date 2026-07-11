@@ -23,6 +23,7 @@ import { CustomSortFromUrl, SortConfig } from '@/widgets/CustomSort/CustomSortFr
 import ProductVariantForm from '../ProductVariantForm';
 import Link from 'next/link';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import { formatCurrency } from '@/lib/currency';
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilterFromUrl';
 
 // Types
@@ -868,12 +869,12 @@ function VariantsPageContent() {
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Price</label>
-                                <p className="text-gray-900 dark:text-white">${viewingVariant.price.toFixed(2)}</p>
+                                <p className="text-gray-900 dark:text-white">{formatCurrency(viewingVariant.price)}</p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Discounted Price</label>
                                 <p className="text-gray-900 dark:text-white">
-                                    {viewingVariant.discounted_price ? `$${viewingVariant.discounted_price.toFixed(2)}` : '-'}
+                                    {viewingVariant.discounted_price ? formatCurrency(viewingVariant.discounted_price) : '-'}
                                 </p>
                             </div>
                             <div>

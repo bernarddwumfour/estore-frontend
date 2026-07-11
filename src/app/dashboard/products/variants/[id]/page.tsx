@@ -17,6 +17,7 @@ import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
 import ProductVariantForm from '@/app/dashboard/products/ProductVariantForm';
 import Image from 'next/image';
 import { useState } from 'react';
+import { formatCurrency } from '@/lib/currency';
 
 interface VariantImage {
     id: string;
@@ -278,17 +279,17 @@ export default function VariantDetailPage() {
                         <CardContent className="space-y-2">
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Original Price:</span>
-                                <span className="font-medium">${variant.price.toFixed(2)}</span>
+                                <span className="font-medium">{formatCurrency(variant.price)}</span>
                             </div>
                             {variant.discount_amount > 0 && (
                                 <>
                                     <div className="flex justify-between text-green-600">
                                         <span>Discount:</span>
-                                        <span>-${variant.discount_amount.toFixed(2)}</span>
+                                        <span>-{formatCurrency(variant.discount_amount)}</span>
                                     </div>
                                     <div className="flex justify-between font-bold pt-2 border-t">
                                         <span>Final Price:</span>
-                                        <span>${finalPrice.toFixed(2)}</span>
+                                        <span>{formatCurrency(finalPrice)}</span>
                                     </div>
                                 </>
                             )}

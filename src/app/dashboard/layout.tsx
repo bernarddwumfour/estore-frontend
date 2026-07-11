@@ -38,7 +38,10 @@ import {
   User,
   Globe,
   MonitorDot,
-  Star
+  Star,
+  TicketPercent,
+  Share2,
+  Inbox
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -107,8 +110,11 @@ const SIDEBAR_LINKS = [
     isCollapsible: true,
     children: [
       { icon: Gift, label: 'Promotions', href: '/dashboard/marketing/promotions' },
+      { icon: TicketPercent, label: 'Discount Codes', href: '/dashboard/marketing/discount-codes' },
       { icon: Star, label: 'Reviews', href: '/dashboard/marketing/reviews' },
-      { icon: Mail, label: 'Email Campaigns', href: '/dashboard/marketing//email-campaigns' },
+      { icon: Mail, label: 'Email Campaigns', href: '/dashboard/marketing/email-campaigns' },
+      { icon: Share2, label: 'Social Posts', href: '/dashboard/marketing/social' },
+      { icon: Inbox, label: 'Social Inbox', href: '/dashboard/marketing/social/inbox' },
     ]
   },
   {
@@ -117,7 +123,8 @@ const SIDEBAR_LINKS = [
     isCollapsible: true,
     children: [
       { icon: Settings, label: 'General', href: '/dashboard/settings/general' },
-      // { icon: Truck, label: 'Shipping', href: '/dashboard/settings/shipping' },
+      { icon: Share2, label: 'Social', href: '/dashboard/settings/social' },
+      { icon: Truck, label: 'Shipping', href: '/dashboard/settings/shipping' },
       // { icon: FileText, label: 'Pages', href: '/dashboard/settings/pages' },
     ]
   },

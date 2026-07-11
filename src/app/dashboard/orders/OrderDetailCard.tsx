@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 import { Clock, Calendar, Package, MapPin, CreditCard, Truck, CheckCircle, X, Loader2, DollarSign, Phone, Mail, User, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/currency";
 
 interface OrderItem {
     id: string;
@@ -57,6 +58,8 @@ interface OrderData {
     shipping_cost: number;
     tax_amount: number;
     discount_amount: number;
+    discount_code?: string | null;
+    affiliate_commission_amount?: number;
     total: number;
     currency: string;
     item_count: number;
@@ -74,6 +77,13 @@ interface OrderData {
     shipped_at: string | null;
     delivered_at: string | null;
     cancelled_at: string | null;
+    affiliate?: {
+        id: string;
+        email: string;
+        name: string;
+        referral_code: string;
+        commission_amount: number;
+    } | null;
 }
 
 interface OrderDetailCardProps {
@@ -232,6 +242,12 @@ export default function OrderDetailCard({ orderId, onClose }: OrderDetailCardPro
                         <p className="font-medium">{order.item_count} {order.item_count === 1 ? 'Item' : 'Items'}</p>
                         <p className="text-sm text-muted-foreground">Shipping: {order.shipping_method || 'Standard'}</p>
                         {order.carrier && <p className="text-sm text-muted-foreground">Carrier: {order.carrier}</p>}
+                        {order.discount_code && (
+                            <p className="text-sm text-green-600">Discount code: {order.discount_code}</p>
+                        )}
+                        {order.affiliate && (
+                            <p className="text-sm text-muted-foreground">Affiliate: {order.affiliate.name || order.affiliate.email}</p>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -244,7 +260,7 @@ export default function OrderDetailCard({ orderId, onClose }: OrderDetailCardPro
                     </CardHeader>
                     <CardContent>
                         <p className="text-2xl font-bold">
-                            {order.currency} {order.total.toFixed(2)}
+                            {formatCurrency(order.total)}
                         </p>
                     </CardContent>
                 </Card>
@@ -260,26 +276,44 @@ export default function OrderDetailCard({ orderId, onClose }: OrderDetailCardPro
                     <div className="space-y-2">
                         <div className="flex justify-between py-2">
                             <span className="text-muted-foreground">Subtotal</span>
-                            <span>{order.currency} {order.subtotal.toFixed(2)}</span>
+                            <span>{formatCurrency(order.subtotal)}</span>
                         </div>
                         <div className="flex justify-between py-2">
                             <span className="text-muted-foreground">Shipping</span>
-                            <span>{order.currency} {order.shipping_cost.toFixed(2)}</span>
+                            <span>{formatCurrency(order.shipping_cost)}</span>
                         </div>
                         <div className="flex justify-between py-2">
                             <span className="text-muted-foreground">Tax</span>
-                            <span>{order.currency} {order.tax_amount.toFixed(2)}</span>
+                            <span>{formatCurrency(order.tax_amount)}</span>
                         </div>
                         {order.discount_amount > 0 && (
                             <div className="flex justify-between py-2 text-green-600">
                                 <span>Discount</span>
-                                <span>-{order.currency} {order.discount_amount.toFixed(2)}</span>
+                                <span>-{formatCurrency(order.discount_amount)}</span>
+                            </div>
+                        )}
+                        {order.discount_code && (
+                            <div className="flex justify-between py-2">
+                                <span className="text-muted-foreground">Applied Code</span>
+                                <span className="font-mono text-sm">{order.discount_code}</span>
+                            </div>
+                        )}
+                        {order.affiliate && (
+                            <div className="flex justify-between py-2">
+                                <span className="text-muted-foreground">Affiliate</span>
+                                <span>{order.affiliate.name || order.affiliate.email}</span>
+                            </div>
+                        )}
+                        {order.affiliate && (
+                            <div className="flex justify-between py-2">
+                                <span className="text-muted-foreground">Affiliate Commission</span>
+                                <span>{formatCurrency(order.affiliate_commission_amount || order.affiliate.commission_amount || 0)}</span>
                             </div>
                         )}
                         <Separator className="my-2" />
                         <div className="flex justify-between py-2 font-bold">
                             <span>Total</span>
-                            <span>{order.currency} {order.total.toFixed(2)}</span>
+                            <span>{formatCurrency(order.total)}</span>
                         </div>
                     </div>
                 </CardContent>
@@ -333,10 +367,10 @@ export default function OrderDetailCard({ orderId, onClose }: OrderDetailCardPro
                                     </TableCell>
                                     <TableCell className="text-center">{item.quantity}</TableCell>
                                     <TableCell className="text-right">
-                                        {order.currency} {item.unit_price.toFixed(2)}
+                                        {formatCurrency(item.unit_price)}
                                     </TableCell>
                                     <TableCell className="text-right font-medium">
-                                        {order.currency} {item.total_price.toFixed(2)}
+                                        {formatCurrency(item.total_price)}
                                     </TableCell>
                                 </TableRow>
                             ))}

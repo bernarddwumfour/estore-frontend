@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatCurrency as formatCurrencyValue } from '@/lib/currency';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     BarChart,
@@ -35,6 +36,7 @@ import { endpoints } from '@/constants/endpoints/endpoints';
 import { DataTable } from '@/widgets/Customtable/DataTable';
 import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
 import { DateRangePicker } from '@/widgets/DatePicker/DateRangePicker';
+import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
 
 // ==================== Types ====================
 interface OverviewStats {
@@ -189,12 +191,10 @@ interface VariantAnalytics {
 
 // ==================== Helper Functions ====================
 const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
+    return formatCurrencyValue(value, {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(value);
+        maximumFractionDigits: 0,
+    });
 };
 
 const formatNumber = (value: number) => {
@@ -909,11 +909,10 @@ export default function ProductsAnalyticsPage() {
 
     const handleApplyDateRange = () => { setAppliedDateRange(tempDateRange); toast.success('Date range applied'); };
     const handleResetDateRange = () => { const newRange = { from: addDays(new Date(), -30), to: new Date() }; setTempDateRange(newRange); setAppliedDateRange(newRange); toast.success('Date range reset'); };
-    const handleRefresh = () => {
-        refetchOverview(); refetchSales(); refetchFunnel(); refetchHealth();
-        refetchPricing(); refetchCategories(); refetchVariants();
-        toast.success('Analytics data refreshed');
-    };
+    const handleRefresh = () => Promise.all([
+        refetchOverview(), refetchSales(), refetchFunnel(), refetchHealth(),
+        refetchPricing(), refetchCategories(), refetchVariants(),
+    ]);
 
     const revenueTrendData = salesPerformance?.revenue_trends.map((t: any) => ({ date: format(new Date(t.date), 'MMM dd'), revenue: t.revenue, orders: t.orders })) || [];
 
@@ -931,7 +930,7 @@ export default function ProductsAnalyticsPage() {
                         <Button onClick={handleApplyDateRange} className="gap-1">Apply</Button>
                         <Button variant="outline" onClick={handleResetDateRange} className="gap-1">Reset</Button>
                     </div>
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2"><RefreshCw size={16} /> Refresh</Button>
+                    <RefreshButton onRefresh={handleRefresh} successMessage="Analytics data refreshed" />
                 </div>
             </div>
 

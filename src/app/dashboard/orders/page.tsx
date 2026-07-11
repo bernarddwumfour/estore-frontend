@@ -5,10 +5,10 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   Plus, Edit, Trash2, Eye,
-  CheckCircle, XCircle, Truck, PackageCheck,
-  Package, Archive, FileText, Upload, ShoppingCart,
+  CheckCircle, CheckCheck, PackageCheck,
+  Package, Archive, FileText, ShoppingCart,
   MapPin, Calendar, CreditCard, RefreshCw, Ban,
-  CircleDollarSign, AlertCircle, Download, Filter
+  ShieldCheck, AlertCircle, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import ShippingAddressCard from './ShippingAddressCard';
 import { useRouter } from 'next/navigation';
 import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
 
 // Types
 interface Order {
@@ -44,6 +45,11 @@ interface Order {
   shipping_cost: number;
   tax_amount: number;
   discount_amount: number;
+  discount_code?: string | null;
+  affiliate_email?: string | null;
+  affiliate_name?: string | null;
+  affiliate_referral_code?: string | null;
+  affiliate_commission_amount?: number;
   total: number;
   currency: string;
   item_count: number;
@@ -69,10 +75,12 @@ const fetchOrders = async (params?: any): Promise<{
   if (params?.status && params.status !== '') queryParams.append('status', params.status);
   if (params?.payment_status && params.payment_status !== '') queryParams.append('payment_status', params.payment_status);
   if (params?.payment_method && params.payment_method !== '') queryParams.append('payment_method', params.payment_method);
+  if (params?.has_discount && params.has_discount !== '') queryParams.append('has_discount', params.has_discount);
+  if (params?.has_affiliate && params.has_affiliate !== '') queryParams.append('has_affiliate', params.has_affiliate);
   if (params?.date_range?.from) queryParams.append('date_from', params.date_range.from);
   if (params?.date_range?.to) queryParams.append('date_to', params.date_range.to);
-  if (params?.min_total && params.min_total !== '') queryParams.append('min_total', params.min_total);
-  if (params?.max_total && params.max_total !== '') queryParams.append('max_total', params.max_total);
+  if (params?.total_range?.min && params.total_range.min !== '') queryParams.append('min_total', params.total_range.min);
+  if (params?.total_range?.max && params.total_range.max !== '') queryParams.append('max_total', params.total_range.max);
   if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
   if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
 
@@ -91,14 +99,40 @@ const bulkOrderAction = async (action: string, orderIds: string[]) => {
 };
 
 // Update Status
-const updateOrderStatus = async (orderId: string, status: string) => {
-  const response = await securityAxios.put(`/orders/admin/orders/${orderId}/status`, { status });
+const updateOrderStatus = async (orderId: string, status: string, skipBehavior?: 'skip' | 'complete') => {
+  const response = await securityAxios.put(`/orders/admin/orders/${orderId}/status`, {
+    status,
+    ...(skipBehavior ? { skip_behavior: skipBehavior } : {}),
+  });
   return response.data;
 };
+
+// 409 payload returned when a status change would silently skip pipeline steps
+export interface SkipConflict {
+  code: string;
+  current_status: string;
+  requested_status: string;
+  skipped_statuses: string[];
+  allowed_skip_behaviors: string[];
+}
+
+export const getSkipConflict = (error: any): SkipConflict | null => {
+  const errors = error?.response?.data?.errors;
+  if (error?.response?.status === 409 && errors?.code === 'steps_skipped') return errors;
+  return null;
+};
+
+const formatStatus = (s: string) => s.replace(/_/g, ' ');
 
 // Update Payment Status
 const updatePaymentStatus = async (orderId: string, payment_status: string) => {
   const response = await securityAxios.put(`/orders/admin/orders/${orderId}/payment-status`, { payment_status });
+  return response.data;
+};
+
+// Reconcile a pending payment with Paystack
+const verifyOrderPayment = async (orderId: string) => {
+  const response = await securityAxios.post(`/orders/admin/orders/${orderId}/verify-payment`);
   return response.data;
 };
 
@@ -149,6 +183,28 @@ const filterConfig: FilterConfig = {
       width: '150px',
     },
     {
+      name: 'has_discount',
+      type: 'select',
+      placeholder: 'Discount',
+      options: [
+        { value: 'true', label: 'With Discount' },
+        { value: 'false', label: 'No Discount' },
+      ],
+      defaultValue: '',
+      width: '130px',
+    },
+    {
+      name: 'has_affiliate',
+      type: 'select',
+      placeholder: 'Affiliate',
+      options: [
+        { value: 'true', label: 'Affiliate Sale' },
+        { value: 'false', label: 'Direct Sale' },
+      ],
+      defaultValue: '',
+      width: '130px',
+    },
+    {
       name: 'date_range',
       type: 'date_range',
       placeholder: 'Date Range',
@@ -185,33 +241,72 @@ const sortConfig: SortConfig = {
 function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSuccess: () => void; onCancel: () => void }) {
   const [selectedStatus, setSelectedStatus] = useState(order.status);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [skipConflict, setSkipConflict] = useState<SkipConflict | null>(null);
 
+  // shipped / delivered are managed from the Shipments page (create a
+  // shipment to ship; mark its shipment delivered) — not offered here.
   const statusOptions = [
     { value: "confirmed", label: "Confirmed" },
     { value: "processing", label: "Processing" },
     { value: "ready_for_shipping", label: "Ready for Shipping" },
-    { value: "shipped", label: "Shipped" },
-    { value: "delivered", label: "Delivered" },
     { value: "completed", label: "Completed" },
     { value: "cancelled", label: "Cancelled" },
   ];
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (skipBehavior?: 'skip' | 'complete') => {
     setIsSubmitting(true);
     try {
-      const response = await updateOrderStatus(order.id, selectedStatus);
+      const response = await updateOrderStatus(order.id, selectedStatus, skipBehavior);
       if (response.success) {
-        toast.success(`Order status updated to ${selectedStatus.replace(/_/g, ' ')}`);
+        toast.success(
+          selectedStatus === 'ready_for_shipping'
+            ? 'Order ready for shipping — shipment created, track it on the Shipments page'
+            : `Order status updated to ${formatStatus(selectedStatus)}`
+        );
         onSuccess();
       } else {
         toast.error(response.message || "Failed to update status");
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to update status");
+      const conflict = getSkipConflict(error);
+      if (conflict) {
+        setSkipConflict(conflict);
+      } else {
+        toast.error(error?.response?.data?.message || "Failed to update status");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (skipConflict) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3">
+          <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            <p>
+              Moving this order from <strong>{formatStatus(skipConflict.current_status)}</strong> to{' '}
+              <strong>{formatStatus(skipConflict.requested_status)}</strong> skips:{' '}
+              <strong>{skipConflict.skipped_statuses.map(formatStatus).join(', ')}</strong>.
+            </p>
+            <p className="mt-1">You can skip those steps or mark them as completed.</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={() => setSkipConflict(null)} disabled={isSubmitting}>
+            Back
+          </Button>
+          <Button variant="outline" onClick={() => handleSubmit('skip')} disabled={isSubmitting}>
+            Skip steps
+          </Button>
+          <Button onClick={() => handleSubmit('complete')} disabled={isSubmitting}>
+            {isSubmitting ? "Updating..." : "Mark steps as completed"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -227,10 +322,13 @@ function UpdateStatusForm({ order, onSuccess, onCancel }: { order: Order; onSucc
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Shipped and delivered are set from the Shipments page.
+        </p>
       </div>
       <div className="flex justify-end gap-2 pt-4">
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={handleSubmit} disabled={isSubmitting}>
+        <Button onClick={() => handleSubmit()} disabled={isSubmitting}>
           {isSubmitting ? "Updating..." : "Update Status"}
         </Button>
       </div>
@@ -313,6 +411,8 @@ export default function OrdersPage() {
     status: '',
     payment_status: '',
     payment_method: '',
+    has_discount: '',
+    has_affiliate: '',
     date_range: undefined,
     total_range: { min: '', max: '' },
     sort_by: 'created_at',
@@ -377,6 +477,8 @@ export default function OrdersPage() {
       status: newFilters.status || '',
       payment_status: newFilters.payment_status || '',
       payment_method: newFilters.payment_method || '',
+      has_discount: newFilters.has_discount || '',
+      has_affiliate: newFilters.has_affiliate || '',
       date_range: newFilters.date_range,
       total_range: newFilters.total_range || { min: '', max: '' },
     });
@@ -394,10 +496,7 @@ export default function OrdersPage() {
   };
 
   // Refresh handler
-  const handleRefresh = () => {
-    refetch();
-    toast.success('Orders refreshed');
-  };
+  const handleRefresh = () => refetch();
 
   // Reset all filters
   const handleResetFilters = () => {
@@ -406,6 +505,8 @@ export default function OrdersPage() {
       status: '',
       payment_status: '',
       payment_method: '',
+      has_discount: '',
+      has_affiliate: '',
       date_range: undefined,
       total_range: { min: '', max: '' },
       sort_by: 'created_at',
@@ -457,34 +558,6 @@ export default function OrdersPage() {
     });
   };
 
-  const handleBulkShip = (selectedItems: Order[]) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Bulk Ship Orders',
-      message: `Are you sure you want to mark ${selectedItems.length} selected order${selectedItems.length !== 1 ? 's' : ''} as shipped?`,
-      variant: 'info',
-      onConfirm: () => {
-        const ids = selectedItems.map(i => i.id);
-        bulkActionMutation.mutate({ action: 'ship', ids });
-        setConfirmDialog({ ...confirmDialog, open: false });
-      },
-    });
-  };
-
-  const handleBulkDeliver = (selectedItems: Order[]) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Bulk Deliver Orders',
-      message: `Are you sure you want to mark ${selectedItems.length} selected order${selectedItems.length !== 1 ? 's' : ''} as delivered?`,
-      variant: 'info',
-      onConfirm: () => {
-        const ids = selectedItems.map(i => i.id);
-        bulkActionMutation.mutate({ action: 'deliver', ids });
-        setConfirmDialog({ ...confirmDialog, open: false });
-      },
-    });
-  };
-
   const handleBulkComplete = (selectedItems: Order[]) => {
     setConfirmDialog({
       open: true,
@@ -525,8 +598,13 @@ export default function OrdersPage() {
       shipping_cost: item.shipping_cost,
       tax_amount: item.tax_amount,
       discount_amount: item.discount_amount,
+      discount_code: item.discount_code,
       total: item.total,
       item_count: item.item_count,
+      affiliate_name: item.affiliate_name,
+      affiliate_email: item.affiliate_email,
+      affiliate_referral_code: item.affiliate_referral_code,
+      affiliate_commission_amount: item.affiliate_commission_amount,
       created_at: item.created_at,
     }));
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -540,6 +618,23 @@ export default function OrdersPage() {
   };
 
   // Row actions
+  const handleVerifyPayment = async (order: Order) => {
+    toast.info(`Checking payment for ${order.order_number} with Paystack...`);
+    try {
+      const response = await verifyOrderPayment(order.id);
+      if (response.success) {
+        toast.success(response.message || 'Payment verified — order marked as paid');
+      } else {
+        toast.error(response.message || 'Payment verification failed');
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Payment verification failed');
+    } finally {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+    }
+  };
+
   const getOrderActions = (order: Order): ActionItem[] => {
     const actions: ActionItem[] = [];
 
@@ -561,7 +656,7 @@ export default function OrdersPage() {
 
     actions.push({
       label: 'Update Status',
-      icon: <PackageCheck size={14} />,
+      icon: <RefreshCw size={14} />,
       onClick: () => setUpdatingStatusFor(order),
       color: 'emerald',
     });
@@ -572,6 +667,16 @@ export default function OrdersPage() {
       onClick: () => setUpdatingPaymentFor(order),
       color: 'orange',
     });
+
+    // Reconcile with Paystack when the redirect/webhook never confirmed it
+    if (order.payment_method === 'paystack' && ['pending', 'failed'].includes(order.payment_status)) {
+      actions.push({
+        label: 'Verify Payment',
+        icon: <ShieldCheck size={14} />,
+        onClick: () => handleVerifyPayment(order),
+        color: 'emerald',
+      });
+    }
 
     if (order.shipping_address) {
       actions.push({
@@ -588,13 +693,11 @@ export default function OrdersPage() {
   // Bulk actions
   const bulkActions = [
     { label: 'Confirm Selected', icon: <CheckCircle size={14} />, onClick: handleBulkConfirm, color: 'emerald' as const },
-    { label: 'Process Selected', icon: <RefreshCw size={14} />, onClick: handleBulkProcess, color: 'blue' as const },
-    { label: 'Ready for Shipping', icon: <Truck size={14} />, onClick: handleBulkReadyForShipping, color: 'violet' as const },
-    { label: 'Ship Selected', icon: <Truck size={14} />, onClick: handleBulkShip, color: 'violet' as const },
-    { label: 'Deliver Selected', icon: <PackageCheck size={14} />, onClick: handleBulkDeliver, color: 'emerald' as const },
-    { label: 'Complete Selected', icon: <CheckCircle size={14} />, onClick: handleBulkComplete, color: 'emerald' as const },
+    { label: 'Process Selected', icon: <Package size={14} />, onClick: handleBulkProcess, color: 'blue' as const },
+    { label: 'Ready for Shipping', icon: <PackageCheck size={14} />, onClick: handleBulkReadyForShipping, color: 'violet' as const },
+    { label: 'Complete Selected', icon: <CheckCheck size={14} />, onClick: handleBulkComplete, color: 'emerald' as const },
     { label: 'Cancel Selected', icon: <Ban size={14} />, onClick: handleBulkCancel, color: 'rose' as const, variant: 'destructive' as const },
-    { label: 'Export Selected', icon: <Upload size={14} />, onClick: handleBulkExport, color: 'blue' as const },
+    { label: 'Export Selected', icon: <Download size={14} />, onClick: handleBulkExport, color: 'blue' as const },
   ];
 
   const orders = data?.data?.orders || [];
@@ -612,10 +715,7 @@ export default function OrdersPage() {
 
         {/* Refresh Button - Always visible */}
         <div className="flex justify-end">
-          <Button variant="outline" onClick={handleRefresh} className="gap-2">
-            <RefreshCw size={16} />
-            Refresh
-          </Button>
+          <RefreshButton onRefresh={handleRefresh} successMessage="Orders refreshed" />
         </div>
 
         {/* Filters and Sort - Always visible */}
@@ -628,6 +728,8 @@ export default function OrdersPage() {
                 status: appliedFilters.status,
                 payment_status: appliedFilters.payment_status,
                 payment_method: appliedFilters.payment_method,
+                has_discount: appliedFilters.has_discount,
+                has_affiliate: appliedFilters.has_affiliate,
                 date_range: appliedFilters.date_range,
                 total_range: appliedFilters.total_range,
               }}
@@ -659,10 +761,7 @@ export default function OrdersPage() {
 
       {/* Refresh Button - Always visible */}
       <div className="flex justify-end">
-        <Button variant="outline" onClick={handleRefresh} className="gap-2">
-          <RefreshCw size={16} />
-          Refresh
-        </Button>
+        <RefreshButton onRefresh={handleRefresh} successMessage="Orders refreshed" />
       </div>
 
       {/* Filters and Sort Row - Always visible and interactive */}
@@ -675,6 +774,8 @@ export default function OrdersPage() {
               status: appliedFilters.status,
               payment_status: appliedFilters.payment_status,
               payment_method: appliedFilters.payment_method,
+              has_discount: appliedFilters.has_discount,
+              has_affiliate: appliedFilters.has_affiliate,
               date_range: appliedFilters.date_range,
               total_range: appliedFilters.total_range,
             }}
@@ -793,8 +894,8 @@ export default function OrdersPage() {
               />
             )}
             bulkActions={bulkActions}
-            bulkActionsMessage="Select orders to confirm, process, mark ready for shipping, ship, deliver, complete, cancel, or export"
-            excludeColumns={['id', 'items', 'shipping_address', 'tax_amount', 'discount_amount', 'currency']}
+            bulkActionsMessage="Select orders to confirm, process, mark ready for shipping, complete, cancel, or export (shipping is managed from the Shipments page)"
+            excludeColumns={['id', 'items', 'shipping_address', 'tax_amount', 'currency']}
             dots={{
               status: {
                 pending: 'amber',

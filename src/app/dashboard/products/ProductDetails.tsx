@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 import { Star, Package, Tag, Clock, Calendar, CheckCircle, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/currency";
 
 interface Variant {
     id: string;
@@ -289,12 +290,12 @@ export default function ProductDetailCard({ productId, onClose }: ProductDetailC
                                                     ))}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>${variant.price.toFixed(2)}</TableCell>
+                                            <TableCell>{formatCurrency(variant.price)}</TableCell>
                                             <TableCell>
-                                                {variant.discount_amount > 0 ? `-$${variant.discount_amount.toFixed(2)}` : "-"}
+                                                {variant.discount_amount > 0 ? `-${formatCurrency(variant.discount_amount)}` : "-"}
                                             </TableCell>
                                             <TableCell className="font-semibold">
-                                                ${finalPrice.toFixed(2)}
+                                                {formatCurrency(finalPrice)}
                                             </TableCell>
                                             <TableCell>
                                                 <span className={variant.stock === 0 ? "text-red-500" : ""}>

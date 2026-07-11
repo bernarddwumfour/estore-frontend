@@ -23,6 +23,7 @@ import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter'
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
 import Link from 'next/link';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
 // Types
 interface Guest {
     id: string;
@@ -244,10 +245,7 @@ export default function GuestsPage() {
     };
 
     // Refresh handler
-    const handleRefresh = () => {
-        refetch();
-        toast.success('Guest list refreshed');
-    };
+    const handleRefresh = () => refetch();
 
     // Reset all filters
     const handleResetFilters = () => {
@@ -399,10 +397,7 @@ export default function GuestsPage() {
 
                 {/* Refresh Button - Always visible */}
                 <div className="flex justify-end">
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                        <RefreshCw size={16} />
-                        Refresh
-                    </Button>
+                    <RefreshButton onRefresh={handleRefresh} successMessage="Guest list refreshed" />
                 </div>
 
                 {/* Filters and Sort - Always visible */}
@@ -504,10 +499,7 @@ export default function GuestsPage() {
 
             {/* Refresh Button - Always visible */}
             <div className="flex justify-end">
-                <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                    <RefreshCw size={16} />
-                    Refresh
-                </Button>
+                <RefreshButton onRefresh={handleRefresh} successMessage="Guest list refreshed" />
             </div>
 
             {/* Filters and Sort Row - Always visible and interactive */}

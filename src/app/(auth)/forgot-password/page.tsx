@@ -16,8 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/use-auth";
-import { Card } from "@/components/ui/card";
-import Logo from "@/widgets/logo/Logo";
+import { AuthShell } from "@/templates/auth-shell";
 import Spinner from "@/widgets/loaders/Spinner";
 import { Mail, CheckCircle } from "lucide-react";
 
@@ -53,12 +52,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
-      <div className="flex justify-center py-6">
-        <Logo />
-      </div>
-
-      <Card className="w-full max-w-md space-y-8 shadow-md p-8 rounded-lg">
+    <AuthShell>
         {/* SUCCESS STATE */}
         {isSubmitted ? (
           <div className="text-center space-y-6 py-8">
@@ -143,7 +137,6 @@ export default function ForgotPasswordPage() {
             </div>
           </>
         )}
-      </Card>
-    </div>
+    </AuthShell>
   );
 }

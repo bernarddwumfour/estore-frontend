@@ -17,9 +17,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/use-auth";
-import { Card } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
-import Logo from "@/widgets/logo/Logo";
+import { AuthShell } from "@/templates/auth-shell";
 import Spinner from "@/widgets/loaders/Spinner";
 
 // Only validate password fields
@@ -89,8 +88,8 @@ function ResetPassword() {
   // If no token, show error state
   if (!token) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-4">
-        <Card className="w-full max-w-md p-8 text-center">
+      <AuthShell>
+        <div className="text-center">
           <h2 className="text-2xl font-bold text-red-600 mb-4">
             Invalid or Missing Token
           </h2>
@@ -100,18 +99,13 @@ function ResetPassword() {
           <Link href="/forgot-password">
             <Button>Request New Reset Link</Button>
           </Link>
-        </Card>
-      </div>
+        </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
-      <div className="flex justify-center py-6">
-        <Logo />
-      </div>
-
-      <Card className="w-full max-w-md space-y-2 shadow-md p-6 rounded-lg">
+    <AuthShell>
         <div className="text-center">
           <h2 className="mt-6 text-xl font-bold tracking-tight">
             Reset Your Password
@@ -228,7 +222,6 @@ function ResetPassword() {
             Back to login
           </Link>
         </div>
-      </Card>
-    </div>
+    </AuthShell>
   );
 }

@@ -4,8 +4,7 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import Logo from "@/widgets/logo/Logo";
+import { AuthShell } from "@/templates/auth-shell";
 import Spinner from "@/widgets/loaders/Spinner";
 import { Check, MessageCircleWarning, Mail } from "lucide-react";
 import { useAuth } from "@/lib/use-auth";
@@ -68,12 +67,8 @@ function VerifyEmail(){
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
-      <div className="flex justify-center py-6">
-        <Logo />
-      </div>
-
-      <Card className="w-full max-w-md space-y-2 shadow-md p-8 rounded-lg text-center">
+    <AuthShell>
+      <div className="space-y-2 text-center">
         <h2 className="text-2xl font-bold tracking-tight">Verify Your Email</h2>
 
         {/* Loading */}
@@ -189,7 +184,7 @@ function VerifyEmail(){
             </Link>
           </div>
         )}
-      </Card>
-    </div>
+      </div>
+    </AuthShell>
   );
 }

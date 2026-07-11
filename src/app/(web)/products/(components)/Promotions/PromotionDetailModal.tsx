@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { ProductType } from "@/types/productTypes";
 import Product from "../../Product";
 import { useRouter } from "next/navigation";
+import { formatCurrency } from "@/lib/currency";
 
 interface PromotionDetailModalProps {
     open: boolean;
@@ -217,14 +218,14 @@ export default function PromotionDetailModal({ open, onClose, promotion }: Promo
                         <div className="flex items-baseline justify-between flex-wrap gap-2">
                             <div>
                                 <span className="text-2xl font-bold text-gray-900 ">
-                                    ${promotion.bundle_price.toFixed(2)}
+                                    {formatCurrency(promotion.bundle_price)}
                                 </span>
                                 <span className="text-sm text-gray-400 line-through ml-2">
-                                    ${promotion.original_total.toFixed(2)}
+                                    {formatCurrency(promotion.original_total)}
                                 </span>
                             </div>
                             <span className="text-sm font-semibold text-emerald-600 bg-emerald-50  px-2 py-1 rounded-full">
-                                Save ${promotion.savings_amount.toFixed(2)}
+                                Save {formatCurrency(promotion.savings_amount)}
                             </span>
                         </div>
 
@@ -272,7 +273,7 @@ export default function PromotionDetailModal({ open, onClose, promotion }: Promo
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-700">Total:</span>
                                 <span className="text-xl font-bold text-gray-900">
-                                    ${totalPrice.toFixed(2)}
+                                    {formatCurrency(totalPrice)}
                                 </span>
                             </div>
                         </div>

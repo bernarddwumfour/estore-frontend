@@ -3,9 +3,10 @@
 
 import React, { useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import type { AxiosError } from 'axios';
 import {
     Eye, RefreshCw, TrendingUp, DollarSign, Users,
-    CheckCircle, XCircle, Upload, UserPlus, UserMinus, BarChart3
+    CheckCircle, XCircle, Upload, UserPlus, UserMinus, BarChart3, Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,8 @@ import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/Cus
 import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
 import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
 import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import { formatCurrency } from '@/lib/currency';
+import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
 
 // Types
 interface Affiliate {
@@ -35,16 +38,52 @@ interface Affiliate {
     created_at: string;
     last_login: string | null;
     referral_code?: string;
+    discount_code?: string;
     total_earnings?: number;
     total_referrals?: number;
+    active_referrals?: number;
     pending_earnings?: number;
     paid_earnings?: number;
     affiliate_level?: 'bronze' | 'silver' | 'gold' | 'platinum';
+    commission_rate?: number;
+    commission_basis?: string;
     joined_affiliate_at?: string;
+    last_payout_at?: string | null;
+    attributed_orders_count?: number;
+    attributed_sales_total?: number;
+    pending_commissions_count?: number;
+    accrued_commissions_count?: number;
+    reversed_commissions_count?: number;
+    user_is_active?: boolean;
+}
+
+interface AvailableDiscountCode {
+    id: string;
+    code: string;
+    name: string;
+    discount_type: 'percentage' | 'fixed';
+    value: number;
+}
+
+interface AffiliateFilters {
+    page?: number;
+    limit?: number;
+    search?: string;
+    is_active?: string;
+    email_verified?: string;
+    affiliate_level?: string;
+    earnings_range?: { min: string; max: string };
+    min_referrals?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+}
+
+interface ApiErrorResponse {
+    message?: string;
 }
 
 // Fetch affiliates with pagination
-const fetchAffiliates = async (params?: any): Promise<{
+const fetchAffiliates = async (params?: AffiliateFilters): Promise<{
     data: {
         affiliates: Affiliate[];
         total: number;
@@ -70,10 +109,62 @@ const fetchAffiliates = async (params?: any): Promise<{
 };
 
 // Make user an affiliate
-const makeAffiliate = async (userId: string) => {
-    const response = await securityAxios.post(endpoints.users.makeAffiliate.replace(':id', userId));
+const fetchAvailableDiscountCodes = async (): Promise<AvailableDiscountCode[]> => {
+    const queryParams = new URLSearchParams({
+        limit: '100',
+        affiliate_only: 'false',
+        is_active: 'true',
+    });
+    const response = await securityAxios.get(`${endpoints.promotions.adminDiscountCodes}?${queryParams.toString()}`);
+    return response.data.data.discount_codes || [];
+};
+
+const makeAffiliate = async ({
+    email,
+    discountCodeId,
+    referralCode,
+    commissionRate,
+    commissionBasis,
+}: {
+    email: string;
+    discountCodeId: string;
+    referralCode?: string;
+    commissionRate?: string;
+    commissionBasis?: string;
+}) => {
+    const response = await securityAxios.post(endpoints.users.makeAffiliateByEmail, {
+        email,
+        discount_code_id: discountCodeId,
+        referral_code: referralCode?.trim() || undefined,
+        commission_rate: commissionRate || undefined,
+        commission_basis: commissionBasis || undefined,
+    });
     return response.data;
 };
+
+// Update an affiliate's commission rate/basis (future orders only)
+const updateAffiliateCommission = async ({
+    userId,
+    commissionRate,
+    commissionBasis,
+}: {
+    userId: string;
+    commissionRate: string;
+    commissionBasis: string;
+}) => {
+    const response = await securityAxios.put(
+        endpoints.users.updateAffiliateCommission.replace(':id', userId),
+        { commission_rate: commissionRate, commission_basis: commissionBasis }
+    );
+    return response.data;
+};
+
+const COMMISSION_BASIS_OPTIONS = [
+    { value: 'sale_amount', label: 'Sale amount (order total after discount)' },
+    { value: 'profit', label: 'Profit (price − cost, after discount)' },
+];
+
+const commissionBasisLabel = (basis?: string) => (basis === 'profit' ? 'profit' : 'sale amount');
 
 // Remove affiliate status
 const removeAffiliate = async (userId: string) => {
@@ -147,9 +238,10 @@ const sortConfig: SortConfig = {
     options: [
         { value: 'total_earnings', label: 'Earnings' },
         { value: 'total_referrals', label: 'Referrals' },
-        { value: 'created_at', label: 'Joined Date' },
-        { value: 'email', label: 'Email' },
-        { value: 'first_name', label: 'First Name' },
+        { value: 'joined_at', label: 'Joined Date' },
+        { value: 'attributed_orders_count', label: 'Attributed Orders' },
+        { value: 'attributed_sales_total', label: 'Attributed Sales' },
+        { value: 'level', label: 'Level' },
     ],
     defaultSortBy: 'total_earnings',
     defaultSortOrder: 'desc',
@@ -162,6 +254,13 @@ export default function AffiliatesPage() {
     const [viewingAffiliate, setViewingAffiliate] = useState<Affiliate | null>(null);
     const [makingAffiliate, setMakingAffiliate] = useState<{ open: boolean; user: Affiliate | null }>({ open: false, user: null });
     const [searchEmail, setSearchEmail] = useState('');
+    const [selectedDiscountCodeId, setSelectedDiscountCodeId] = useState('');
+    const [referralCode, setReferralCode] = useState('');
+    const [commissionRate, setCommissionRate] = useState('2');
+    const [commissionBasis, setCommissionBasis] = useState('sale_amount');
+    const [editingCommissionFor, setEditingCommissionFor] = useState<Affiliate | null>(null);
+    const [editRate, setEditRate] = useState('');
+    const [editBasis, setEditBasis] = useState('sale_amount');
 
     // Filter and pagination state
     const [filters, setFilters] = useState({
@@ -170,7 +269,16 @@ export default function AffiliatesPage() {
     });
 
     // Track applied filters - matches the filterConfig structure
-    const [appliedFilters, setAppliedFilters] = useState({
+    const [appliedFilters, setAppliedFilters] = useState<{
+        search: string;
+        is_active: string;
+        email_verified: string;
+        affiliate_level: string;
+        earnings_range: { min: string; max: string };
+        min_referrals: string;
+        sort_by: string;
+        sort_order: 'asc' | 'desc';
+    }>({
         search: '',
         is_active: '',
         email_verified: '',
@@ -207,6 +315,11 @@ export default function AffiliatesPage() {
         }),
     });
 
+    const { data: availableDiscountCodes = [], isLoading: isLoadingDiscountCodes } = useQuery({
+        queryKey: ['available-affiliate-discount-codes'],
+        queryFn: fetchAvailableDiscountCodes,
+    });
+
     // Make affiliate mutation
     const makeAffiliateMutation = useMutation({
         mutationFn: makeAffiliate,
@@ -214,11 +327,30 @@ export default function AffiliatesPage() {
             toast.success('User is now an affiliate');
             setMakingAffiliate({ open: false, user: null });
             setSearchEmail('');
+            setSelectedDiscountCodeId('');
+            setReferralCode('');
+            setCommissionRate('2');
+            setCommissionBasis('sale_amount');
+            refetch();
+            queryClient.invalidateQueries({ queryKey: ['affiliates'] });
+            queryClient.invalidateQueries({ queryKey: ['available-affiliate-discount-codes'] });
+        },
+        onError: (error: AxiosError<ApiErrorResponse>) => {
+            toast.error(error?.response?.data?.message || 'Failed to make user an affiliate');
+        },
+    });
+
+    // Edit commission mutation (applies to future orders only)
+    const updateCommissionMutation = useMutation({
+        mutationFn: updateAffiliateCommission,
+        onSuccess: () => {
+            toast.success('Commission updated — applies to future orders');
+            setEditingCommissionFor(null);
             refetch();
             queryClient.invalidateQueries({ queryKey: ['affiliates'] });
         },
-        onError: (error: any) => {
-            toast.error(error?.response?.data?.message || 'Failed to make user an affiliate');
+        onError: (error: AxiosError<ApiErrorResponse>) => {
+            toast.error(error?.response?.data?.message || 'Failed to update commission');
         },
     });
 
@@ -229,16 +361,20 @@ export default function AffiliatesPage() {
             toast.success('Affiliate status removed');
             refetch();
             queryClient.invalidateQueries({ queryKey: ['affiliates'] });
+            queryClient.invalidateQueries({ queryKey: ['available-affiliate-discount-codes'] });
         },
-        onError: (error: any) => {
+        onError: (error: AxiosError<ApiErrorResponse>) => {
             toast.error(error?.response?.data?.message || 'Failed to remove affiliate status');
         },
     });
 
     // Activate/Deactivate mutation
     const toggleStatusMutation = useMutation({
-        mutationFn: async ({ userId }: { userId: string; isActive: boolean }) => {
-            const response = await securityAxios.post(endpoints.users.activateOrDeactivate.replace(':id', userId));
+        mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
+            const response = await securityAxios.post(
+                endpoints.users.toggleAffiliateStatus.replace(':id', userId),
+                { is_active: isActive }
+            );
             return response.data;
         },
         onSuccess: () => {
@@ -246,7 +382,7 @@ export default function AffiliatesPage() {
             refetch();
             queryClient.invalidateQueries({ queryKey: ['affiliates'] });
         },
-        onError: (error: any) => {
+        onError: (error: AxiosError<ApiErrorResponse>) => {
             toast.error(error?.response?.data?.message || 'Failed to update affiliate status');
         },
     });
@@ -300,10 +436,7 @@ export default function AffiliatesPage() {
     };
 
     // Refresh handler
-    const handleRefresh = () => {
-        refetch();
-        toast.success('Affiliate list refreshed');
-    };
+    const handleRefresh = () => refetch();
 
     // Single action helpers with confirmation
     const handleToggleActive = (affiliate: Affiliate) => {
@@ -337,10 +470,20 @@ export default function AffiliatesPage() {
     };
 
     const handleMakeAffiliate = () => {
-        if (searchEmail) {
-            // In a real implementation, you would search for the user by email first
-            // For now, we'll just show a toast
-            toast.info('Please select a user from the search results');
+        const email = searchEmail.trim().toLowerCase();
+        const rate = parseFloat(commissionRate);
+        if (commissionRate !== '' && (isNaN(rate) || rate < 0 || rate > 100)) {
+            toast.error('Commission rate must be between 0 and 100');
+            return;
+        }
+        if (email && selectedDiscountCodeId) {
+            makeAffiliateMutation.mutate({
+                email,
+                discountCodeId: selectedDiscountCodeId,
+                referralCode,
+                commissionRate,
+                commissionBasis,
+            });
         }
     };
 
@@ -356,6 +499,10 @@ export default function AffiliatesPage() {
             email_verified: item.email_verified,
             total_earnings: item.total_earnings,
             total_referrals: item.total_referrals,
+            discount_code: item.discount_code,
+            commission_rate: item.commission_rate,
+            attributed_orders_count: item.attributed_orders_count,
+            attributed_sales_total: item.attributed_sales_total,
             affiliate_level: item.affiliate_level,
             created_at: item.created_at,
         }));
@@ -387,6 +534,16 @@ export default function AffiliatesPage() {
         ];
 
         if (affiliate.is_affiliate) {
+            actions.push({
+                label: 'Edit Commission',
+                icon: <Pencil size={14} />,
+                onClick: () => {
+                    setEditRate(String(affiliate.commission_rate ?? 2));
+                    setEditBasis(affiliate.commission_basis || 'sale_amount');
+                    setEditingCommissionFor(affiliate);
+                },
+                color: 'violet',
+            });
             actions.push({
                 label: 'Remove Affiliate Status',
                 icon: <UserMinus size={14} />,
@@ -440,10 +597,7 @@ export default function AffiliatesPage() {
                         <UserPlus size={16} />
                         Make Affiliate
                     </Button>
-                    <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                        <RefreshCw size={16} />
-                        Refresh
-                    </Button>
+                    <RefreshButton onRefresh={handleRefresh} successMessage="Affiliate list refreshed" />
                 </div>
 
                 {/* Filters and Sort - Always visible */}
@@ -519,7 +673,7 @@ export default function AffiliatesPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Total Earnings</p>
-                                <p className="text-2xl font-bold text-emerald-600">${totalEarnings.toFixed(2)}</p>
+                                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalEarnings)}</p>
                             </div>
                             <DollarSign className="h-8 w-8 text-emerald-500" />
                         </div>
@@ -537,7 +691,7 @@ export default function AffiliatesPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Avg Earnings</p>
-                                <p className="text-2xl font-bold text-blue-600">${avgEarnings.toFixed(2)}</p>
+                                <p className="text-2xl font-bold text-blue-600">{formatCurrency(avgEarnings)}</p>
                             </div>
                             <BarChart3 className="h-8 w-8 text-blue-500" />
                         </div>
@@ -554,10 +708,7 @@ export default function AffiliatesPage() {
                     <UserPlus size={16} />
                     Make Affiliate
                 </Button>
-                <Button variant="outline" onClick={handleRefresh} className="gap-2">
-                    <RefreshCw size={16} />
-                    Refresh
-                </Button>
+                <RefreshButton onRefresh={handleRefresh} successMessage="Affiliate list refreshed" />
             </div>
 
             {/* Filters and Sort Row - Always visible and interactive */}
@@ -599,9 +750,16 @@ export default function AffiliatesPage() {
             {/* Make Affiliate Dialog */}
             <CustomDialog
                 title="Make User an Affiliate"
-                description="Select a user to make an affiliate marketer"
+                description="Enter the user email, choose an existing discount code, and optionally set a custom reference code."
                 open={makingAffiliate.open}
-                onOpenChange={(open) => !open && setMakingAffiliate({ open: false, user: null })}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setMakingAffiliate({ open: false, user: null });
+                        setSearchEmail('');
+                        setSelectedDiscountCodeId('');
+                        setReferralCode('');
+                    }
+                }}
                 contentWidth="max-w-md"
             >
                 <div className="space-y-4">
@@ -616,16 +774,152 @@ export default function AffiliatesPage() {
                         />
                         <p className="text-xs text-gray-500 mt-1">Enter user email to make them an affiliate</p>
                     </div>
+                    <div>
+                        <label className="text-sm font-medium mb-1 block">Referral Code</label>
+                        <input
+                            type="text"
+                            placeholder="Optional custom reference code"
+                            value={referralCode}
+                            onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                            className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            Leave blank to let the system generate one. This value must be unique and cannot match any discount code.
+                        </p>
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium mb-1 block">Discount Code</label>
+                        <select
+                            value={selectedDiscountCodeId}
+                            onChange={(e) => setSelectedDiscountCodeId(e.target.value)}
+                            className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                        >
+                            <option value="">Select a discount code</option>
+                            {availableDiscountCodes.map((discountCode) => (
+                                <option key={discountCode.id} value={discountCode.id}>
+                                    {discountCode.code} · {discountCode.name} · {discountCode.discount_type === 'percentage' ? `${discountCode.value}%` : formatCurrency(discountCode.value)}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {isLoadingDiscountCodes
+                                ? 'Loading available discount codes...'
+                                : 'Only active, unassigned discount codes are available for affiliate assignment.'}
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-sm font-medium mb-1 block">Commission Rate (%)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.5"
+                                value={commissionRate}
+                                onChange={(e) => setCommissionRate(e.target.value)}
+                                className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium mb-1 block">Applies To</label>
+                            <select
+                                value={commissionBasis}
+                                onChange={(e) => setCommissionBasis(e.target.value)}
+                                className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                            >
+                                {COMMISSION_BASIS_OPTIONS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <p className="text-xs text-gray-500 col-span-2">
+                            The affiliate earns this percentage of each attributed order — of the sale amount, or of the profit (selling price minus cost, after the discount).
+                        </p>
+                    </div>
                     <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="outline" onClick={() => setMakingAffiliate({ open: false, user: null })}>Cancel</Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setMakingAffiliate({ open: false, user: null });
+                                setSelectedDiscountCodeId('');
+                                setReferralCode('');
+                            }}
+                        >
+                            Cancel
+                        </Button>
                         <Button
                             onClick={handleMakeAffiliate}
-                            disabled={!searchEmail}
+                            disabled={!searchEmail || !selectedDiscountCodeId || isLoadingDiscountCodes}
                         >
                             Make Affiliate
                         </Button>
                     </div>
                 </div>
+            </CustomDialog>
+
+            {/* Edit Commission Dialog */}
+            <CustomDialog
+                title="Edit Commission"
+                description={`Update the commission for ${editingCommissionFor?.email || ''} — applies to future orders only`}
+                open={!!editingCommissionFor}
+                onOpenChange={(open) => !open && setEditingCommissionFor(null)}
+                contentWidth="max-w-md"
+            >
+                {editingCommissionFor && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">Commission Rate (%)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.5"
+                                    value={editRate}
+                                    onChange={(e) => setEditRate(e.target.value)}
+                                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">Applies To</label>
+                                <select
+                                    value={editBasis}
+                                    onChange={(e) => setEditBasis(e.target.value)}
+                                    className="w-full p-2 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-black text-gray-900 dark:text-white"
+                                >
+                                    {COMMISSION_BASIS_OPTIONS.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                            Already-recorded commissions keep their original amounts; only new orders use the updated rate and basis.
+                        </p>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="outline" onClick={() => setEditingCommissionFor(null)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    const rate = parseFloat(editRate);
+                                    if (isNaN(rate) || rate < 0 || rate > 100) {
+                                        toast.error('Commission rate must be between 0 and 100');
+                                        return;
+                                    }
+                                    updateCommissionMutation.mutate({
+                                        userId: editingCommissionFor.id,
+                                        commissionRate: editRate,
+                                        commissionBasis: editBasis,
+                                    });
+                                }}
+                                disabled={updateCommissionMutation.isPending || !editRate}
+                            >
+                                {updateCommissionMutation.isPending ? 'Saving...' : 'Save Commission'}
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </CustomDialog>
 
             {/* View Affiliate Details Sheet */}
@@ -653,13 +947,23 @@ export default function AffiliatesPage() {
                                 <p className="text-gray-900 dark:text-white font-mono">{viewingAffiliate.referral_code || '-'}</p>
                             </div>
                             <div>
+                                <label className="text-sm font-medium text-gray-500">Discount Code</label>
+                                <p className="text-gray-900 dark:text-white font-mono">{viewingAffiliate.discount_code || '-'}</p>
+                            </div>
+                            <div>
                                 <label className="text-sm font-medium text-gray-500">Affiliate Level</label>
                                 <p className="text-gray-900 dark:text-white capitalize">{viewingAffiliate.affiliate_level || 'Bronze'}</p>
                             </div>
                             <div>
+                                <label className="text-sm font-medium text-gray-500">Commission Rate</label>
+                                <p className="text-gray-900 dark:text-white">
+                                    {viewingAffiliate.commission_rate || 0}% of {commissionBasisLabel(viewingAffiliate.commission_basis)}
+                                </p>
+                            </div>
+                            <div>
                                 <label className="text-sm font-medium text-gray-500">Total Earnings</label>
                                 <p className="text-gray-900 dark:text-white font-bold text-lg">
-                                    ${(viewingAffiliate.total_earnings || 0).toFixed(2)}
+                                    {formatCurrency(viewingAffiliate.total_earnings || 0)}
                                 </p>
                             </div>
                             <div>
@@ -667,16 +971,36 @@ export default function AffiliatesPage() {
                                 <p className="text-gray-900 dark:text-white font-bold text-lg">{viewingAffiliate.total_referrals || 0}</p>
                             </div>
                             <div>
+                                <label className="text-sm font-medium text-gray-500">Attributed Orders</label>
+                                <p className="text-gray-900 dark:text-white font-bold text-lg">{viewingAffiliate.attributed_orders_count || 0}</p>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-500">Attributed Sales</label>
+                                <p className="text-gray-900 dark:text-white font-bold text-lg">
+                                    {formatCurrency(viewingAffiliate.attributed_sales_total || 0)}
+                                </p>
+                            </div>
+                            <div>
                                 <label className="text-sm font-medium text-gray-500">Pending Earnings</label>
-                                <p className="text-amber-600">${(viewingAffiliate.pending_earnings || 0).toFixed(2)}</p>
+                                <p className="text-amber-600">{formatCurrency(viewingAffiliate.pending_earnings || 0)}</p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Paid Earnings</label>
-                                <p className="text-emerald-600">${(viewingAffiliate.paid_earnings || 0).toFixed(2)}</p>
+                                <p className="text-emerald-600">{formatCurrency(viewingAffiliate.paid_earnings || 0)}</p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Joined Affiliate Program</label>
                                 <p>{viewingAffiliate.joined_affiliate_at ? new Date(viewingAffiliate.joined_affiliate_at).toLocaleDateString() : '-'}</p>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-500">Last Payout</label>
+                                <p>{viewingAffiliate.last_payout_at ? new Date(viewingAffiliate.last_payout_at).toLocaleDateString() : '-'}</p>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-500">Commission States</label>
+                                <p className="text-gray-900 dark:text-white">
+                                    Pending {viewingAffiliate.pending_commissions_count || 0} • Accrued {viewingAffiliate.accrued_commissions_count || 0} • Reversed {viewingAffiliate.reversed_commissions_count || 0}
+                                </p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-500">Status</label>
@@ -707,7 +1031,7 @@ export default function AffiliatesPage() {
                         )}
                         bulkActions={bulkActions}
                         bulkActionsMessage="Select affiliates to export"
-                        excludeColumns={['id', 'full_name', 'last_login', 'joined_affiliate_at', 'pending_earnings', 'paid_earnings']}
+                        excludeColumns={['id', 'full_name', 'last_login', 'joined_affiliate_at', 'pending_earnings', 'paid_earnings', 'user_is_active', 'active_referrals', 'pending_commissions_count', 'accrued_commissions_count', 'reversed_commissions_count', 'last_payout_at']}
                         dots={{
                             is_active: {
                                 true: 'emerald',

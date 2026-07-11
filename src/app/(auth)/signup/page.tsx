@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 // import { useAuth } from "@/lib/use-auth";
-import Logo from "@/widgets/logo/Logo";
+import { AuthShell } from "@/templates/auth-shell";
 // import { toast } from "sonner";
 import {
   Select,
@@ -26,7 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
 import Spinner from "@/widgets/loaders/Spinner";
 import { useAuth } from "@/lib/use-auth";
@@ -97,11 +96,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items- flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <div className="flex justify-center py-6">
-        <Logo />
-      </div>
-      <Card className="w-full max-w-md space-y-8 shadow-md p-4 rounded-lg">
+    <AuthShell>
         <div className="text-center">
           <h2 className="mt-2 text-xl font-bold tracking-tight">
             Create a new account
@@ -261,7 +256,6 @@ export default function SignupPage() {
             </Button>
           </form>
         </Form>
-      </Card>
-    </div>
+    </AuthShell>
   );
 }

@@ -8,6 +8,7 @@ import { Bookmark, ShoppingCart, Minus, Plus, Trash, AlertCircle, Package } from
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/app/lib/store/cart-store';
 import AddToWishList from '../(components)/AddToWishList';
+import { formatCurrency } from '@/lib/currency';
 
 // Types
 interface StockStatus {
@@ -323,7 +324,7 @@ export function CartActions({
           </div>
 
           <span className="text-gray-900 font-medium">
-            Total: ${selectedVariant ? (cartQuantity * selectedVariant.discounted_price).toFixed(2) : '0.00'}
+            Total: {formatCurrency(selectedVariant ? cartQuantity * selectedVariant.discounted_price : 0)}
           </span>
 
         </div>
