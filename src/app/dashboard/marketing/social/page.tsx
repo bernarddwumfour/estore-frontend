@@ -626,9 +626,11 @@ export default function SocialManagerPage() {
     const handleDelete = (post: SocialPost) => setConfirmDialog({
         open: true,
         title: 'Delete Post',
-        message: post.zernio_post_id
-            ? 'Delete this post? It will also be removed from the social platforms.'
-            : 'Delete this post record?',
+        message: post.scheduled_for && post.status === 'sent'
+            ? 'Delete this post? Its scheduled publication will be cancelled on Zernio.'
+            : post.zernio_post_id
+                ? 'Remove this post from your store records? Already-published posts stay live on the platform — delete them there (e.g. on Facebook) if needed.'
+                : 'Delete this post record?',
         onConfirm: () => {
             deleteMutation.mutate(post.id);
             setConfirmDialog((c) => ({ ...c, open: false }));
