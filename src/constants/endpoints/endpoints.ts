@@ -20,6 +20,7 @@ export const endpoints = {
   },
 
   common: {
+    adminGeneralConfig: '/common/admin/general/config',
     logs: '/common/admin/logs',
     logsStats: '/common/admin/logs/stats',
     logsApps: '/common/admin/logs/apps',
@@ -99,6 +100,13 @@ export const endpoints = {
   promotions: {
     listPromotions: "/promotions",
     promotionDetails: "/promotions/:slug",
+    previewDiscountCode: "/promotions/discount-codes/preview",
+    affiliateDashboard: "/promotions/affiliate/dashboard",
+    adminDiscountCodes: "/promotions/admin/discount-codes",
+    adminDiscountCodeCreate: "/promotions/admin/discount-codes/create",
+    adminDiscountCodeDetail: "/promotions/admin/discount-codes/:id",
+    adminDiscountCodeUpdate: "/promotions/admin/discount-codes/:id/update",
+    adminDiscountCodeStatus: "/promotions/admin/discount-codes/:id/status",
     adminDetails: "/promotions/admin/promotions/:id",
     adminList: '/promotions/admin/promotions',
     create: '/promotions/admin/promotions/create',
@@ -108,6 +116,40 @@ export const endpoints = {
     refreshStock: '/promotions/admin/promotions/:id/refresh-stock',
     update: '/promotions/admin/promotions/:id/update',
     delete: ""
+  },
+  marketing: {
+    adminCampaigns: "/marketing/admin/campaigns",
+    adminCampaignCreate: "/marketing/admin/campaigns/create",
+    adminCampaignSegments: "/marketing/admin/campaigns/segments",
+    adminCampaignDetail: "/marketing/admin/campaigns/:id",
+    adminCampaignUpdate: "/marketing/admin/campaigns/:id/update",
+    adminCampaignTestSend: "/marketing/admin/campaigns/:id/test-send",
+    adminCampaignSend: "/marketing/admin/campaigns/:id/send",
+  },
+  social: {
+    adminAccounts: "/social/admin/accounts",
+    adminConfig: "/social/admin/config",
+    adminUsage: "/social/admin/usage",
+    adminMedia: "/social/admin/media",
+    adminMediaUpload: "/social/admin/media/upload",
+    adminMediaDelete: "/social/admin/media/:id/delete",
+    adminProfiles: "/social/admin/profiles",
+    adminProfileDetail: "/social/admin/profiles/:id",
+    adminAccountConnect: "/social/admin/accounts/connect",
+    adminAccountDisconnect: "/social/admin/accounts/:id/disconnect",
+    adminAccountMove: "/social/admin/accounts/:id/move",
+    adminPosts: "/social/admin/posts",
+    adminPostCreate: "/social/admin/posts/create",
+    adminPostApprove: "/social/admin/posts/:id/approve",
+    adminPostReject: "/social/admin/posts/:id/reject",
+    adminPostDelete: "/social/admin/posts/:id/delete",
+    adminPostAnalytics: "/social/admin/posts/:id/analytics",
+    adminPostComments: "/social/admin/posts/:id/comments",
+    adminCommentReply: "/social/admin/posts/:id/comments/reply",
+    adminCommentAction: "/social/admin/posts/:id/comments/action",
+    adminConversations: "/social/admin/inbox/conversations",
+    adminMessages: "/social/admin/inbox/conversations/:id/messages",
+    adminMessageSend: "/social/admin/inbox/conversations/:id/send",
   },
   orders: {
     analytics: {
@@ -130,6 +172,7 @@ export const endpoints = {
     cancelOrder: "/orders/:id/cancel",
     updateStatus: "/orders/admin/orders/:id/status",
     updatePaymentStatus: "/orders/admin/orders/:id/payment-status",
+    verifyOrderPayment: "/orders/admin/orders/:id/verify-payment",
     getOrderDetails: "/orders/admin/orders/:id",
     bulkOrderAction: "/orders/admin/orders/bulk-action",
 
@@ -141,6 +184,10 @@ export const endpoints = {
     updateShipmentStatus: "/orders/admin/shipments/:id/update-status",
     bulkUpdateShipments: "/orders/admin/shipments/bulk-update",
     shippingOptions: "/orders/shipping/options",
+    shippingMeta: "/orders/shipping/meta",
+    checkoutMeta: "/orders/checkout/meta",
+    shippingPopularAddresses: "/orders/shipping/popular-addresses",
+    adminShippingConfig: "/orders/admin/shipping/config",
 
     // Transaction endpoints
     adminTransactions: "/orders/admin/transactions",
@@ -184,7 +231,10 @@ export const endpoints = {
     // Affiliate Management
     listAffiliateUsers: "/users/admin/affiliates",
     makeAffiliate: "/users/admin/affiliates/:id/make",
+    makeAffiliateByEmail: "/users/admin/affiliates/make-by-email",
     removeAffiliate: "/users/admin/affiliates/:id/remove",
+    toggleAffiliateStatus: "/users/admin/affiliates/:id/status",
+    updateAffiliateCommission: "/users/admin/affiliates/:id/commission",
 
     // Existing endpoints
     addUsers: "/user/staff/register",

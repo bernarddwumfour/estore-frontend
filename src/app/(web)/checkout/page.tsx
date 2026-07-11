@@ -19,12 +19,41 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { PageHeader } from '@/templates/page-header';
+import { formatCurrency } from '@/lib/currency';
+import { storeRecentOrder } from '@/lib/orders/recent-order';
 
 interface ShippingOption {
   id: string;
   name: string;
+  carrier?: string;
   cost: number;
   estimated_days: string;
+  is_free: boolean;
+  reason?: string;
+}
+
+interface ShippingMeta {
+  allowed_countries: { code: string; name: string }[];
+  pickup_enabled: boolean;
+}
+
+interface CheckoutMeta {
+  payment_methods: { id: string; name: string; description: string }[];
+  default_payment_method: string | null;
+  guest_checkout_enabled: boolean;
+  min_order_value: string;
+  tax_rate: string;
+  tax_inclusive: boolean;
+  currency: string;
+}
+
+interface PopularAddress {
+  id: string;
+  name: string;
+  region: string;
+  country: string;
+  price: string;
   is_free: boolean;
 }
 
@@ -57,13 +86,31 @@ interface CartItem {
   }>;
 }
 
+interface DiscountPreview {
+  code: string;
+  name: string;
+  subtotal: number;
+  discount_amount: number;
+  subtotal_after_discount: number;
+  is_affiliate_code: boolean;
+}
+
 export default function CheckoutPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [selectedShippingId, setSelectedShippingId] = useState<string>('');
+  const [shippingMeta, setShippingMeta] = useState<ShippingMeta | null>(null);
+  const [checkoutMeta, setCheckoutMeta] = useState<CheckoutMeta | null>(null);
+  const [popularAddresses, setPopularAddresses] = useState<PopularAddress[]>([]);
+  const [selectedPopularId, setSelectedPopularId] = useState<string>('');
+  const [shippingError, setShippingError] = useState<string>('');
+  const [quoteNonce, setQuoteNonce] = useState(0);
   const [usePersonalInfoForShipping, setUsePersonalInfoForShipping] = useState(true);
+  const [discountCodeInput, setDiscountCodeInput] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState<DiscountPreview | null>(null);
   const router = useRouter();
 
   // Guest info state
@@ -117,9 +164,16 @@ export default function CheckoutPage() {
   // Calculate totals
   const subtotal = getTotalPrice();
   const selectedShipping = shippingOptions.find(opt => opt.id === selectedShippingId);
-  const shippingCost = selectedShipping?.cost || 0;
-  const tax = 0;
-  const total = subtotal + shippingCost + tax;
+  const selectedPopular = popularAddresses.find(addr => addr.id === selectedPopularId);
+  const shippingCost = selectedPopular ? Number(selectedPopular.price) : (selectedShipping?.cost || 0);
+  const taxRate = Number(checkoutMeta?.tax_rate || 0);
+  const taxInclusive = checkoutMeta?.tax_inclusive === true;
+  const tax = taxRate > 0 && !taxInclusive ? Math.round(subtotal * taxRate) / 100 : 0;
+  const discountAmount = appliedDiscount?.discount_amount || 0;
+  const total = Math.max(0, subtotal + shippingCost + tax - discountAmount);
+  const minOrderValue = Number(checkoutMeta?.min_order_value || 0);
+  const belowMinimum = minOrderValue > 0 && subtotal < minOrderValue;
+  const guestBlocked = checkoutMeta?.guest_checkout_enabled === false && !isAuthenticated;
 
   useEffect(() => {
     setIsMounted(true);
@@ -163,13 +217,54 @@ export default function CheckoutPage() {
     }
   }, [guestInfo, usePersonalInfoForShipping, isAuthenticated]);
 
+  // Shipping metadata (allowed countries, pickup) — fetched once
+  useEffect(() => {
+    UnAuthenticatedAxios.get(endpoints.orders.shippingMeta)
+      .then((response) => setShippingMeta(response.data?.data || null))
+      .catch(() => setShippingMeta(null));
+  }, []);
+
+  // Checkout metadata (payment methods, tax, guest/min-order rules) — fetched once
+  useEffect(() => {
+    UnAuthenticatedAxios.get(endpoints.orders.checkoutMeta)
+      .then((response) => {
+        const meta: CheckoutMeta | null = response.data?.data || null;
+        setCheckoutMeta(meta);
+        if (meta?.default_payment_method) {
+          setFormData((prev) =>
+            meta.payment_methods.some((m) => m.id === prev.payment_method)
+              ? prev
+              : { ...prev, payment_method: meta.default_payment_method as string }
+          );
+        }
+      })
+      .catch(() => setCheckoutMeta(null));
+  }, []);
+
+  // Popular delivery addresses for the selected country
+  useEffect(() => {
+    const country = formData.shipping_address.country;
+    if (!country) return;
+    UnAuthenticatedAxios.get(
+      `${endpoints.orders.shippingPopularAddresses}?country=${encodeURIComponent(country)}`
+    )
+      .then((response) => {
+        const addresses: PopularAddress[] = response.data?.data?.addresses || [];
+        setPopularAddresses(addresses);
+        setSelectedPopularId((current) =>
+          current && !addresses.some((a) => a.id === current) ? '' : current
+        );
+      })
+      .catch(() => setPopularAddresses([]));
+  }, [formData.shipping_address.country]);
+
   // Calculate shipping options when address changes
   useEffect(() => {
     const calculateShipping = async () => {
       const address = formData.shipping_address;
       const hasRequiredFields = address.country && address.city && address.address_line1;
 
-      if (!hasRequiredFields || items.length === 0) return;
+      if (!hasRequiredFields || items.length === 0 || selectedPopularId) return;
 
       setIsCalculatingShipping(true);
       try {
@@ -194,29 +289,29 @@ export default function CheckoutPage() {
         // Shipping calculation doesn't need auth
         const response = await UnAuthenticatedAxios.post(endpoints.orders.shippingOptions, {
           country_code: address.country,
+          state: address.state,
           city: address.city,
           postal_code: address.postal_code,
+          address_line1: address.address_line1,
           items: shippingItems,
         });
 
         if (response.data.success) {
           const options = response.data.data.options;
           setShippingOptions(options);
+          setShippingError('');
           if (options.length > 0 && !selectedShippingId) {
             setSelectedShippingId(options[0].id);
           }
         }
       } catch (error) {
         console.error('Error calculating shipping:', error);
-        const fallbackOptions = [{
-          id: 'standard',
-          name: 'Standard Shipping',
-          cost: 10.00,
-          estimated_days: '3-7 business days',
-          is_free: false,
-        }];
-        setShippingOptions(fallbackOptions);
-        setSelectedShippingId('standard');
+        setShippingOptions([]);
+        setSelectedShippingId('');
+        const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        setShippingError(
+          message || 'Could not calculate shipping for this address. Please check the address and try again.'
+        );
       } finally {
         setIsCalculatingShipping(false);
       }
@@ -224,7 +319,7 @@ export default function CheckoutPage() {
 
     const debounceTimer = setTimeout(calculateShipping, 800);
     return () => clearTimeout(debounceTimer);
-  }, [formData.shipping_address.country, formData.shipping_address.city, formData.shipping_address.address_line1, formData.shipping_address.postal_code, items]);
+  }, [formData.shipping_address.country, formData.shipping_address.state, formData.shipping_address.city, formData.shipping_address.address_line1, formData.shipping_address.postal_code, items, selectedPopularId, quoteNonce]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -294,22 +389,11 @@ export default function CheckoutPage() {
     setSelectedShippingId(optionId);
   };
 
-  // Prepare order data with bundle support
-  const prepareOrderData = () => {
-    const orderData: any = {
-      shipping_address: {
-        ...formData.shipping_address,
-        address_type: 'shipping',
-      },
-      payment_method: formData.payment_method,
-      shipping_method: selectedShippingId || 'standard',
-      customer_note: formData.customer_note,
-      items: [],
-    };
-
+  const buildCheckoutItems = () => {
+    const checkoutItems: any[] = [];
     for (const item of items) {
       if (item.isBundle && item.bundleId) {
-        orderData.items.push({
+        checkoutItems.push({
           is_bundle: true,
           bundle_id: item.bundleId,
           bundle_name: item.bundleName || item.title,
@@ -323,12 +407,71 @@ export default function CheckoutPage() {
           })) || [],
         });
       } else {
-        orderData.items.push({
+        checkoutItems.push({
           is_bundle: false,
           variant_id: item.variantId,
           quantity: item.quantity,
         });
       }
+    }
+
+    return checkoutItems;
+  };
+
+  const applyDiscountCode = async () => {
+    const code = discountCodeInput.trim().toUpperCase();
+    if (!code) {
+      toast.error('Enter a discount code');
+      return;
+    }
+
+    setIsApplyingDiscount(true);
+    try {
+      const response = await UnAuthenticatedAxios.post(endpoints.promotions.previewDiscountCode, {
+        code,
+        items: buildCheckoutItems(),
+      });
+
+      if (response.data.success) {
+        setAppliedDiscount(response.data.data);
+        setDiscountCodeInput(response.data.data.code);
+        toast.success(`Code ${response.data.data.code} applied`);
+      } else {
+        setAppliedDiscount(null);
+        toast.error(response.data.message || 'Unable to apply discount code');
+      }
+    } catch (error: any) {
+      setAppliedDiscount(null);
+      const message =
+        error.response?.data?.errors?.discount_code ||
+        error.response?.data?.message ||
+        'Unable to apply discount code';
+      toast.error(message);
+    } finally {
+      setIsApplyingDiscount(false);
+    }
+  };
+
+  const removeDiscountCode = () => {
+    setAppliedDiscount(null);
+    setDiscountCodeInput('');
+  };
+
+  // Prepare order data with bundle support
+  const prepareOrderData = () => {
+    const orderData: any = {
+      shipping_address: {
+        ...formData.shipping_address,
+        address_type: 'shipping',
+      },
+      payment_method: formData.payment_method,
+      shipping_method: selectedPopularId ? '' : (selectedShippingId || 'standard'),
+      customer_note: formData.customer_note,
+      items: buildCheckoutItems(),
+    };
+
+    if (selectedPopularId) {
+      orderData.popular_address_id = selectedPopularId;
     }
 
     if (!isAuthenticated) {
@@ -345,6 +488,10 @@ export default function CheckoutPage() {
         ...formData.billing_address,
         address_type: 'billing',
       };
+    }
+
+    if (appliedDiscount?.code) {
+      orderData.discount_code = appliedDiscount.code;
     }
 
     return orderData;
@@ -368,6 +515,15 @@ export default function CheckoutPage() {
 
         if (apiResponse.success) {
           clearCart();
+          const order = apiResponse.data?.order;
+          if (order) {
+            storeRecentOrder({
+              order,
+              isAuthenticated,
+              source: 'checkout',
+              createdAt: new Date().toISOString(),
+            });
+          }
 
           if (formData.payment_method === 'paystack' && apiResponse.data?.payment?.authorization_url) {
             toast.success("Redirecting to payment...");
@@ -375,11 +531,11 @@ export default function CheckoutPage() {
           } else if (formData.payment_method === 'pod') {
             toast.success(apiResponse.message || "Order placed successfully!");
             const orderId = apiResponse.data?.order?.id;
-            router.push(orderId ? `/orders/${orderId}` : '/orders');
+            router.push(orderId ? `/order-placed?order_id=${orderId}` : '/order-placed');
           } else {
             toast.success(apiResponse.message || "Order placed successfully!");
             const orderId = apiResponse.data?.order?.id;
-            router.push(orderId ? `/orders/${orderId}` : '/orders');
+            router.push(orderId ? `/order-placed?order_id=${orderId}` : '/order-placed');
           }
         } else {
           toast.error(apiResponse.error || "Failed to place order");
@@ -387,8 +543,14 @@ export default function CheckoutPage() {
       }
     } catch (error: any) {
       console.error("Error creating order:", error);
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
+      const errors = error.response?.data?.errors;
+      if (errors?.shipping_method || errors?.popular_address_id) {
+        // The selected rate/delivery area is stale — re-quote and let the user re-pick
+        toast.error(errors.shipping_method || errors.popular_address_id);
+        setSelectedShippingId('');
+        setSelectedPopularId('');
+        setQuoteNonce((n) => n + 1);
+      } else if (errors) {
         Object.values(errors).forEach((err: any) => {
           toast.error(typeof err === 'string' ? err : err.payment_method || err.items || "Validation error");
         });
@@ -432,8 +594,8 @@ export default function CheckoutPage() {
       return 'Please fill all required shipping address fields';
     }
 
-    if (!selectedShippingId && shippingOptions.length > 0) {
-      return 'Please select a shipping method';
+    if (!selectedPopularId && !selectedShippingId) {
+      return 'Please select a shipping method or delivery area';
     }
 
     if (formData.use_separate_billing) {
@@ -479,23 +641,27 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-xl space-y-4 pb-6">
-          <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
-            Checkout
-          </h2>
-          <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-            Complete Your Order{" "}
-            <span className="text-slate-950 relative inline-block">
-              Securely
-              <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
-            </span>
-          </h3>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <PageHeader subtitle="Checkout" title="Complete Your Order Securely" />
+      <div className="container mx-auto px-4 py-12">
 
         {/* Guest checkout info banner */}
-        {!isAuthenticated && (
+        {!isAuthenticated && guestBlocked && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Lock className="h-5 w-5 text-red-600 mt-0.5" />
+              <div>
+                <p className="text-sm text-red-800 font-medium">Sign in required</p>
+                <p className="text-sm text-red-600">
+                  Guest checkout is currently disabled.{' '}
+                  <Link href="/login" className="underline font-medium">Sign in</Link> or{' '}
+                  <Link href="/signup" className="underline font-medium">create an account</Link> to place your order.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        {!isAuthenticated && !guestBlocked && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-start gap-3">
               <UserPlus className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -670,10 +836,18 @@ export default function CheckoutPage() {
                       onChange={handleShippingAddressChange}
                       className="w-full h-12 px-3 border rounded-md text-base bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
                     >
-                      <option value="Ghana">Ghana</option>
-                      <option value="Nigeria">Nigeria</option>
-                      <option value="Kenya">Kenya</option>
-                      <option value="South Africa">South Africa</option>
+                      {shippingMeta?.allowed_countries?.length ? (
+                        shippingMeta.allowed_countries.map((country) => (
+                          <option key={country.code} value={country.name}>{country.name}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Ghana">Ghana</option>
+                          <option value="Nigeria">Nigeria</option>
+                          <option value="Kenya">Kenya</option>
+                          <option value="South Africa">South Africa</option>
+                        </>
+                      )}
                     </select>
                     <div className="md:col-span-2">
                       <Textarea
@@ -801,8 +975,40 @@ export default function CheckoutPage() {
                 </Card>
               )}
 
+              {/* Popular delivery areas */}
+              {popularAddresses.length > 0 && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-semibold mb-1 flex items-center gap-2">
+                      <MapPin className="h-5 w-5" /> Delivery Area
+                    </h2>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Deliver to a popular location near you — or use your own address below.
+                    </p>
+                    <select
+                      value={selectedPopularId}
+                      onChange={(e) => setSelectedPopularId(e.target.value)}
+                      className="w-full h-12 px-3 border rounded-md text-base bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    >
+                      <option value="">My address isn&apos;t listed — use my address</option>
+                      {popularAddresses.map((addr) => (
+                        <option key={addr.id} value={addr.id}>
+                          {addr.name} ({addr.region}) — {addr.is_free ? 'Free delivery' : formatCurrency(Number(addr.price))}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedPopular && (
+                      <p className="mt-3 text-sm text-green-700 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Delivering to {selectedPopular.name} — {selectedPopular.is_free ? 'free of charge' : formatCurrency(Number(selectedPopular.price))}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Shipping Options */}
-              {shippingOptions.length > 0 && (
+              {!selectedPopularId && (shippingOptions.length > 0 || isCalculatingShipping || shippingError) && (
                 <Card>
                   <CardContent className="p-6">
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -811,6 +1017,13 @@ export default function CheckoutPage() {
                     {isCalculatingShipping ? (
                       <div className="flex justify-center py-4">
                         <Loader2 className="h-6 w-6 animate-spin" />
+                      </div>
+                    ) : shippingError ? (
+                      <div className="text-center py-4 space-y-3">
+                        <p className="text-sm text-red-600">{shippingError}</p>
+                        <Button type="button" variant="outline" onClick={() => setQuoteNonce((n) => n + 1)}>
+                          Retry
+                        </Button>
                       </div>
                     ) : (
                       <RadioGroup value={selectedShippingId} onValueChange={handleShippingOptionChange} className="space-y-3">
@@ -821,7 +1034,13 @@ export default function CheckoutPage() {
                               <Label htmlFor={option.id} className="cursor-pointer">
                                 <div>
                                   <p className="font-medium text-base">{option.name}</p>
-                                  <p className="text-sm text-gray-500">Estimated: {option.estimated_days}</p>
+                                  <p className="text-sm text-gray-500">
+                                    {option.carrier && option.carrier !== option.name ? `${option.carrier} · ` : ''}
+                                    Estimated: {option.estimated_days}
+                                  </p>
+                                  {option.is_free && option.reason && (
+                                    <p className="text-xs text-green-600 mt-0.5">{option.reason}</p>
+                                  )}
                                 </div>
                               </Label>
                             </div>
@@ -829,7 +1048,7 @@ export default function CheckoutPage() {
                               {option.is_free ? (
                                 <Badge variant="outline" className="text-green-600 border-green-600 px-3 py-1">Free</Badge>
                               ) : (
-                                <span className="font-medium text-base">${option.cost.toFixed(2)}</span>
+                                <span className="font-medium text-base">{formatCurrency(option.cost)}</span>
                               )}
                             </div>
                           </div>
@@ -847,25 +1066,26 @@ export default function CheckoutPage() {
                     <CreditCard className="h-5 w-5" /> Payment Method
                   </h2>
                   <RadioGroup value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))} className="space-y-3">
-                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <RadioGroupItem value="paystack" id="paystack" />
-                        <Label htmlFor="paystack" className="cursor-pointer">
-                          <p className="font-medium text-base">Paystack</p>
-                          <p className="text-sm text-gray-500">Pay with card, mobile money, or bank transfer</p>
-                        </Label>
+                    {(checkoutMeta?.payment_methods ?? [
+                      { id: 'paystack', name: 'Paystack', description: 'Pay with card, mobile money, or bank transfer' },
+                      { id: 'pod', name: 'Pay on Delivery', description: 'Pay when your order arrives' },
+                    ]).map((method) => (
+                      <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <RadioGroupItem value={method.id} id={method.id} />
+                          <Label htmlFor={method.id} className="cursor-pointer">
+                            <p className="font-medium text-base">{method.name}</p>
+                            <p className="text-sm text-gray-500">{method.description}</p>
+                          </Label>
+                        </div>
+                        {method.id === 'pod' && (
+                          <Badge variant="outline" className="text-green-600 border-green-600 px-3 py-1">No upfront payment</Badge>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <RadioGroupItem value="pod" id="pod" />
-                        <Label htmlFor="pod" className="cursor-pointer">
-                          <p className="font-medium text-base">Pay on Delivery</p>
-                          <p className="text-sm text-gray-500">Pay when your order arrives</p>
-                        </Label>
-                      </div>
-                      <Badge variant="outline" className="text-green-600 border-green-600 px-3 py-1">No upfront payment</Badge>
-                    </div>
+                    ))}
+                    {checkoutMeta?.payment_methods?.length === 0 && (
+                      <p className="text-sm text-red-600">No payment methods are currently available. Please try again later.</p>
+                    )}
                   </RadioGroup>
 
                   <div className="mt-4 p-3 bg-gray-50 rounded-lg">
@@ -900,7 +1120,7 @@ export default function CheckoutPage() {
                             )}
                           </p>
                           <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                          <p className="text-xs text-gray-500">${item.price.toFixed(2)} each</p>
+                          <p className="text-xs text-gray-500">{formatCurrency(item.price)} each</p>
                           {item.isBundle && item.bundleItems && (
                             <details className="mt-2">
                               <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
@@ -917,24 +1137,77 @@ export default function CheckoutPage() {
                             </details>
                           )}
                         </div>
-                        <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                        <p className="font-medium">{formatCurrency(item.price * item.quantity)}</p>
                       </div>
                     ))}
                   </div>
 
                   <div className="border-t pt-4 space-y-2">
+                    <div className="space-y-2 pb-3 border-b">
+                      <Label htmlFor="discount-code" className="text-sm font-medium flex items-center gap-2">
+                        <Tag className="h-4 w-4" />
+                        Discount Code
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="discount-code"
+                          value={discountCodeInput}
+                          onChange={(e) => setDiscountCodeInput(e.target.value.toUpperCase())}
+                          placeholder="Enter code"
+                          className="h-10"
+                        />
+                        {appliedDiscount ? (
+                          <Button type="button" variant="outline" onClick={removeDiscountCode}>
+                            Remove
+                          </Button>
+                        ) : (
+                          <Button type="button" variant="outline" onClick={applyDiscountCode} disabled={isApplyingDiscount}>
+                            {isApplyingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                          </Button>
+                        )}
+                      </div>
+                      {appliedDiscount && (
+                        <p className="text-xs text-emerald-700">
+                          {appliedDiscount.code} applied.
+                          {appliedDiscount.is_affiliate_code ? ' Affiliate discount active.' : ''}
+                        </p>
+                      )}
+                    </div>
                     <div className="flex justify-between text-sm">
                       <span>Subtotal</span>
-                      <span>${subtotal.toFixed(2)}</span>
+                      <span>{formatCurrency(subtotal)}</span>
                     </div>
+                    {appliedDiscount && (
+                      <div className="flex justify-between text-sm text-emerald-700">
+                        <span>Discount ({appliedDiscount.code})</span>
+                        <span>-{formatCurrency(discountAmount)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm">
                       <span>Shipping</span>
-                      <span>{shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`}</span>
+                      <span>{shippingCost === 0 ? "Free" : formatCurrency(shippingCost)}</span>
                     </div>
+                    {tax > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span>Tax ({taxRate}%)</span>
+                        <span>{formatCurrency(tax)}</span>
+                      </div>
+                    )}
+                    {taxInclusive && (
+                      <div className="flex justify-between text-sm text-gray-500">
+                        <span>Tax{taxRate > 0 ? ` (${taxRate}%)` : ''}</span>
+                        <span>Included in prices</span>
+                      </div>
+                    )}
+                    {belowMinimum && (
+                      <p className="text-xs text-red-600 pt-1">
+                        Minimum order value is {formatCurrency(minOrderValue)}. Add {formatCurrency(minOrderValue - subtotal)} more to check out.
+                      </p>
+                    )}
                     <div className="border-t pt-3 mt-3">
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
-                        <span>${total.toFixed(2)}</span>
+                        <span>{formatCurrency(total)}</span>
                       </div>
                     </div>
                   </div>
@@ -952,7 +1225,7 @@ export default function CheckoutPage() {
                       type="submit"
                       className="w-full h-12 text-base"
                       size="lg"
-                      disabled={isLoading || isCalculatingShipping || !selectedShippingId}
+                      disabled={isLoading || isCalculatingShipping || isApplyingDiscount || (!selectedShippingId && !selectedPopularId) || belowMinimum || guestBlocked}
                     >
                       {isLoading ? (
                         <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
