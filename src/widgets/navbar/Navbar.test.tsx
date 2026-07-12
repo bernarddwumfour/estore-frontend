@@ -25,7 +25,7 @@ vi.mock("@/app/lib/store/cart-store", () => {
   };
 });
 
-vi.mock("../SearchModal/SearchModal", () => ({
+vi.mock("../search-modal/SearchModal", () => ({
   SearchModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div>search-modal-open</div> : null,
 }));

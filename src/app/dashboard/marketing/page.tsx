@@ -1,7 +1,7 @@
 // app/dashboard/marketing/promotions/page.tsx
 'use client';
 
-import { UnderConstruction } from "@/widgets/UnderConstruction/UnderConstruction";
+import { UnderConstruction } from "@/widgets/under-construction/UnderConstruction";
 
 
 export default function PromotionsPage() {

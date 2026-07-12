@@ -10,7 +10,7 @@ import { useCartStore } from "@/app/lib/store/cart-store"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/lib/use-auth"
 import { Button } from "@/components/ui/button"
-import { SearchModal } from "../SearchModal/SearchModal"
+import { SearchModal } from "../search-modal/SearchModal"
 
 export default function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)

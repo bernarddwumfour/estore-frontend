@@ -29,7 +29,7 @@ import {
 import { ChevronDown, ChevronUp } from "lucide-react";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
 import VariantSelector from './VariantSelector';
 import { formatCurrency } from '@/lib/currency';
 

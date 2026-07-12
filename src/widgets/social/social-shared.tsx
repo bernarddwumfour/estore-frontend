@@ -12,7 +12,16 @@ export interface SocialAccount {
     platform: string;
     name?: string;
     username?: string;
+    displayName?: string;
+    profileId?: string | { _id?: string; id?: string };
+    profile_id?: string;
     [key: string]: unknown;
+}
+
+export interface SocialPostMediaItem {
+    type: 'image' | 'video';
+    url: string;
+    title?: string;
 }
 
 export interface SocialPost {
@@ -21,6 +30,7 @@ export interface SocialPost {
     object_id: string | null;
     caption: string;
     image_url: string;
+    media_items?: SocialPostMediaItem[];
     platforms: { platform: string; accountId: string }[];
     status: 'pending_approval' | 'sent' | 'rejected' | 'failed' | 'skipped';
     zernio_post_id: string;
@@ -34,9 +44,14 @@ export interface SocialPost {
 export interface SocialComment {
     id?: string;
     _id?: string;
+    parentId?: string;
+    depth?: number;
     liked?: boolean;
+    isLiked?: boolean;
     hidden?: boolean;
+    isHidden?: boolean;
     isReply?: boolean;
+    from?: unknown;
     [key: string]: unknown;
 }
 
@@ -44,15 +59,29 @@ export interface PostAnalytics {
     impressions: number;
     reach: number;
     engagement: number;
+    engagementRate?: number;
     likes: number;
     comments: number;
     shares: number;
     clicks: number;
+    views?: number;
+    saves?: number;
+    follows?: number;
+    syncStatus?: string;
+    message?: string;
+    lastUpdated?: string;
 }
 
 export const accountId = (account: SocialAccount) => account._id || account.id || '';
+export const accountProfileId = (account: SocialAccount) => {
+    const profile = account.profileId ?? account.profile_id;
+    if (!profile) return '';
+    if (typeof profile === 'string') return profile;
+    if (typeof profile === 'object') return String(profile._id ?? profile.id ?? '');
+    return '';
+};
 export const accountLabel = (account: SocialAccount) =>
-    account.name || account.username || account.platform;
+    account.displayName || account.name || account.username || account.platform;
 
 export const STATUS_STYLES: Record<string, string> = {
     pending_approval: 'border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400',
@@ -92,12 +121,37 @@ export function PostStatusBadge({ status }: { status: SocialPost['status'] }) {
     );
 }
 
-export const commentText = (c: SocialComment) =>
-    String(c.text ?? c.message ?? c.content ?? c.comment ?? '');
-export const commentAuthor = (c: SocialComment) =>
-    String(c.author ?? c.username ?? c.from ?? c.user ?? 'User');
+export const commentText = (c: SocialComment) => {
+    const content = c.content;
+    if (content && typeof content === 'object') {
+        const source = content as Record<string, unknown>;
+        const text = source.text ?? source.message ?? source.body;
+        if (text) return String(text);
+    }
+    return String(c.text ?? c.message ?? c.comment ?? '');
+};
+export const commentAuthor = (c: SocialComment) => {
+    const from = c.from;
+    if (from && typeof from === 'object') {
+        const source = from as Record<string, unknown>;
+        return String(source.name ?? source.username ?? source.displayName ?? 'User');
+    }
+    return String(c.author ?? c.username ?? from ?? c.user ?? 'User');
+};
 export const commentIdOf = (c: SocialComment, i: number) =>
     String(c.id ?? c._id ?? c.commentId ?? i);
+export const commentCid = (c: SocialComment) =>
+    String(c.cid ?? c.commentCid ?? '');
+export const commentLikeUri = (c: SocialComment) =>
+    String(c.likeUri ?? c.like_uri ?? '');
+export const isCommentHidden = (c: SocialComment) =>
+    Boolean(c.hidden ?? c.isHidden ?? false);
+export const isCommentLiked = (c: SocialComment) =>
+    Boolean(c.liked ?? c.isLiked ?? false);
+export const commentDepth = (c: SocialComment) => {
+    const depth = Number(c.depth ?? (c.isReply ? 1 : 0));
+    return Number.isFinite(depth) && depth > 0 ? Math.min(depth, 3) : 0;
+};
 
 
 export function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {

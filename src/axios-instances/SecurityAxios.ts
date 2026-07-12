@@ -1,6 +1,7 @@
 // axios-instances/SecurityAxios.ts
 import { endpoints } from "@/constants/endpoints/endpoints";
 import { getAuthCookie, setAuthCookie } from "@/lib/providers/auth-provider";
+import type { ApiResponse } from "@/types/api";
 import axios, {
   AxiosInstance,
   InternalAxiosRequestConfig,
@@ -11,14 +12,6 @@ import axios, {
 // ==================== TYPE DEFINITIONS ====================
 
 type RefreshSubscriber = (token: string) => void;
-
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-  errors?: Record<string, string[]>;
-}
 
 type RefreshTokenResponse = {
   data: {

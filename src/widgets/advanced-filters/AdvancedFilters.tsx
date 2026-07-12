@@ -1,4 +1,4 @@
-// components/AdvancedFilters/AdvancedFilters.tsx
+// components/advanced-filters/AdvancedFilters.tsx
 "use client"
 
 import { useState, useEffect, useCallback } from "react"

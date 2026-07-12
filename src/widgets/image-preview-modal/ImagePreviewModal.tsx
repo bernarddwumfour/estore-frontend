@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { CustomDialog } from "../CustomDialog/CustomDialog";
+import { CustomDialog } from "../custom-dialog/CustomDialog";
 import { ChevronLeft, ChevronRightIcon, RotateCw, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";

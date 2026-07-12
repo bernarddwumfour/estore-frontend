@@ -10,13 +10,14 @@ import {
 import { toast } from 'sonner';
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { apiMessage, type ApiError } from '@/lib/api-message';
-import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
-import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
-import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
-import { UserAvatar } from '@/widgets/UserAvatar/UserAvatar';
-import { StatTile, accountId, accountLabel, type SocialAccount } from '@/widgets/social/social-shared';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
+import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
+import RefreshButton from '@/widgets/refresh-button/RefreshButton';
+import { UserAvatar } from '@/widgets/user-avatar/UserAvatar';
+import { StatTile, accountId, accountLabel, accountProfileId, type SocialAccount } from '@/widgets/social/social-shared';
 
 /* ---------------- Types & fetchers ---------------- */
 
@@ -26,7 +27,8 @@ interface SocialConfig {
 }
 
 interface SocialProfile {
-    _id: string;
+    _id?: string;
+    id?: string;
     name: string;
     description?: string;
     accounts?: number;
@@ -39,12 +41,14 @@ interface UsageStats {
     posts_this_month: number;
     posts_limit: number;
     profiles: number;
+    uploads?: number;
+    uploads_limit?: number;
 }
 
 const CONNECT_PLATFORMS = [
     'instagram', 'tiktok', 'twitter', 'facebook', 'linkedin', 'youtube',
     'whatsapp', 'threads', 'pinterest', 'reddit', 'bluesky', 'telegram',
-    'google_business', 'snapchat', 'discord',
+    'googlebusiness', 'snapchat', 'discord',
 ];
 
 const fetchAccounts = async (): Promise<SocialAccount[]> => {
@@ -70,15 +74,42 @@ const fetchUsage = async (): Promise<UsageStats> => {
 const inputClass =
     'w-full p-2 text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-400/40';
 
+function SettingsCard({ icon, title, description, children, headerRight }: {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    children: React.ReactNode;
+    headerRight?: React.ReactNode;
+}) {
+    return (
+        <section className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gray-900 dark:bg-gray-100 flex items-center justify-center text-white dark:text-gray-900 shrink-0">
+                        {icon}
+                    </div>
+                    <div>
+                        <h2 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h2>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{description}</p>
+                    </div>
+                </div>
+                {headerRight}
+            </div>
+            {children}
+        </section>
+    );
+}
+
+const profileId = (profile: SocialProfile) => String(profile._id ?? profile.id ?? '');
+const platformLabel = (platform: string) =>
+    platform === 'googlebusiness'
+        ? 'Google Business'
+        : platform.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+
 /* ---------------- Mode switch ---------------- */
 
-function ModeSwitch() {
+function ModeSwitch({ config }: { config: SocialConfig }) {
     const queryClient = useQueryClient();
-    const { data: config, isLoading } = useQuery({
-        queryKey: ['social-config'],
-        queryFn: fetchConfig,
-        retry: false,
-    });
 
     const modeMutation = useMutation({
         mutationFn: async (mode: 'test' | 'live') => {
@@ -92,88 +123,73 @@ function ModeSwitch() {
                     ? 'Test mode on — posts and messages are simulated locally'
                     : 'Live mode on — posts go to your real social accounts'
             );
-            queryClient.invalidateQueries();
+            queryClient.invalidateQueries({ queryKey: ['social-config'] });
+            queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['social-profiles'] });
+            queryClient.invalidateQueries({ queryKey: ['social-usage'] });
         },
         onError: (error: unknown) => toast.error(apiMessage(error, 'Failed to switch mode')),
     });
 
-    if (isLoading) {
-        return <div className="py-4 flex justify-center"><Loader2 className="animate-spin text-gray-400" size={18} /></div>;
-    }
-
-    const isTest = config?.mode === 'test';
+    const isTest = config.mode === 'test';
 
     return (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 space-y-3">
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white ${isTest ? 'bg-gray-500' : 'bg-gray-900 dark:bg-gray-100 dark:text-gray-900'}`}>
-                        {isTest ? <FlaskConical size={15} /> : <Radio size={15} />}
-                    </div>
-                    <div>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white">
-                            {isTest ? 'Test mode' : 'Live mode'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {isTest
-                                ? 'Posts, comments and DMs are simulated locally — nothing reaches real platforms.'
-                                : 'Posts are published to your connected accounts through Zernio.'}
-                        </p>
-                    </div>
+        <SettingsCard
+            icon={isTest ? <FlaskConical size={15} /> : <Radio size={15} />}
+            title="Posting mode"
+            description="Choose simulated posting or live Zernio publishing"
+            headerRight={
+                <div className="flex items-center gap-2">
+                    {modeMutation.isPending && <Loader2 size={14} className="animate-spin text-gray-400" />}
+                    <Switch
+                        checked={!isTest}
+                        disabled={modeMutation.isPending}
+                        onCheckedChange={(checked) => modeMutation.mutate(checked ? 'live' : 'test')}
+                        title={isTest ? 'Switch to live mode' : 'Switch to test mode'}
+                    />
                 </div>
-                <button
-                    type="button"
-                    role="switch"
-                    aria-checked={isTest}
-                    disabled={modeMutation.isPending}
-                    onClick={() => modeMutation.mutate(isTest ? 'live' : 'test')}
-                    className={`relative inline-flex h-7 w-[52px] shrink-0 items-center rounded-full transition-colors ${isTest ? 'bg-gray-500' : 'bg-gray-900 dark:bg-gray-200'} ${modeMutation.isPending ? 'opacity-60' : ''}`}
-                    title={isTest ? 'Switch to live mode' : 'Switch to test mode'}
-                >
-                    {modeMutation.isPending ? (
-                        <Loader2 size={13} className="animate-spin text-white mx-auto" />
-                    ) : (
-                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${isTest ? 'translate-x-[28px]' : 'translate-x-1'}`} />
-                    )}
-                </button>
+            }
+        >
+            <div className="space-y-1">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {isTest ? 'Test mode is active' : 'Live mode is active'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {isTest
+                        ? 'Posts, comments and DMs are simulated locally; nothing reaches real platforms.'
+                        : 'Posts are published to your connected accounts through Zernio.'}
+                </p>
             </div>
-            {!config?.live_configured && (
+            {!config.live_configured && (
                 <p className="text-[11px] text-gray-500">
                     Live mode needs <code className="font-mono">ZERNIO_API_KEY</code> on the backend.
                 </p>
             )}
-        </div>
+        </SettingsCard>
     );
 }
 
 /* ---------------- Usage card ---------------- */
 
-function UsageCard() {
-    const { data: usage, isLoading, isError } = useQuery({
-        queryKey: ['social-usage'],
-        queryFn: fetchUsage,
-        retry: false,
-    });
-
-    if (isError) return null;
-
+function UsageCard({ usage }: { usage: UsageStats }) {
     return (
-        <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-gray-500">
-                <BarChart3 size={14} />
-                <h3 className="text-xs font-black uppercase tracking-wider">Usage {usage?.plan ? `· ${usage.plan} plan` : ''}</h3>
+        <SettingsCard
+            icon={<BarChart3 size={15} />}
+            title="Usage"
+            description="Plan usage for connected accounts, posts, profiles and uploads"
+            headerRight={usage.plan ? (
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-gray-900 text-white dark:bg-white dark:text-gray-900">
+                    {usage.plan} plan
+                </span>
+            ) : undefined}
+        >
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <StatTile icon={<Users size={12} />} label={usage.accounts_limit ? `Accounts / ${usage.accounts_limit}` : 'Accounts'} value={usage.accounts_connected} />
+                <StatTile icon={<Send size={12} />} label={usage.posts_limit ? `Posts / ${usage.posts_limit}` : 'Posts this month'} value={usage.posts_this_month} />
+                <StatTile icon={<FolderKanban size={12} />} label="Profiles" value={usage.profiles} />
+                <StatTile icon={<Heart size={12} />} label={usage.uploads_limit ? `Uploads / ${usage.uploads_limit}` : 'Uploads'} value={usage.uploads ?? 0} />
             </div>
-            {isLoading ? (
-                <div className="py-4 flex justify-center"><Loader2 className="animate-spin text-gray-400" size={18} /></div>
-            ) : usage ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <StatTile icon={<Users size={12} />} label={usage.accounts_limit ? `Accounts / ${usage.accounts_limit}` : 'Accounts'} value={usage.accounts_connected} />
-                    <StatTile icon={<Send size={12} />} label={usage.posts_limit ? `Posts / ${usage.posts_limit}` : 'Posts this month'} value={usage.posts_this_month} />
-                    <StatTile icon={<FolderKanban size={12} />} label="Profiles" value={usage.profiles} />
-                    <StatTile icon={<Heart size={12} />} label="Platforms" value={CONNECT_PLATFORMS.length} />
-                </div>
-            ) : null}
-        </div>
+        </SettingsCard>
     );
 }
 
@@ -222,12 +238,11 @@ function ProfilesCard({ profiles, refetchAll }: {
     const deletingId = deleteMutation.isPending ? deleteMutation.variables : null;
 
     return (
-        <div className="space-y-3">
-            <div className="flex items-center gap-1.5 text-gray-500">
-                <FolderKanban size={14} />
-                <h3 className="text-xs font-black uppercase tracking-wider">Profiles</h3>
-            </div>
-
+        <SettingsCard
+            icon={<FolderKanban size={15} />}
+            title="Profiles"
+            description="Group connected accounts by brand, region or publishing workflow"
+        >
             <div className="flex gap-2">
                 <input
                     value={newName}
@@ -258,7 +273,7 @@ function ProfilesCard({ profiles, refetchAll }: {
                 <div className="space-y-1.5">
                     {profiles.map((profile) => (
                         <div
-                            key={profile._id}
+                            key={profileId(profile)}
                             className="flex items-center gap-3 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2.5"
                         >
                             <UserAvatar name={profile.name} size="sm" icon={<Layers size={13} />} />
@@ -282,7 +297,7 @@ function ProfilesCard({ profiles, refetchAll }: {
                                 disabled={deleteMutation.isPending || renameMutation.isPending}
                                 onClick={() => setConfirmDelete(profile)}
                             >
-                                {deletingId === profile._id
+                                {deletingId === profileId(profile)
                                     ? <Loader2 size={14} className="animate-spin" />
                                     : <Trash2 size={14} />}
                             </button>
@@ -309,7 +324,7 @@ function ProfilesCard({ profiles, refetchAll }: {
                         <Button
                             size="sm" className="gap-2 rounded-full px-5"
                             disabled={!renameValue.trim() || renameMutation.isPending}
-                            onClick={() => renaming && renameMutation.mutate({ id: renaming._id, name: renameValue.trim() })}
+                            onClick={() => renaming && renameMutation.mutate({ id: profileId(renaming), name: renameValue.trim() })}
                         >
                             {renameMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />}
                             Save
@@ -322,28 +337,27 @@ function ProfilesCard({ profiles, refetchAll }: {
                 open={!!confirmDelete}
                 onOpenChange={(open) => !open && setConfirmDelete(null)}
                 title="Delete Profile"
-                infoMessage={`Delete "${confirmDelete?.name}"? Its accounts stay connected but become unassigned.`}
+                infoMessage={`Delete "${confirmDelete?.name}"? Zernio may block deletion while active accounts are still assigned to it.`}
                 variant="error"
                 primaryButtonText="Delete"
                 secondaryButtonText="Cancel"
                 primaryAction={() => {
-                    if (confirmDelete) deleteMutation.mutate(confirmDelete._id);
+                    if (confirmDelete) deleteMutation.mutate(profileId(confirmDelete));
                     setConfirmDelete(null);
                 }}
                 secondaryAction={() => setConfirmDelete(null)}
             />
-        </div>
+        </SettingsCard>
     );
 }
 
 /* ---------------- Accounts card ---------------- */
 
-function AccountsCard({ accounts, profiles, refetchAll, notConfigured, isLoading, error, isError }: {
+function AccountsCard({ accounts, profiles, refetchAll, notConfigured, error, isError }: {
     accounts: SocialAccount[];
     profiles: SocialProfile[];
     refetchAll: () => void;
     notConfigured: boolean;
-    isLoading: boolean;
     isError: boolean;
     error: unknown;
 }) {
@@ -351,12 +365,15 @@ function AccountsCard({ accounts, profiles, refetchAll, notConfigured, isLoading
     const [connectPlatform, setConnectPlatform] = useState('instagram');
     const [connectProfile, setConnectProfile] = useState('');
     const [confirmDisconnect, setConfirmDisconnect] = useState<SocialAccount | null>(null);
+    const firstProfileId = profiles[0] ? profileId(profiles[0]) : '';
+    const connectProfileValid = profiles.some((profile) => profileId(profile) === connectProfile);
+    const selectedConnectProfile = connectProfileValid ? connectProfile : firstProfileId;
 
     const connectMutation = useMutation({
         mutationFn: async () => {
             const response = await securityAxios.post(endpoints.social.adminAccountConnect, {
                 platform: connectPlatform,
-                ...(connectProfile ? { profile_id: connectProfile } : {}),
+                profile_id: selectedConnectProfile,
             });
             return response.data;
         },
@@ -401,25 +418,23 @@ function AccountsCard({ accounts, profiles, refetchAll, notConfigured, isLoading
     const movingId = moveMutation.isPending ? moveMutation.variables?.id : null;
 
     return (
-        <div className="space-y-3">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-gray-500">
-                    <Link2 size={14} />
-                    <h3 className="text-xs font-black uppercase tracking-wider">Connected accounts</h3>
-                </div>
+        <SettingsCard
+            icon={<Link2 size={15} />}
+            title="Connected accounts"
+            description="Accounts available for publishing posts and managing inbox activity"
+            headerRight={
                 <Button
                     size="sm" className="gap-1.5 rounded-full"
-                    onClick={() => setConnectOpen(true)}
+                    onClick={() => {
+                        setConnectProfile(profiles[0] ? profileId(profiles[0]) : '');
+                        setConnectOpen(true);
+                    }}
                 >
                     <Plus size={14} /> Connect
                 </Button>
-            </div>
-
-            {isLoading ? (
-                <div className="py-8 flex justify-center">
-                    <Loader2 className="animate-spin text-gray-400" size={22} />
-                </div>
-            ) : notConfigured ? (
+            }
+        >
+            {notConfigured ? (
                 <div className="rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                     Social posting is not configured. Add your <code className="font-mono text-xs">ZERNIO_API_KEY</code> to
                     the backend environment, or flip on test mode above to try it out.
@@ -455,7 +470,7 @@ function AccountsCard({ accounts, profiles, refetchAll, notConfigured, isLoading
                                 </div>
                                 {profiles.length > 0 && (
                                     <select
-                                        value={String(account.profileId || '')}
+                                        value={accountProfileId(account)}
                                         disabled={movingId === id || disconnectMutation.isPending}
                                         onChange={(e) => e.target.value && moveMutation.mutate({ id, profileId: e.target.value })}
                                         className="p-1.5 text-xs border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black text-gray-700 dark:text-gray-300 disabled:opacity-50"
@@ -463,7 +478,7 @@ function AccountsCard({ accounts, profiles, refetchAll, notConfigured, isLoading
                                     >
                                         <option value="">No profile</option>
                                         {profiles.map((p) => (
-                                            <option key={p._id} value={p._id}>{p.name}</option>
+                                            <option key={profileId(p)} value={profileId(p)}>{p.name}</option>
                                         ))}
                                     </select>
                                 )}
@@ -500,29 +515,32 @@ function AccountsCard({ accounts, profiles, refetchAll, notConfigured, isLoading
                             className={inputClass}
                         >
                             {CONNECT_PLATFORMS.map((p) => (
-                                <option key={p} value={p} className="capitalize">{p.replace('_', ' ')}</option>
+                                <option key={p} value={p}>{platformLabel(p)}</option>
                             ))}
                         </select>
                     </div>
-                    {profiles.length > 0 && (
+                    {profiles.length > 0 ? (
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Profile (optional)</label>
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Profile</label>
                             <select
-                                value={connectProfile}
+                                value={selectedConnectProfile}
                                 onChange={(e) => setConnectProfile(e.target.value)}
                                 className={inputClass}
                             >
-                                <option value="">Default</option>
                                 {profiles.map((p) => (
-                                    <option key={p._id} value={p._id}>{p.name}</option>
+                                    <option key={profileId(p)} value={profileId(p)}>{p.name}</option>
                                 ))}
                             </select>
                         </div>
+                    ) : (
+                        <p className="text-xs text-gray-500">
+                            Create a profile before connecting an account.
+                        </p>
                     )}
                     <div className="flex justify-end">
                         <Button
                             size="sm" className="gap-2 rounded-full px-5"
-                            disabled={connectMutation.isPending}
+                            disabled={connectMutation.isPending || !selectedConnectProfile}
                             onClick={() => connectMutation.mutate()}
                         >
                             {connectMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
@@ -546,14 +564,20 @@ function AccountsCard({ accounts, profiles, refetchAll, notConfigured, isLoading
                 }}
                 secondaryAction={() => setConfirmDisconnect(null)}
             />
-        </div>
+        </SettingsCard>
     );
 }
 
-/* ---------------- Social section ---------------- */
+/* ---------------- Page ---------------- */
 
-function SocialSettingsSection() {
+export default function SocialSettingsPage() {
     const queryClient = useQueryClient();
+
+    const configQuery = useQuery({
+        queryKey: ['social-config'],
+        queryFn: fetchConfig,
+        retry: false,
+    });
 
     const accountsQuery = useQuery({
         queryKey: ['social-accounts'],
@@ -561,68 +585,105 @@ function SocialSettingsSection() {
         retry: false,
     });
 
+    const notConfigured = (accountsQuery.error as ApiError)?.response?.status === 503;
+
     const profilesQuery = useQuery({
         queryKey: ['social-profiles'],
         queryFn: fetchProfiles,
+        enabled: accountsQuery.isSuccess,
         retry: false,
     });
 
-    const notConfigured = (accountsQuery.error as ApiError)?.response?.status === 503;
+    const usageQuery = useQuery({
+        queryKey: ['social-usage'],
+        queryFn: fetchUsage,
+        enabled: accountsQuery.isSuccess,
+        retry: false,
+    });
 
     const refetchAll = () => {
+        queryClient.invalidateQueries({ queryKey: ['social-config'] });
         queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
         queryClient.invalidateQueries({ queryKey: ['social-profiles'] });
         queryClient.invalidateQueries({ queryKey: ['social-usage'] });
     };
 
+    const refreshAll = async () => {
+        const [configResult, accountsResult] = await Promise.all([
+            configQuery.refetch(),
+            accountsQuery.refetch(),
+        ]);
+
+        if (accountsResult.isSuccess) {
+            await Promise.all([
+                profilesQuery.refetch(),
+                usageQuery.refetch(),
+            ]);
+        }
+
+        if (configResult.isError) return configResult;
+
+        const accountStatus = (accountsResult.error as ApiError)?.response?.status;
+        if (accountsResult.isError && accountStatus !== 503) return accountsResult;
+
+        return configResult;
+    };
+
+    const isInitialLoading =
+        configQuery.isLoading ||
+        accountsQuery.isLoading ||
+        (accountsQuery.isSuccess && (profilesQuery.isLoading || usageQuery.isLoading));
+    const isFatalError =
+        configQuery.isError ||
+        (accountsQuery.isError && !notConfigured) ||
+        (accountsQuery.isSuccess && profilesQuery.isError);
+    const loadError = configQuery.error || accountsQuery.error || profilesQuery.error;
+
     return (
-        <div className="space-y-6">
-            <div className="flex justify-end">
+        <div className="container mx-auto space-y-5">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Social Settings</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Posting mode, connected accounts, profiles and plan usage
+                    </p>
+                </div>
                 <RefreshButton
-                    onRefresh={async () => { refetchAll(); return accountsQuery.refetch(); }}
+                    onRefresh={refreshAll}
                     queryKey={['social-accounts']}
-                    label=""
-                    className="h-8 w-8 p-0 rounded-full border-none"
                     successMessage="Social settings refreshed"
                 />
             </div>
 
-            <ModeSwitch />
-            {!notConfigured && <UsageCard />}
-            <div className="grid grid-cols-1 xl:grid-cols-[3fr_2fr] gap-6 items-start">
-                <div className="xl:border-r xl:border-gray-100 xl:dark:border-gray-900 xl:pr-6">
-                    <AccountsCard
-                        accounts={accountsQuery.data || []}
-                        profiles={profilesQuery.data || []}
-                        refetchAll={refetchAll}
-                        notConfigured={notConfigured}
-                        isLoading={accountsQuery.isLoading}
-                        isError={accountsQuery.isError}
-                        error={accountsQuery.error}
-                    />
+            {isInitialLoading ? (
+                <div className="py-16 flex justify-center">
+                    <Loader2 className="animate-spin text-gray-400" size={28} />
                 </div>
-                {!notConfigured && (
-                    <ProfilesCard profiles={profilesQuery.data || []} refetchAll={refetchAll} />
-                )}
-            </div>
-        </div>
-    );
-}
-
-/* ---------------- Page ---------------- */
-
-export default function SocialSettingsPage() {
-    return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Social Settings</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Posting mode, connected accounts, profiles and plan usage
-                </p>
-            </div>
-            <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
-                <SocialSettingsSection />
-            </div>
+            ) : isFatalError || !configQuery.data ? (
+                <div className="text-center py-12">
+                    <p className="text-red-600 dark:text-red-400">
+                        {apiMessage(loadError, 'Failed to load social settings')}
+                    </p>
+                </div>
+            ) : (
+                <>
+                    <ModeSwitch config={configQuery.data} />
+                    {!notConfigured && usageQuery.data && <UsageCard usage={usageQuery.data} />}
+                    <div className="grid grid-cols-1 xl:grid-cols-[3fr_2fr] gap-5 items-start">
+                        <AccountsCard
+                            accounts={accountsQuery.data || []}
+                            profiles={profilesQuery.data || []}
+                            refetchAll={refetchAll}
+                            notConfigured={notConfigured}
+                            isError={accountsQuery.isError && !notConfigured}
+                            error={accountsQuery.error}
+                        />
+                        {!notConfigured && (
+                            <ProfilesCard profiles={profilesQuery.data || []} refetchAll={refetchAll} />
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     );
 }

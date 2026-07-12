@@ -13,12 +13,12 @@ import { Separator } from "@/components/ui/separator";
 import { Star, Package, Tag, Clock, CheckCircle, ArrowLeft, Loader2, Eye, Edit, Trash2, Plus, ShoppingCart, MapPin, CreditCard, PackageCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
-import { ActionsDropdown, type ActionItem } from '@/widgets/ActionsDropdown/ActionsDropdown';
-import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
+import { ActionsDropdown, type ActionItem } from '@/widgets/actions-dropdown/ActionsDropdown';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
 import { CustomSelect, type selectField } from '@/widgets/custom-select/CustomSelect';
-import ProductForm from '../ProductForm';
-import ProductVariantForm from '../ProductVariantForm';
-import ProductVariantsList from '../ProductVariantsList';
+import ProductForm from '../(components)/ProductForm';
+import ProductVariantForm from '../(components)/ProductVariantForm';
+import ProductVariantsList from '../(components)/ProductVariantsList';
 import { Dispatch, SetStateAction, useState } from 'react';
 import { formatCurrency } from '@/lib/currency';
 

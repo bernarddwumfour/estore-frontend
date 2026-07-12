@@ -12,16 +12,16 @@ import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
 import CategoryForm from './CatergoryForm';
-import { DataDisplay } from '@/widgets/DataDisplay/DataDisplay';
-import { DataTable } from '@/widgets/Customtable/DataTable';
-import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
-import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
-import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
-import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilterFromUrl';
-import { CustomSortFromUrl, SortConfig } from '@/widgets/CustomSort/CustomSortFromUrl';
-import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import { DataDisplay } from '@/widgets/data-display/DataDisplay';
+import { DataTable } from '@/widgets/custom-table/DataTable';
+import { ActionItem, ActionsDropdown } from '@/widgets/actions-dropdown/ActionsDropdown';
+import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
+import { CustomPagination, PaginationMeta } from '@/widgets/custom-pagination/CustomPagination';
+import { CustomFilter, FilterConfig } from '@/widgets/custom-filter/CustomFilterFromUrl';
+import { CustomSortFromUrl, SortConfig } from '@/widgets/custom-sort/CustomSortFromUrl';
+import { TableSkeleton } from '@/widgets/custom-table/TableSkeleton';
 
 // Types
 interface Category {

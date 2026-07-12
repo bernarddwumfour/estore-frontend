@@ -13,9 +13,9 @@ import { Button } from '@/components/ui/button';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { apiMessage } from '@/lib/api-message';
 import { Switch } from '@/components/ui/switch';
-import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
-import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
-import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
+import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
+import RefreshButton from '@/widgets/refresh-button/RefreshButton';
 
 /* ---------------- Types ---------------- */
 

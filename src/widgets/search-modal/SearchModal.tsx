@@ -10,7 +10,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { AdvancedFilters } from "../AdvancedFilters/AdvancedFilters"
+import { AdvancedFilters } from "../advanced-filters/AdvancedFilters"
 import { useDebounce } from "@/app/lib/hooks/use-debounce"
 import { endpoints } from "@/constants/endpoints/endpoints"
 import unAuthenticatedAxios from "@/axios-instances/UnAuthenticatedAxios"

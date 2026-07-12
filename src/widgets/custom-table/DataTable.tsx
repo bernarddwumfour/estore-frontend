@@ -1,4 +1,4 @@
-// app/widgets/Customtable/DataTable.tsx
+// app/widgets/custom-table/DataTable.tsx
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -19,10 +19,10 @@ import {
 import { cn } from "@/lib/utils";
 import Link from 'next/link';
 
-import { DataDisplay } from '../DataDisplay/DataDisplay';
-import { CustomDialog } from '../CustomDialog/CustomDialog';
-import { CustomSheet } from '../CustomSheet/CustomSheet';
-import MultiImagePreviewModal from '../ImagePreviewModal/ImagePreviewModal';
+import { DataDisplay } from '../data-display/DataDisplay';
+import { CustomDialog } from '../custom-dialog/CustomDialog';
+import { CustomSheet } from '../custom-sheet/CustomSheet';
+import MultiImagePreviewModal from '../image-preview-modal/ImagePreviewModal';
 
 type ColorOption = 'emerald' | 'orange' | 'zinc' | 'blue' | 'rose' | 'amber' | 'violet';
 type ViewType = 'dialog' | 'sheet';

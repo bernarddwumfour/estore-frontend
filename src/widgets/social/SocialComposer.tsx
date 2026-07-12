@@ -2,27 +2,61 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Calendar, ChevronDown, ChevronUp, ImageIcon, Loader2, Send, X } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Film, ImageIcon, Loader2, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { accountId, accountLabel, isVideoUrl, type SocialAccount } from './social-shared';
-import { MediaPicker } from './MediaPicker';
+import { MediaPicker, type PickedMedia } from './MediaPicker';
+
+const MAX_MEDIA_ITEMS = 10;
 
 export interface ComposerValues {
     caption: string;
     image_url: string;
+    media_items: PickedMedia[];
     scheduled_for: string;
     account_ids: string[];
 }
 
 export const emptyComposer: ComposerValues = {
-    caption: '', image_url: '', scheduled_for: '', account_ids: [],
+    caption: '', image_url: '', media_items: [], scheduled_for: '', account_ids: [],
+};
+
+const normalizeMediaItems = (mediaItems: PickedMedia[] = [], imageUrl = ''): PickedMedia[] => {
+    const seen = new Set<string>();
+    const items: PickedMedia[] = [];
+
+    mediaItems.forEach((item) => {
+        const url = item.url.trim();
+        if (!url || seen.has(url)) return;
+        seen.add(url);
+        items.push({
+            type: item.type || (isVideoUrl(url) ? 'video' : 'image'),
+            url,
+            ...(item.title?.trim() ? { title: item.title.trim() } : {}),
+        });
+    });
+
+    const legacyUrl = imageUrl.trim();
+    if (legacyUrl && !seen.has(legacyUrl)) {
+        items.push({ type: isVideoUrl(legacyUrl) ? 'video' : 'image', url: legacyUrl });
+    }
+
+    return items.slice(0, MAX_MEDIA_ITEMS);
 };
 
 export function composerPayload(values: ComposerValues) {
+    const mediaItems = normalizeMediaItems(values.media_items, values.image_url);
+    const imageUrl = mediaItems[0]?.url || values.image_url.trim();
+
     return {
         caption: values.caption.trim(),
-        ...(values.image_url.trim() ? { image_url: values.image_url.trim() } : {}),
+        media_items: mediaItems.map((item) => ({
+            type: item.type,
+            url: item.url,
+            ...(item.title ? { title: item.title } : {}),
+        })),
+        ...(imageUrl ? { image_url: imageUrl } : {}),
         ...(values.scheduled_for ? { scheduled_for: new Date(values.scheduled_for).toISOString() } : {}),
         ...(values.account_ids.length ? { account_ids: values.account_ids } : {}),
     };
@@ -38,9 +72,17 @@ interface SocialComposerProps {
 
 /** Post creation/edit form used in the New Post and Review & Publish dialogs. */
 export function SocialComposer({ accounts, initial, submitLabel, onSubmit, isSubmitting }: SocialComposerProps) {
-    const [form, setForm] = useState<ComposerValues>(initial);
-    const [showOptions, setShowOptions] = useState(!!initial.image_url);
+    const [form, setForm] = useState<ComposerValues>(() => {
+        const mediaItems = normalizeMediaItems(initial.media_items, initial.image_url);
+        return {
+            ...initial,
+            image_url: mediaItems[0]?.url || initial.image_url,
+            media_items: mediaItems,
+        };
+    });
+    const [showOptions, setShowOptions] = useState(!!initial.image_url || initial.media_items.length > 0);
     const [pickerOpen, setPickerOpen] = useState(false);
+    const selectedMedia = normalizeMediaItems(form.media_items, form.image_url);
 
     const toggleAccount = (id: string) => {
         setForm((c) => ({
@@ -59,6 +101,49 @@ export function SocialComposer({ accounts, initial, submitLabel, onSubmit, isSub
         onSubmit(form);
     };
 
+    const setMediaItems = (items: PickedMedia[]) => {
+        const mediaItems = normalizeMediaItems(items);
+        setForm((c) => ({
+            ...c,
+            image_url: mediaItems[0]?.url || '',
+            media_items: mediaItems,
+        }));
+    };
+
+    const addMediaItems = (media: PickedMedia[]) => {
+        const current = selectedMedia;
+        const seen = new Set(current.map((item) => item.url));
+        const next = [...current];
+        let skippedForLimit = false;
+
+        media.forEach((item) => {
+            const [cleanItem] = normalizeMediaItems([item]);
+            if (!cleanItem || seen.has(cleanItem.url)) return;
+            if (next.length >= MAX_MEDIA_ITEMS) {
+                skippedForLimit = true;
+                return;
+            }
+            seen.add(cleanItem.url);
+            next.push(cleanItem);
+        });
+
+        if (skippedForLimit) {
+            toast.error(`You can attach up to ${MAX_MEDIA_ITEMS} media items`);
+        }
+
+        setForm((c) => {
+            return {
+                ...c,
+                image_url: next[0]?.url || '',
+                media_items: next,
+            };
+        });
+    };
+
+    const removeMediaItem = (url: string) => {
+        setMediaItems(selectedMedia.filter((item) => item.url !== url));
+    };
+
     return (
         <div className="space-y-3">
             <textarea
@@ -70,30 +155,36 @@ export function SocialComposer({ accounts, initial, submitLabel, onSubmit, isSub
                 className="w-full p-3 text-sm border border-gray-200 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-gray-400/40"
             />
 
-            {form.image_url.trim() && (
-                <div className="relative inline-block">
-                    {isVideoUrl(form.image_url) ? (
-                        <video
-                            src={form.image_url}
-                            controls
-                            className="max-h-56 rounded-xl border border-gray-200 dark:border-gray-800"
-                        />
-                    ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                            src={form.image_url}
-                            alt="Post preview"
-                            className="max-h-56 rounded-xl object-cover border border-gray-200 dark:border-gray-800"
-                        />
-                    )}
-                    <button
-                        type="button"
-                        onClick={() => setForm((c) => ({ ...c, image_url: '' }))}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-rose-600 transition-colors"
-                        title="Remove media"
-                    >
-                        <X size={13} />
-                    </button>
+            {selectedMedia.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+                    {selectedMedia.map((item, index) => {
+                        const isVideo = item.type === 'video' || isVideoUrl(item.url);
+                        return (
+                            <div
+                                key={item.url}
+                                className="relative aspect-square overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950"
+                            >
+                                {isVideo ? (
+                                    <video src={item.url} controls className="w-full h-full object-cover" />
+                                ) : (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={item.url} alt={item.title || 'Post media'} className="w-full h-full object-cover" />
+                                )}
+                                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-black/60 text-white text-[9px] font-bold flex items-center gap-1">
+                                    {isVideo ? <Film size={9} /> : <ImageIcon size={9} />}
+                                    {index + 1}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => removeMediaItem(item.url)}
+                                    className="absolute top-1.5 right-1.5 p-1.5 rounded-full bg-black/60 text-white hover:bg-rose-600 transition-colors"
+                                    title="Remove media"
+                                >
+                                    <X size={13} />
+                                </button>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
@@ -105,7 +196,9 @@ export function SocialComposer({ accounts, initial, submitLabel, onSubmit, isSub
                         className="flex items-center gap-2 border border-gray-200 dark:border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-500 hover:border-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
                     >
                         <ImageIcon size={15} className="shrink-0" />
-                        {form.image_url ? 'Change media' : 'Add image / video'}
+                        {selectedMedia.length > 0
+                            ? `${selectedMedia.length}/${MAX_MEDIA_ITEMS} media selected`
+                            : 'Add image / video'}
                     </button>
                     <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-800 rounded-lg px-3">
                         <Calendar size={15} className="text-gray-400 shrink-0" />
@@ -158,7 +251,7 @@ export function SocialComposer({ accounts, initial, submitLabel, onSubmit, isSub
                     className="text-xs font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center gap-1"
                 >
                     {showOptions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    {showOptions ? 'Hide options' : 'Add image / schedule'}
+                    {showOptions ? 'Hide options' : 'Add media / schedule'}
                 </button>
                 <Button size="sm" onClick={handleSubmit} disabled={isSubmitting} className="gap-2 rounded-full px-5">
                     {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
@@ -169,7 +262,8 @@ export function SocialComposer({ accounts, initial, submitLabel, onSubmit, isSub
             <MediaPicker
                 open={pickerOpen}
                 onOpenChange={setPickerOpen}
-                onSelect={(media) => setForm((c) => ({ ...c, image_url: media.url }))}
+                selectedUrls={selectedMedia.map((item) => item.url)}
+                onSelect={addMediaItems}
             />
         </div>
     );

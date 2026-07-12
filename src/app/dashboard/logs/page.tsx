@@ -21,7 +21,7 @@ import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { AlertMessage } from '@/widgets/alert-message/AlertMessage';
 import { useSearchParams, useRouter } from 'next/navigation';
-import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
+import RefreshButton from '@/widgets/refresh-button/RefreshButton';
 
 interface StatsData {
     period_days: number;

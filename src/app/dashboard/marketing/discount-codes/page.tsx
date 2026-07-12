@@ -8,16 +8,16 @@ import securityAxios from '@/axios-instances/SecurityAxios';
 import { Button } from '@/components/ui/button';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { formatCurrency } from '@/lib/currency';
-import { ActionsDropdown, type ActionItem } from '@/widgets/ActionsDropdown/ActionsDropdown';
-import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
-import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
-import { CustomSheet } from '@/widgets/CustomSheet/CustomSheet';
-import { CustomFilter, type FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
-import { CustomPagination, type PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
-import { CustomSort, type SortConfig } from '@/widgets/CustomSort/CustomSort';
-import { DataTable } from '@/widgets/Customtable/DataTable';
-import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
-import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
+import { ActionsDropdown, type ActionItem } from '@/widgets/actions-dropdown/ActionsDropdown';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
+import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
+import { CustomSheet } from '@/widgets/custom-sheet/CustomSheet';
+import { CustomFilter, type FilterConfig } from '@/widgets/custom-filter/CustomFilter';
+import { CustomPagination, type PaginationMeta } from '@/widgets/custom-pagination/CustomPagination';
+import { CustomSort, type SortConfig } from '@/widgets/custom-sort/CustomSort';
+import { DataTable } from '@/widgets/custom-table/DataTable';
+import { TableSkeleton } from '@/widgets/custom-table/TableSkeleton';
+import RefreshButton from '@/widgets/refresh-button/RefreshButton';
 
 interface DiscountCode {
     id: string;

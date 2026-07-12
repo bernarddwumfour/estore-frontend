@@ -33,10 +33,10 @@ import {
 import { addDays, format } from 'date-fns';
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import { DataTable } from '@/widgets/Customtable/DataTable';
-import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
-import { DateRangePicker } from '@/widgets/DatePicker/DateRangePicker';
-import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
+import { DataTable } from '@/widgets/custom-table/DataTable';
+import { ActionItem, ActionsDropdown } from '@/widgets/actions-dropdown/ActionsDropdown';
+import { DateRangePicker } from '@/widgets/date-picker/DateRangePicker';
+import RefreshButton from '@/widgets/refresh-button/RefreshButton';
 
 // ==================== Types ====================
 interface OverviewStats {

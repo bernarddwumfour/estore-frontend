@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { apiMessage } from '@/lib/api-message';
-import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
+import RefreshButton from '@/widgets/refresh-button/RefreshButton';
 
 /* ---------------- Types ---------------- */
 

@@ -1,4 +1,4 @@
-// useFetchWishlist.ts - Alternative with individual hook
+// use-fetch-wishlist.ts — fetches and hydrates wishlist from API
 "use client"
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'

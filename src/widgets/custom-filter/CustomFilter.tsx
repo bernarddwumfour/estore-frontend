@@ -15,8 +15,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { DateRangePicker } from '../DatePicker/DateRangePicker';
-import { DatePicker } from '../DatePicker/DatePicker';
+import { DateRangePicker } from '../date-picker/DateRangePicker';
+import { DatePicker } from '../date-picker/DatePicker';
 
 export interface FilterField {
     name: string;

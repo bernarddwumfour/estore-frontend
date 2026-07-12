@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import Categories from '@/widgets/categories/Categories';
 import ProductsGridSkeleton from '@/app/(web)/products/(components)/ProductsGridSkeleton';
 import ProductsGridWrapper from '@/app/(web)/products/(components)/ProductsGridWrapper';
-import { AdvancedFilters } from '@/widgets/AdvancedFilters/AdvancedFilters';
+import { AdvancedFilters } from '@/widgets/advanced-filters/AdvancedFilters';
 import PageHeader from '../components/PageHeader';
 import type { ProductsPageProps } from '../../contract';
 

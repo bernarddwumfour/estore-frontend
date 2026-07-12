@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
-import MultiImagePreviewModal from '../ImagePreviewModal/ImagePreviewModal';
+import MultiImagePreviewModal from '../image-preview-modal/ImagePreviewModal';
 
 interface DataDisplayProps {
     data: Record<string, any>;

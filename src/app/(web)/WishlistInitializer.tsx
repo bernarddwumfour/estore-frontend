@@ -1,6 +1,6 @@
 "use client"
 import { useAuth } from '@/lib/use-auth'
-import { useFetchWishlist } from '../lib/hooks/useFetchWishlist'
+import { useFetchWishlist } from '../lib/hooks/use-fetch-wishlist'
 import { useSetWishlist } from '../lib/store/wishlist-store'
 
 export const WishlistInitializer = () => {

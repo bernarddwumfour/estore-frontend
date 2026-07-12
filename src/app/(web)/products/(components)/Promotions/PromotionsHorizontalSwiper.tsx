@@ -11,7 +11,7 @@ import type { Swiper as SwiperType } from "swiper";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-import { useDeviceContext } from "@/lib/providers/useDeviceContext";
+import { useDeviceContext } from "@/lib/providers/use-device-context";
 
 interface PromotionsHorizontalSwiperProps {
     promotions: PromotionType[];

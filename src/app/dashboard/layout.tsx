@@ -1,4 +1,4 @@
-// app/admin/layout.tsx
+// app/dashboard/layout.tsx
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -156,6 +156,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
+  const closeMobileSidebar = () => setSidebarOpen(false);
+
   // Flatten links for search
   const flatLinks = useMemo(() => {
     const links: { label: string; href: string; icon: LucideIcon; parent?: string }[] = [];
@@ -208,25 +210,71 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setSidebarOpen(false);
+      setShowSearchResults(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [pathname]);
+
+  useEffect(() => {
+    const largeScreenQuery = window.matchMedia('(min-width: 1024px)');
+    const handleBreakpointChange = (event: MediaQueryListEvent) => {
+      if (event.matches) setSidebarOpen(false);
+    };
+
+    largeScreenQuery.addEventListener('change', handleBreakpointChange);
+    return () => largeScreenQuery.removeEventListener('change', handleBreakpointChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isSidebarOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    };
+    const originalOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSidebarOpen]);
+
   return (
-    <div className="min-h-screen bg-white dark:bg-black flex">
+    <div className="min-h-screen bg-white dark:bg-black flex overflow-x-hidden">
+      {isSidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={closeMobileSidebar}
+        />
+      )}
+
       {/* SIDEBAR */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-48 bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800 transition-all duration-500 ease-in-out lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 w-72 max-w-[calc(100vw-3rem)] bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out lg:translate-x-0",
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
-        isCollapsed ? "w-20" : "w-64"
+        isCollapsed ? "lg:w-20" : "lg:w-64"
       )}>
         {/* Desktop Collapse Toggle */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex absolute -right-3 top-20 z-50 w-6 h-6 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-full items-center justify-center text-gray-400 dark:text-gray-600 hover:text-black dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-700 transition-all shadow-sm"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="hidden lg:flex absolute -right-3 top-20 z-[60] w-6 h-6 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-full items-center justify-center text-gray-400 dark:text-gray-600 hover:text-black dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-700 transition-all shadow-sm"
         >
           <ChevronRight className={cn("transition-transform duration-500", !isCollapsed && "rotate-180")} size={12} />
         </button>
 
         {/* Logo */}
         <div className={cn("p-6 transition-all duration-500", isCollapsed ? "px-0 flex justify-center" : "px-6")}>
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/dashboard" onClick={closeMobileSidebar} className="flex items-center gap-2">
             <span className={cn("font-black text-2xl tracking-tighter transition-all duration-300 text-black dark:text-white", isCollapsed ? "scale-75" : "")}>
               <div className="flex gap-3 items-center">
                 <Logo />{!isCollapsed && <span>iPlug</span>}
@@ -273,6 +321,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <Link
                           key={child.label}
                           href={child.href}
+                          onClick={closeMobileSidebar}
                           className={cn(
                             "flex items-center gap-3 px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
                             pathname === child.href
@@ -296,6 +345,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={link.label}
                 href={link.href as string}
+                onClick={closeMobileSidebar}
                 className={cn(
                   "flex items-center text-sm font-bold rounded-lg transition-all group py-2.5",
                   isActive
@@ -320,11 +370,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         isCollapsed ? "lg:ml-20" : "lg:ml-64"
       )}>
         {/* HEADER */}
-        <header className="h-16 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-black/80 backdrop-blur-xl flex items-center justify-between px-8 sticky top-0 z-40">
+        <header className="h-16 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-black/80 backdrop-blur-xl flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30 lg:z-40">
           <div className="flex items-center gap-4">
             {/* Mobile Menu Button */}
             <button
               onClick={() => setSidebarOpen(!isSidebarOpen)}
+              aria-label={isSidebarOpen ? "Close navigation menu" : "Open navigation menu"}
               className="lg:hidden text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white"
             >
               {isSidebarOpen ? <X /> : <Menu />}
@@ -396,13 +447,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               )}
             </Button>
 
-            <div className="h-8 w-[1px] bg-gray-200 dark:bg-gray-800 mx-2" />
+            <div className="hidden sm:block h-8 w-[1px] bg-gray-200 dark:bg-gray-800 mx-2" />
 
             {/* User Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-full transition-all">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Button variant="ghost" className="flex items-center gap-2 px-2 sm:px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-full transition-all">
+                  <span className="hidden sm:inline text-sm font-medium text-gray-700 dark:text-gray-300">
                     {user?.first_name || 'Admin'}
                   </span>
                   <ChevronDown size={14} className="text-gray-500 dark:text-gray-500" />
@@ -415,7 +466,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-800" />
                 <DropdownMenuItem asChild>
-                  <Link href="/admin/profile" className="flex items-center gap-3 p-3 text-xs font-medium rounded-xl cursor-pointer text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900">
+                  <Link href="/dashboard/settings/general" className="flex items-center gap-3 p-3 text-xs font-medium rounded-xl cursor-pointer text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900">
                     Profile Settings
                   </Link>
                 </DropdownMenuItem>
@@ -429,8 +480,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Page Content */}
         <div className={cn(
-          "p-8 px-10 mx-auto w-full relative",
-          isCollapsed ? "max-w-[calc(100vw-100px)]" : "max-w-[calc(100vw-300px)]"
+          "p-4 sm:p-6 lg:p-8 lg:px-10 mx-auto w-full relative",
+          isCollapsed ? "max-w-full lg:max-w-[calc(100vw-100px)]" : "max-w-full lg:max-w-[calc(100vw-300px)]"
         )}>
           {children}
         </div>

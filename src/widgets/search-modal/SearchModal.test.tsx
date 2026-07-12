@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 // AdvancedFilters is imported but only used in commented-out markup; stub it
 // so the heavy filter module isn't pulled into this test.
-vi.mock("../AdvancedFilters/AdvancedFilters", () => ({ AdvancedFilters: () => null }));
+vi.mock("../advanced-filters/AdvancedFilters", () => ({ AdvancedFilters: () => null }));
 
 const categories = [
   { id: "c1", name: "Phones", slug: "phones" },

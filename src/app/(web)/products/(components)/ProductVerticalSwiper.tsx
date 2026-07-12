@@ -8,7 +8,7 @@ import { ProductType } from "@/types/productTypes";
 import "swiper/css";
 import Product from "../Product";
 import { useState } from "react";
-import { useDeviceContext } from "@/lib/providers/useDeviceContext";
+import { useDeviceContext } from "@/lib/providers/use-device-context";
 
 interface ProductVerticalSwiperProps {
     products: ProductType[];

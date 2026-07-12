@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { endpoints } from '@/constants/endpoints/endpoints';
+import securityAxios from '@/axios-instances/SecurityAxios';
 import CancelOrderButton from '../(components)/CancelOrderButton';
 import {
   Dialog,
@@ -171,18 +172,8 @@ function ReviewDialog({
         };
       }
 
-      const url = `${baseUrl}${endpoint}`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-
-      const result = await response.json();
+      const response = await securityAxios.post(endpoint, body);
+      const result = response.data;
 
       if (!result.success) {
         throw new Error(result.message || 'Failed to submit review');
@@ -362,56 +353,14 @@ export default function OrderDetailsPage() {
       return;
     }
 
-    let accessToken: string;
     try {
-      const authData = JSON.parse(authCookie);
-      accessToken = authData.tokens?.access_token;
-      if (!accessToken) {
-        router.replace('/login');
-        return;
-      }
-    } catch {
-      router.replace('/login');
-      return;
-    }
+      const apiPath = endpoints.orders.orderDetails.replace(':id', orderId);
 
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
-      const endpoint = endpoints.orders.orderDetails.replace(':id', orderId);
-      const url = `${baseUrl}${endpoint}`;
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
-      });
-
-      if (response.status === 401) {
-        router.replace('/login');
-        return;
-      }
-
-      if (response.status === 404) {
-        setNotFound(true);
-        return;
-      }
-
-      if (response.status === 403) {
-        router.replace('/orders');
-        return;
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
-        throw new Error('Invalid response format from server');
-      }
-
-      const result = await response.json();
+      const response = await securityAxios.get(apiPath);
+      const result = response.data;
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to load order details');
+        throw new Error(result.message || 'Failed to load order details');
       }
 
       const orderData = result.data?.order || result.data;
@@ -420,17 +369,10 @@ export default function OrderDetailsPage() {
       // Fetch existing order review if order is delivered/completed
       if (orderData && (orderData.status === 'delivered' || orderData.status === 'completed')) {
         try {
-          const reviewUrl = `${baseUrl}/orders/${orderId}/review`;
-          const reviewResponse = await fetch(reviewUrl, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            cache: 'no-store',
-          });
+          const orderReviewResponse = await securityAxios.get(`/orders/${orderId}/review`);
+          const reviewResult = orderReviewResponse.data;
 
-          if (reviewResponse.ok) {
-            const reviewResult = await reviewResponse.json();
+          if (reviewResult.success) {
             if (reviewResult.success && reviewResult.data) {
               setExistingOrderReview(reviewResult.data);
             }
@@ -445,17 +387,10 @@ export default function OrderDetailsPage() {
           for (const item of orderData.items) {
             try {
               const productSlug = item.product_slug || item.product_title?.toLowerCase().replace(/\s+/g, '-');
-              const productReviewUrl = `${baseUrl}/products/${productSlug}/reviews?limit=10`;
-              const reviewResponse = await fetch(productReviewUrl, {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  'Content-Type': 'application/json',
-                },
-                cache: 'no-store',
-              });
+              const prodReviewResponse = await securityAxios.get(`/products/${productSlug}/reviews?limit=10`);
+              const reviewResult = prodReviewResponse.data;
 
-              if (reviewResponse.ok) {
-                const reviewResult = await reviewResponse.json();
+              if (reviewResult.success) {
                 if (reviewResult.success && reviewResult.data?.reviews?.length > 0) {
                   const userReview = reviewResult.data.reviews.find(
                     (r: any) => r.user_email === orderData.user_email
@@ -473,10 +408,19 @@ export default function OrderDetailsPage() {
         }
       }
     } catch (err: any) {
+      // axios rejects on non-2xx — check response status for routing
+      if (err.response?.status === 404) {
+        setNotFound(true);
+        return;
+      }
+      if (err.response?.status === 403) {
+        router.replace('/orders');
+        return;
+      }
       if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
         setError('Unable to connect to the server. Please check your internet connection.');
       } else {
-        setError(err.message || 'Failed to load order details. Please try again.');
+        setError(err.response?.data?.message || err.message || 'Failed to load order details. Please try again.');
       }
     } finally {
       setLoading(false);

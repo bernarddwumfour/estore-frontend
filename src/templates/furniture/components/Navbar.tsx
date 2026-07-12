@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
-import { SearchModal } from "@/widgets/SearchModal/SearchModal";
+import { SearchModal } from "@/widgets/search-modal/SearchModal";
 
 const navLinks = [
   { label: "Home", href: "/" },

@@ -1,14 +1,13 @@
-// axios-instances/SecurityAxios.ts
+// axios-instances/UnAuthenticatedAxios.ts
 import { endpoints } from "@/constants/endpoints/endpoints";
 import { getAuthCookie, setAuthCookie } from "@/lib/providers/auth-provider";
+import type { ApiResponse } from "@/types/api";
 import axios, {
   AxiosInstance,
   InternalAxiosRequestConfig,
   AxiosError,
   AxiosResponse
 } from "axios";
-
-
 
 const unAuthenticatedAxios: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -17,15 +16,6 @@ const unAuthenticatedAxios: AxiosInstance = axios.create({
     "Content-Type": "application/json",
   },
 });
-
-// CHANGED: Added type for API response structure
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-  errors?: Record<string, string[]>;
-}
 
 
 const normalizeEndpoint = (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {

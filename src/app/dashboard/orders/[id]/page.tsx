@@ -12,12 +12,12 @@ import { Separator } from "@/components/ui/separator";
 import { Clock, Package, MapPin, CreditCard, Truck, CheckCircle, CheckCheck, ArrowLeft, Loader2, DollarSign, Phone, Mail, User, Hash, PackageCheck, XCircle, Timer, ShoppingBag, Eye, ShoppingCart, Edit, Trash2, Gift, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
-import { DataTable } from '@/widgets/Customtable/DataTable';
-import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
+import { DataTable } from '@/widgets/custom-table/DataTable';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
 import { cn } from "@/lib/utils";
 import { Dispatch, SetStateAction, useState } from 'react';
 import { CustomSelect, selectField } from '@/widgets/custom-select/CustomSelect';
-import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
+import { ActionItem, ActionsDropdown } from '@/widgets/actions-dropdown/ActionsDropdown';
 import { formatCurrency } from '@/lib/currency';
 
 interface OrderItem {

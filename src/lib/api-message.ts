@@ -1,6 +1,4 @@
-export interface ApiError {
-    response?: { status?: number; data?: { message?: string } };
-}
+import type { ApiError } from "@/types/api";
 
 /** Extract the backend envelope's message from an axios error, with a fallback. */
 export const apiMessage = (error: unknown, fallback: string) =>

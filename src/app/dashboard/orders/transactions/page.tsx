@@ -11,17 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import { CustomSheet } from '@/widgets/CustomSheet/CustomSheet';
-import { DataTable } from '@/widgets/Customtable/DataTable';
-import { DataDisplay } from '@/widgets/DataDisplay/DataDisplay';
-import { ActionItem, ActionsDropdown } from '@/widgets/ActionsDropdown/ActionsDropdown';
-import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
-import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
-import { CustomSort, SortConfig } from '@/widgets/CustomSort/CustomSort';
+import { CustomSheet } from '@/widgets/custom-sheet/CustomSheet';
+import { DataTable } from '@/widgets/custom-table/DataTable';
+import { DataDisplay } from '@/widgets/data-display/DataDisplay';
+import { ActionItem, ActionsDropdown } from '@/widgets/actions-dropdown/ActionsDropdown';
+import { CustomPagination, PaginationMeta } from '@/widgets/custom-pagination/CustomPagination';
+import { CustomFilter, FilterConfig } from '@/widgets/custom-filter/CustomFilter';
+import { CustomSort, SortConfig } from '@/widgets/custom-sort/CustomSort';
 import { useRouter } from 'next/navigation';
-import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import { TableSkeleton } from '@/widgets/custom-table/TableSkeleton';
 import { formatCurrency } from '@/lib/currency';
-import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
+import RefreshButton from '@/widgets/refresh-button/RefreshButton';
 
 // Types
 interface Transaction {

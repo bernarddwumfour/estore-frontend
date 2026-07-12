@@ -11,14 +11,20 @@ import { Button } from '@/components/ui/button';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { apiMessage } from '@/lib/api-message';
 import { clockTime, timeAgo } from '@/lib/format-time';
-import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
-import { UserAvatar } from '@/widgets/UserAvatar/UserAvatar';
+import RefreshButton from '@/widgets/refresh-button/RefreshButton';
+import { UserAvatar } from '@/widgets/user-avatar/UserAvatar';
 import { TestModeBadge } from '@/widgets/social/TestModeBadge';
 
 interface Conversation {
     id?: string;
     _id?: string;
+    conversationId?: string;
+    conversation_id?: string;
     platform?: string;
+    accountId?: string;
+    account_id?: string;
+    participantName?: string;
+    accountUsername?: string;
     lastMessage?: string;
     lastMessageAt?: string;
     lastMessageIsOwn?: boolean;
@@ -28,38 +34,108 @@ interface Conversation {
 interface Message {
     id?: string;
     _id?: string;
+    messageId?: string;
+    message_id?: string;
     createdAt?: string;
+    sentAt?: string;
+    direction?: string;
     [key: string]: unknown;
 }
 
-const conversationId = (c: Conversation) => String(c._id ?? c.id ?? '');
-const conversationName = (c: Conversation) =>
-    String(c.name ?? c.participant ?? c.username ?? c.from ?? c.title ?? 'Conversation');
-const messageText = (m: Message) =>
-    String(m.text ?? m.message ?? m.content ?? m.body ?? '');
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const readString = (source: Record<string, unknown> | null | undefined, keys: string[]) => {
+    if (!source) return '';
+    for (const key of keys) {
+        const value = source[key];
+        if (typeof value === 'string' && value.trim()) return value.trim();
+        if (typeof value === 'number') return String(value);
+    }
+    return '';
+};
+
+const nestedName = (value: unknown) =>
+    isRecord(value)
+        ? readString(value, ['participantName', 'displayName', 'name', 'username', 'fullName', 'handle', 'title'])
+        : '';
+
+const conversationParticipantName = (c: Conversation) => {
+    for (const key of ['participant', 'sender', 'contact', 'customer', 'user', 'from']) {
+        const name = nestedName(c[key]);
+        if (name) return name;
+    }
+    if (Array.isArray(c.participants)) {
+        for (const participant of c.participants) {
+            const name = nestedName(participant);
+            if (name) return name;
+        }
+    }
+    const lastMessage = c.lastMessage;
+    if (isRecord(lastMessage)) {
+        const fromName = nestedName(lastMessage.from) || nestedName(lastMessage.sender);
+        if (fromName) return fromName;
+    }
+    return '';
+};
+
+const conversationId = (c: Conversation) =>
+    readString(c, ['_id', 'id', 'conversationId', 'conversation_id']);
+const conversationAccountId = (c: Conversation) =>
+    readString(c, ['accountId', 'account_id'])
+    || (isRecord(c.account) ? readString(c.account, ['_id', 'id', 'accountId']) : '');
+const conversationName = (c: Conversation) => {
+    const direct = readString(c, [
+        'participantName', 'senderName', 'displayName', 'contactName', 'customerName',
+        'name', 'username', 'accountUsername',
+    ]);
+    if (direct) return direct;
+    const nested = conversationParticipantName(c);
+    if (nested) return nested;
+    const title = readString(c, ['title', 'subject']);
+    return title && title.toLowerCase() !== 'conversation' ? title : 'Conversation';
+};
+const messageText = (m: Message | Record<string, unknown> | string | unknown): string => {
+    if (typeof m === 'string') return m;
+    if (!isRecord(m)) return '';
+    const direct = readString(m, ['text', 'message', 'content', 'body']);
+    if (direct) return direct;
+    return isRecord(m.content) ? readString(m.content, ['text', 'message', 'body']) : '';
+};
+const conversationPreview = (c: Conversation) => messageText(c.lastMessage) || readString(c, ['preview', 'snippet']);
 const messageTime = (m: Message) =>
-    String(m.createdAt ?? m.created_at ?? m.timestamp ?? '');
-const isOutgoing = (m: Message) =>
-    Boolean(m.isOwn ?? m.fromMe ?? m.outgoing ?? m.is_outgoing ?? false);
+    readString(m, ['sentAt', 'createdAt', 'created_at', 'timestamp', 'time']);
+const conversationTime = (c: Conversation) =>
+    readString(c, ['lastMessageAt', 'updatedTime', 'updatedAt', 'lastActivityAt']);
+const isOutgoing = (m: Message) => {
+    if (m.direction === 'outgoing') return true;
+    if (m.direction === 'incoming') return false;
+    return Boolean(m.isOwn ?? m.fromMe ?? m.outgoing ?? m.is_outgoing ?? false);
+};
+const lastMessageIsOwn = (c: Conversation) => {
+    if (typeof c.lastMessageIsOwn === 'boolean') return c.lastMessageIsOwn;
+    return isRecord(c.lastMessage) ? isOutgoing(c.lastMessage as Message) : false;
+};
 
 const PLATFORM_OPTIONS = [
     { value: '', label: 'All Platforms' },
     { value: 'instagram', label: 'Instagram' },
     { value: 'facebook', label: 'Facebook' },
     { value: 'twitter', label: 'X / Twitter' },
-    { value: 'whatsapp', label: 'WhatsApp' },
+    { value: 'bluesky', label: 'Bluesky' },
+    { value: 'reddit', label: 'Reddit' },
     { value: 'telegram', label: 'Telegram' },
-    { value: 'discord', label: 'Discord' },
 ];
 
 const fetchConversations = async (platform: string): Promise<Conversation[]> => {
-    const suffix = platform ? `?platform=${platform}` : '';
+    const suffix = platform ? `?platform=${encodeURIComponent(platform)}` : '';
     const response = await securityAxios.get(`${endpoints.social.adminConversations}${suffix}`);
     return response.data?.data?.conversations || [];
 };
 
-const fetchMessages = async (id: string): Promise<Message[]> => {
-    const response = await securityAxios.get(endpoints.social.adminMessages.replace(':id', id));
+const fetchMessages = async (id: string, accountId: string): Promise<Message[]> => {
+    const query = accountId ? `?account_id=${encodeURIComponent(accountId)}` : '';
+    const response = await securityAxios.get(`${endpoints.social.adminMessages.replace(':id', id)}${query}`);
     return response.data?.data?.messages || [];
 };
 
@@ -70,8 +146,9 @@ function ConversationItem({ conversation, active, onSelect }: {
     active: boolean;
     onSelect: () => void;
 }) {
-    const preview = conversation.lastMessage
-        ? `${conversation.lastMessageIsOwn ? 'You: ' : ''}${conversation.lastMessage}`
+    const previewText = conversationPreview(conversation);
+    const preview = previewText
+        ? `${lastMessageIsOwn(conversation) ? 'You: ' : ''}${previewText}`
         : 'No messages yet';
     return (
         <button
@@ -88,7 +165,7 @@ function ConversationItem({ conversation, active, onSelect }: {
                         {conversationName(conversation)}
                     </p>
                     <span className="text-[10px] text-gray-400 shrink-0">
-                        {timeAgo(conversation.lastMessageAt)}
+                        {timeAgo(conversationTime(conversation))}
                     </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -113,11 +190,13 @@ function MessageThread({ conversation, onBack }: {
     const [reply, setReply] = useState('');
     const bottomRef = useRef<HTMLDivElement>(null);
     const id = conversationId(conversation);
+    const accountId = conversationAccountId(conversation);
 
-    const { data: messages, isLoading, refetch } = useQuery({
-        queryKey: ['social-messages', id],
-        queryFn: () => fetchMessages(id),
-        enabled: !!id,
+    const { data: messages, isLoading, isError, error, refetch } = useQuery({
+        queryKey: ['social-messages', id, accountId],
+        queryFn: () => fetchMessages(id, accountId),
+        enabled: !!id && !!accountId,
+        retry: false,
     });
 
     // keep the newest message in view, like any messenger
@@ -129,7 +208,7 @@ function MessageThread({ conversation, onBack }: {
         mutationFn: async (message: string) => {
             const response = await securityAxios.post(
                 endpoints.social.adminMessageSend.replace(':id', id),
-                { message }
+                { message, account_id: accountId }
             );
             return response.data;
         },
@@ -170,7 +249,7 @@ function MessageThread({ conversation, onBack }: {
                 <div className="ml-auto">
                     <RefreshButton
                         onRefresh={() => refetch()}
-                        queryKey={['social-messages', id]}
+                        queryKey={['social-messages', id, accountId]}
                         label=""
                         className="h-8 w-8 p-0 rounded-full border-none"
                         successMessage="Messages refreshed"
@@ -180,7 +259,15 @@ function MessageThread({ conversation, onBack }: {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {isLoading ? (
+                {!accountId ? (
+                    <p className="text-sm text-gray-500 text-center py-8">
+                        This conversation is missing its account id.
+                    </p>
+                ) : isError ? (
+                    <p className="text-sm text-red-600 dark:text-red-400 text-center py-8">
+                        {apiMessage(error, 'Error loading messages')}
+                    </p>
+                ) : isLoading ? (
                     <div className="py-12 flex justify-center">
                         <Loader2 className="animate-spin text-gray-400" size={24} />
                     </div>
@@ -219,11 +306,11 @@ function MessageThread({ conversation, onBack }: {
                     onChange={(e) => setReply(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     placeholder="Type a message..."
-                    disabled={sendMutation.isPending}
+                    disabled={sendMutation.isPending || !accountId}
                     className="flex-1 px-4 py-2 text-sm border border-gray-200 dark:border-gray-800 rounded-full bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-400/40 disabled:opacity-60"
                 />
                 <Button
-                    disabled={!reply.trim() || sendMutation.isPending}
+                    disabled={!reply.trim() || sendMutation.isPending || !accountId}
                     onClick={handleSend}
                     className="rounded-full gap-2"
                 >

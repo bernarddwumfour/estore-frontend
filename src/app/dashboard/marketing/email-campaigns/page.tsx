@@ -7,14 +7,14 @@ import { toast } from 'sonner';
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { Button } from '@/components/ui/button';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import { ActionsDropdown, type ActionItem } from '@/widgets/ActionsDropdown/ActionsDropdown';
-import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
-import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
-import { CustomSheet } from '@/widgets/CustomSheet/CustomSheet';
-import { CustomFilter, type FilterConfig } from '@/widgets/CustomFilter/CustomFilter';
-import { CustomPagination, type PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
-import { DataTable } from '@/widgets/Customtable/DataTable';
-import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import { ActionsDropdown, type ActionItem } from '@/widgets/actions-dropdown/ActionsDropdown';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
+import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
+import { CustomSheet } from '@/widgets/custom-sheet/CustomSheet';
+import { CustomFilter, type FilterConfig } from '@/widgets/custom-filter/CustomFilter';
+import { CustomPagination, type PaginationMeta } from '@/widgets/custom-pagination/CustomPagination';
+import { DataTable } from '@/widgets/custom-table/DataTable';
+import { TableSkeleton } from '@/widgets/custom-table/TableSkeleton';
 
 interface EmailCampaign {
     id: string;

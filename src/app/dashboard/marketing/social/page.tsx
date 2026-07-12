@@ -15,17 +15,18 @@ import { Button } from '@/components/ui/button';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { apiMessage } from '@/lib/api-message';
 import { formatNumber, timeAgo } from '@/lib/format-time';
-import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
-import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
-import RefreshButton from '@/widgets/RefreshButton/RefreshButton';
-import { UserAvatar } from '@/widgets/UserAvatar/UserAvatar';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
+import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
+import RefreshButton from '@/widgets/refresh-button/RefreshButton';
+import { UserAvatar } from '@/widgets/user-avatar/UserAvatar';
 import {
     SocialComposer, composerPayload, emptyComposer, type ComposerValues,
 } from '@/widgets/social/SocialComposer';
 import { TestModeBadge } from '@/widgets/social/TestModeBadge';
 import {
-    PostStatusBadge, SOURCE_ICONS, STATUS_DOTS, StatTile, commentAuthor, commentIdOf, commentText, isVideoUrl,
-    type PostAnalytics, type SocialAccount, type SocialComment, type SocialPost,
+    PostStatusBadge, SOURCE_ICONS, STATUS_DOTS, StatTile, commentAuthor, commentCid, commentIdOf,
+    commentDepth, commentLikeUri, commentText, isCommentHidden, isCommentLiked, isVideoUrl,
+    type PostAnalytics, type SocialAccount, type SocialComment, type SocialPost, type SocialPostMediaItem,
 } from '@/widgets/social/social-shared';
 
 /* ---------------- Data fetching ---------------- */
@@ -66,8 +67,21 @@ const fetchPosts = async (params: { page: number; search: string; filters: PostF
     return response.data.data;
 };
 
-const fetchComments = async (postId: string): Promise<SocialComment[]> => {
-    const response = await securityAxios.get(endpoints.social.adminPostComments.replace(':id', postId));
+const firstPostAccountId = (post: SocialPost) => post.platforms?.[0]?.accountId || '';
+
+const postMediaItems = (post: SocialPost): SocialPostMediaItem[] => {
+    const mediaItems = (post.media_items || []).filter((item) => item?.url);
+    if (mediaItems.length > 0) return mediaItems;
+    if (!post.image_url) return [];
+    return [{
+        type: isVideoUrl(post.image_url) ? 'video' : 'image',
+        url: post.image_url,
+    }];
+};
+
+const fetchComments = async (postId: string, accountId?: string): Promise<SocialComment[]> => {
+    const query = accountId ? `?account_id=${encodeURIComponent(accountId)}` : '';
+    const response = await securityAxios.get(`${endpoints.social.adminPostComments.replace(':id', postId)}${query}`);
     return response.data?.data?.comments || [];
 };
 
@@ -142,12 +156,14 @@ function PostDetail({
         retry: false,
     });
 
+    const commentAccountId = firstPostAccountId(post);
     const { data: comments } = useQuery({
-        queryKey: ['social-comments', post.id],
-        queryFn: () => fetchComments(post.id),
-        enabled: isPublished,
+        queryKey: ['social-comments', post.id, commentAccountId],
+        queryFn: () => fetchComments(post.id, commentAccountId),
+        enabled: isPublished && !!commentAccountId,
     });
-    const commentCount = comments?.length ?? analytics?.comments ?? 0;
+    const commentCount = Math.max(comments?.length ?? 0, analytics?.comments ?? 0);
+    const mediaItems = postMediaItems(post);
 
     return (
         <div className="space-y-4">
@@ -183,21 +199,41 @@ function PostDetail({
 
             {/* Body */}
             <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">{post.caption}</p>
-            {post.image_url && (
-                isVideoUrl(post.image_url) ? (
-                    <video
-                        src={post.image_url}
-                        controls
-                        className="w-full max-h-80 rounded-xl border border-gray-100 dark:border-gray-900"
-                    />
-                ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                        src={post.image_url}
-                        alt="Post"
-                        className="w-full max-h-80 object-cover rounded-xl border border-gray-100 dark:border-gray-900"
-                    />
-                )
+            {mediaItems.length > 0 && (
+                <div className={`grid gap-2 ${mediaItems.length === 1 ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                    {mediaItems.map((item, index) => {
+                        const isVideo = item.type === 'video' || isVideoUrl(item.url);
+                        const mediaClass = mediaItems.length === 1
+                            ? 'w-full max-h-80 object-cover'
+                            : 'w-full h-full object-cover';
+                        return (
+                            <div
+                                key={`${item.url}-${index}`}
+                                className={`relative overflow-hidden rounded-xl border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 ${mediaItems.length === 1 ? '' : 'aspect-square'}`}
+                            >
+                                {isVideo ? (
+                                    <video
+                                        src={item.url}
+                                        controls
+                                        className={mediaClass}
+                                    />
+                                ) : (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                        src={item.url}
+                                        alt={item.title || 'Post media'}
+                                        className={mediaClass}
+                                    />
+                                )}
+                                {mediaItems.length > 1 && (
+                                    <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-black/60 text-white text-[9px] font-bold">
+                                        {index + 1}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             )}
             {post.platforms?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -278,14 +314,19 @@ function PostDetail({
                     {analyticsLoading ? (
                         <div className="py-6 flex justify-center"><Loader2 className="animate-spin text-gray-400" size={18} /></div>
                     ) : analytics ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            <StatTile icon={<Eye size={12} />} label="Impressions" value={analytics.impressions} />
-                            <StatTile icon={<Users size={12} />} label="Reach" value={analytics.reach} />
-                            <StatTile icon={<ThumbsUp size={12} />} label="Engagement" value={analytics.engagement} />
-                            <StatTile icon={<Heart size={12} />} label="Likes" value={analytics.likes} />
-                            <StatTile icon={<Share size={12} />} label="Shares" value={analytics.shares} />
-                            <StatTile icon={<MousePointerClick size={12} />} label="Clicks" value={analytics.clicks} />
-                        </div>
+                        <>
+                            {analytics.message && (
+                                <p className="text-xs text-gray-500">{analytics.message}</p>
+                            )}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                <StatTile icon={<Eye size={12} />} label="Impressions" value={analytics.impressions} />
+                                <StatTile icon={<Users size={12} />} label="Reach" value={analytics.reach} />
+                                <StatTile icon={<ThumbsUp size={12} />} label="Engagement" value={analytics.engagement} />
+                                <StatTile icon={<Heart size={12} />} label="Likes" value={analytics.likes} />
+                                <StatTile icon={<Share size={12} />} label="Shares" value={analytics.shares} />
+                                <StatTile icon={<MousePointerClick size={12} />} label="Clicks" value={analytics.clicks} />
+                            </div>
+                        </>
                     ) : (
                         <p className="text-xs text-gray-500">Analytics not available for this post yet.</p>
                     )}
@@ -302,7 +343,13 @@ function PostDetail({
             >
                 <SocialComposer
                     accounts={accounts}
-                    initial={{ caption: post.caption, image_url: post.image_url || '', scheduled_for: '', account_ids: [] }}
+                    initial={{
+                        caption: post.caption,
+                        image_url: post.image_url || '',
+                        media_items: postMediaItems(post),
+                        scheduled_for: '',
+                        account_ids: [],
+                    }}
                     submitLabel="Approve & Publish"
                     isSubmitting={isApproving}
                     onSubmit={(values) => {
@@ -318,6 +365,8 @@ function PostDetail({
 /* ---------------- Column 3: comments ---------------- */
 
 function CommentsPanel({ post, onBack }: { post: SocialPost; onBack: () => void }) {
+    const defaultAccountId = firstPostAccountId(post);
+    const [selectedAccountId, setSelectedAccountId] = useState(defaultAccountId);
     const [replyTo, setReplyTo] = useState('');
     const [replyText, setReplyText] = useState('');
     const queryClient = useQueryClient();
@@ -325,9 +374,9 @@ function CommentsPanel({ post, onBack }: { post: SocialPost; onBack: () => void 
     const isPublished = post.status === 'sent' && !!post.zernio_post_id;
 
     const { data: comments, isLoading, refetch } = useQuery({
-        queryKey: ['social-comments', post.id],
-        queryFn: () => fetchComments(post.id),
-        enabled: isPublished,
+        queryKey: ['social-comments', post.id, selectedAccountId],
+        queryFn: () => fetchComments(post.id, selectedAccountId),
+        enabled: isPublished && !!selectedAccountId,
     });
 
     const refresh = () => {
@@ -339,7 +388,7 @@ function CommentsPanel({ post, onBack }: { post: SocialPost; onBack: () => void 
         mutationFn: async ({ commentId, message }: { commentId: string; message: string }) => {
             const response = await securityAxios.post(
                 endpoints.social.adminCommentReply.replace(':id', post.id),
-                { comment_id: commentId, message }
+                { comment_id: commentId, message, account_id: selectedAccountId }
             );
             return response.data;
         },
@@ -353,10 +402,21 @@ function CommentsPanel({ post, onBack }: { post: SocialPost; onBack: () => void 
     });
 
     const actionMutation = useMutation({
-        mutationFn: async ({ commentId, action }: { commentId: string; action: string }) => {
+        mutationFn: async ({ commentId, action, cid, likeUri }: {
+            commentId: string;
+            action: string;
+            cid?: string;
+            likeUri?: string;
+        }) => {
             const response = await securityAxios.post(
                 endpoints.social.adminCommentAction.replace(':id', post.id),
-                { comment_id: commentId, action }
+                {
+                    comment_id: commentId,
+                    action,
+                    account_id: selectedAccountId,
+                    ...(cid ? { cid } : {}),
+                    ...(likeUri ? { like_uri: likeUri } : {}),
+                }
             );
             return response.data;
         },
@@ -390,20 +450,34 @@ function CommentsPanel({ post, onBack }: { post: SocialPost; onBack: () => void 
         );
     }
 
+    if (!selectedAccountId) {
+        return (
+            <div className="space-y-3">
+                {backButton}
+                <div className="flex flex-col items-center justify-center text-center px-6 py-16 space-y-2">
+                    <MessageCircle className="text-gray-300 dark:text-gray-700" size={32} />
+                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No post account found</p>
+                    <p className="text-xs text-gray-500">Comments need the social account used to publish this post.</p>
+                </div>
+            </div>
+        );
+    }
+
     const actionButton = (
-        cid: string,
+        commentId: string,
         action: string,
         label: string,
         icon: React.ReactNode,
         hoverClass: string,
         activeClass = '',
+        options: { cid?: string; likeUri?: string } = {},
     ) => {
-        const isThisPending = pendingAction?.commentId === cid && pendingAction?.action === action;
+        const isThisPending = pendingAction?.commentId === commentId && pendingAction?.action === action;
         return (
             <button
                 className={`text-[11px] font-semibold disabled:opacity-50 ${activeClass || `text-gray-500 ${hoverClass}`}`}
                 disabled={anyBusy}
-                onClick={() => actionMutation.mutate({ commentId: cid, action })}
+                onClick={() => actionMutation.mutate({ commentId, action, ...options })}
             >
                 {isThisPending
                     ? <Loader2 size={11} className="inline mr-1 animate-spin" />
@@ -422,12 +496,29 @@ function CommentsPanel({ post, onBack }: { post: SocialPost; onBack: () => void 
                 </h3>
                 <RefreshButton
                     onRefresh={() => refetch()}
-                    queryKey={['social-comments', post.id]}
+                    queryKey={['social-comments', post.id, selectedAccountId]}
                     label=""
                     className="h-7 w-7 p-0 rounded-full border-none"
                     successMessage="Comments refreshed"
                 />
             </div>
+            {post.platforms.length > 1 && (
+                <div className="flex flex-wrap gap-1.5">
+                    {post.platforms.map((platform) => (
+                        <button
+                            key={platform.accountId}
+                            type="button"
+                            onClick={() => setSelectedAccountId(platform.accountId)}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border transition-colors ${selectedAccountId === platform.accountId
+                                ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white'
+                                : 'border-gray-200 dark:border-gray-800 text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                                }`}
+                        >
+                            {platform.platform}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {isLoading ? (
                 <div className="py-8 flex justify-center"><Loader2 className="animate-spin text-gray-400" size={18} /></div>
@@ -436,19 +527,24 @@ function CommentsPanel({ post, onBack }: { post: SocialPost; onBack: () => void 
             ) : (
                 comments.map((comment, index) => {
                     const cid = commentIdOf(comment, index);
-                    const isHidden = !!comment.hidden;
+                    const hidden = isCommentHidden(comment);
+                    const liked = isCommentLiked(comment);
+                    const depth = commentDepth(comment);
                     return (
-                        <div key={cid} className={`flex gap-2.5 ${isHidden ? 'opacity-60' : ''}`}>
+                        <div
+                            key={cid}
+                            className={`flex gap-2.5 ${hidden ? 'opacity-60' : ''} ${depth ? 'ml-6 pl-3 border-l border-gray-200 dark:border-gray-800' : ''}`}
+                        >
                             <UserAvatar
                                 name={commentAuthor(comment)}
                                 size="sm"
-                                variant={comment.isReply ? 'brand' : 'neutral'}
+                                variant={depth ? 'brand' : 'neutral'}
                             />
                             <div className="flex-1 min-w-0">
                                 <div className="bg-gray-100 dark:bg-gray-900 rounded-2xl px-3 py-2">
                                     <div className="flex items-center gap-2">
                                         <p className="text-xs font-bold text-gray-900 dark:text-white">{commentAuthor(comment)}</p>
-                                        {isHidden && (
+                                        {hidden && (
                                             <span className="px-1.5 py-0.5 rounded-full border border-gray-300 dark:border-gray-700 text-gray-500 text-[9px] font-black uppercase tracking-wider">
                                                 Hidden from customers
                                             </span>
@@ -459,11 +555,12 @@ function CommentsPanel({ post, onBack }: { post: SocialPost; onBack: () => void 
                                 <div className="flex flex-wrap gap-3 px-3 pt-1">
                                     {actionButton(
                                         cid,
-                                        comment.liked ? 'unlike' : 'like',
-                                        comment.liked ? 'Liked' : 'Like',
+                                        liked ? 'unlike' : 'like',
+                                        liked ? 'Liked' : 'Like',
                                         <ThumbsUp size={11} className="inline" />,
                                         'hover:text-gray-900 dark:hover:text-white',
-                                        comment.liked ? 'font-bold text-gray-900 dark:text-white' : '',
+                                        liked ? 'font-bold text-gray-900 dark:text-white' : '',
+                                        liked ? { likeUri: commentLikeUri(comment) } : { cid: commentCid(comment) },
                                     )}
                                     <button
                                         className="text-[11px] font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white disabled:opacity-50"
@@ -472,7 +569,7 @@ function CommentsPanel({ post, onBack }: { post: SocialPost; onBack: () => void 
                                     >
                                         <MessageCircle size={11} className="inline mr-1" />Reply
                                     </button>
-                                    {isHidden
+                                    {hidden
                                         ? actionButton(cid, 'unhide', 'Unhide', <Eye size={11} className="inline" />, 'hover:text-gray-900 dark:hover:text-white', 'text-gray-500 underline')
                                         : actionButton(cid, 'hide', 'Hide', <EyeOff size={11} className="inline" />, 'hover:text-gray-900 dark:hover:text-white')}
                                     {actionButton(cid, 'delete', 'Delete', <Trash2 size={11} className="inline" />, 'hover:text-rose-600')}

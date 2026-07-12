@@ -13,18 +13,18 @@ import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import { ActionsDropdown, type ActionItem } from '@/widgets/ActionsDropdown/ActionsDropdown';
-import { CustomDialog } from '@/widgets/CustomDialog/CustomDialog';
-import { CustomSheet } from '@/widgets/CustomSheet/CustomSheet';
-import { DataTable } from '@/widgets/Customtable/DataTable';
-import { InfoDialog } from '@/widgets/CustomDialog/InfoDialog';
-import { CustomPagination, PaginationMeta } from '@/widgets/CustomPagination/CustomPagination';
-import { CustomSortFromUrl, SortConfig } from '@/widgets/CustomSort/CustomSortFromUrl';
-import ProductVariantForm from '../ProductVariantForm';
+import { ActionsDropdown, type ActionItem } from '@/widgets/actions-dropdown/ActionsDropdown';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
+import { CustomSheet } from '@/widgets/custom-sheet/CustomSheet';
+import { DataTable } from '@/widgets/custom-table/DataTable';
+import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
+import { CustomPagination, PaginationMeta } from '@/widgets/custom-pagination/CustomPagination';
+import { CustomSortFromUrl, SortConfig } from '@/widgets/custom-sort/CustomSortFromUrl';
+import ProductVariantForm from '../(components)/ProductVariantForm';
 import Link from 'next/link';
-import { TableSkeleton } from '@/widgets/Customtable/TableSkeleton';
+import { TableSkeleton } from '@/widgets/custom-table/TableSkeleton';
 import { formatCurrency } from '@/lib/currency';
-import { CustomFilter, FilterConfig } from '@/widgets/CustomFilter/CustomFilterFromUrl';
+import { CustomFilter, FilterConfig } from '@/widgets/custom-filter/CustomFilterFromUrl';
 
 // Types
 interface Variant {
