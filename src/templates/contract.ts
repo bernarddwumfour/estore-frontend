@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { ProductType } from "@/types/productTypes";
+import type { BlogPostType } from "@/types/blogTypes";
 
 /**
  * The set of presentational slots a store template may override.
@@ -31,6 +32,24 @@ export interface PageHeaderProps {
   description?: string;
 }
 
+export interface BlogPostPageProps {
+  post: BlogPostType;
+}
+
+export interface BlogPageProps {
+  posts: BlogPostType[];
+  pagination: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_previous: boolean;
+    next_page: number | null;
+    previous_page: number | null;
+  } | null;
+}
+
 export interface Template {
   /** The storefront homepage composition. */
   HomePage: ComponentType;
@@ -40,12 +59,14 @@ export interface Template {
   Navbar: ComponentType;
   /** Storefront footer, rendered by the shared (web) layout. */
   Footer: ComponentType;
-  /** The /blog listing page composition. */
-  BlogPage: ComponentType;
+  /** The /blog listing page composition (receives fetched posts + pagination). */
+  BlogPage: ComponentType<BlogPageProps>;
   /** The /contact page composition. */
   ContactPage: ComponentType;
   /** The /about page composition. */
   AboutPage: ComponentType;
   /** The /products listing page composition (receives resolved searchParams). */
   ProductsPage: ComponentType<ProductsPageProps>;
+  /** The /blog/[slug] detail page composition (receives the fetched post). */
+  BlogPostPage: ComponentType<BlogPostPageProps>;
 }

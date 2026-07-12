@@ -255,4 +255,21 @@ export const endpoints = {
     updateExtracurriculum: "/profile/extracurricular/update/:id",
     listExtracurriculum: "/profile/extracurricular/list"
   },
+  blog: {
+    listPostsWeb: "/blog/posts",
+    postDetailsWeb: "/blog/posts/:slug",
+    listCategoriesWeb: "/blog/categories",
+    adminList: "/blog/admin/posts",
+    adminDetails: "/blog/admin/posts/:id",
+    create: "/blog/admin/posts/create",
+    update: "/blog/admin/posts/:id/update",
+    publish: "/blog/admin/posts/:id/publish",
+    archive: "/blog/admin/posts/:id/archive",
+    delete: "/blog/admin/posts/:id/delete",
+    bulkAction: "/blog/admin/posts/bulk-action",
+    adminCategories: "/blog/admin/categories",
+    adminCategoryCreate: "/blog/admin/categories/create",
+    adminCategoryUpdate: "/blog/admin/categories/:id/update",
+    adminCategoryDelete: "/blog/admin/categories/:id/delete",
+  },
 };

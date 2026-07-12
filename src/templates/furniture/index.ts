@@ -4,6 +4,7 @@ import ProductCard from "./components/ProductCard";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import BlogPage from "./pages/BlogPage";
+import BlogPostPage from "./pages/BlogPostPage";
 import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
 import ProductsPage from "./pages/ProductsPage";
@@ -19,6 +20,7 @@ export const furniture: Partial<Template> = {
   Navbar,
   Footer,
   BlogPage,
+  BlogPostPage,
   ContactPage,
   AboutPage,
   ProductsPage,

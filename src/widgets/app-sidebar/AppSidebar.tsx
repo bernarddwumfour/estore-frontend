@@ -7,6 +7,7 @@ import {
   ChartBar,
   Frame,
   Map,
+  Megaphone,
   PieChart,
   Settings2,
   Users,
@@ -84,6 +85,38 @@ const data = {
         {
           title: "List Users",
           url: "/dashboard/users",
+        },
+      ],
+    },
+    {
+      title: "Marketing",
+      url: "#",
+      icon: Megaphone,
+      isActive: true,
+      items: [
+        {
+          title: "Promotions",
+          url: "/dashboard/marketing/promotions",
+        },
+        {
+          title: "Reviews",
+          url: "/dashboard/marketing/reviews",
+        },
+        {
+          title: "Discount Codes",
+          url: "/dashboard/marketing/discount-codes",
+        },
+        {
+          title: "Email Campaigns",
+          url: "/dashboard/marketing/email-campaigns",
+        },
+        {
+          title: "Social",
+          url: "/dashboard/marketing/social",
+        },
+        {
+          title: "Blog",
+          url: "/dashboard/marketing/blog",
         },
       ],
     },

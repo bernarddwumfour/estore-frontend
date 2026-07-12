@@ -6,7 +6,7 @@ import {
     CardTitle,
   } from "@/components/ui/card";
   import React from "react";
-  import UserForm from "./UserForm";
+  import UserForm from "./(components)/UserForm";
   
   function page() {
     return (

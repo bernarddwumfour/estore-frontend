@@ -41,7 +41,8 @@ import {
   Star,
   TicketPercent,
   Share2,
-  Inbox
+  Inbox,
+  FileText
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -115,6 +116,7 @@ const SIDEBAR_LINKS = [
       { icon: Mail, label: 'Email Campaigns', href: '/dashboard/marketing/email-campaigns' },
       { icon: Share2, label: 'Social Posts', href: '/dashboard/marketing/social' },
       { icon: Inbox, label: 'Social Inbox', href: '/dashboard/marketing/social/inbox' },
+      { icon: FileText, label: 'Blog', href: '/dashboard/marketing/blog' },
     ]
   },
   {

@@ -4,6 +4,7 @@ import ProductCard from "./components/ProductCard";
 import Navbar from "@/widgets/navbar/Navbar";
 import Footer from "@/widgets/footer/Footer";
 import BlogPage from "./pages/BlogPage";
+import BlogPostPage from "./pages/BlogPostPage";
 import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
 import ProductsPage from "./pages/ProductsPage";
@@ -15,6 +16,7 @@ export const defaultTemplate: Template = {
   Navbar,
   Footer,
   BlogPage,
+  BlogPostPage,
   ContactPage,
   AboutPage,
   ProductsPage,

@@ -1,136 +1,133 @@
-"use client"
-import { Button } from '@/components/ui/button';
-import Image from 'next/image';
-import Link from 'next/link';
-import PageHeader from '../components/PageHeader';
+"use client";
 
-const blogPosts = [
-  {
-    id: 1,
-    title: "Top 10 Wireless Headphones for 2025",
-    excerpt: "Discover the best wireless headphones on the market with superior sound quality, long battery life, and cutting-edge noise cancellation features.",
-    author: "Alex Rivera",
-    date: "December 15, 2025",
-    readTime: "6 min read",
-    imageUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=1160",
-  },
-  {
-    id: 2,
-    title: "How to Choose the Perfect Gaming Setup",
-    excerpt: "From keyboards to mice and monitors, we break down everything you need to build an unbeatable gaming station in 2025.",
-    author: "Jordan Lee",
-    date: "December 10, 2025",
-    readTime: "8 min read",
-    imageUrl: "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?auto=format&fit=crop&q=80&w=1160",
-  },
-  {
-    id: 3,
-    title: "The Rise of True Wireless Earbuds",
-    excerpt: "Explore why true wireless earbuds have become the go-to choice for music lovers and professionals alike.",
-    author: "Sam Taylor",
-    date: "December 5, 2025",
-    readTime: "5 min read",
-    imageUrl: "https://images.unsplash.com/photo-1606741965509-717b9fdd6549?auto=format&fit=crop&q=80&w=1160",
-  },
-  {
-    id: 4,
-    title: "Smartwatches: More Than Just Timekeepers",
-    excerpt: "Learn how modern smartwatches are helping people track fitness, stay connected, and improve daily productivity.",
-    author: "Morgan Blake",
-    date: "November 28, 2025",
-    readTime: "7 min read",
-    imageUrl: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=1160",
-  },
-  {
-    id: 5,
-    title: "Essential Accessories Every Tech Lover Needs",
-    excerpt: "From laptop stands to phone cases, here are the must-have accessories that make your tech life easier and more stylish.",
-    author: "Casey Kim",
-    date: "November 20, 2025",
-    readTime: "4 min read",
-    imageUrl: "https://images.unsplash.com/photo-1580894894513-541e068a3e2b?auto=format&fit=crop&q=80&w=1160",
-  },
-  {
-    id: 6,
-    title: "Why Mechanical Keyboards Are Making a Comeback",
-    excerpt: "Dive into the world of mechanical keyboards and find out why gamers and typists are switching back in droves.",
-    author: "Riley Scott",
-    date: "November 15, 2025",
-    readTime: "6 min read",
-    imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1160",
-  },
-];
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import PageHeader from "../components/PageHeader";
+import type { BlogPageProps } from "@/templates/contract";
 
-export default function BlogPage() {
+export default function BlogPage({ posts, pagination }: BlogPageProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <PageHeader
         subtitle="Our Blog"
-        title="Stay updated with the latest tech trends, product reviews, and helpful guides from our team."
+        title="Tips, reviews, and buying guides for your tech"
       />
       <div className="container mx-auto px-4 py-16">
-        {/* Blog Posts Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {blogPosts.map((post) => (
-            <Link key={post.id} href={`/blog/${post.id}`}>
-              <article
-                className="group relative block overflow-hidden rounded-lg bg-white border border-gray-100"
-              >
-                {/* Image */}
-                <div className="relative h-64 overflow-hidden">
-                  <Image
-                    src={post.imageUrl}
-                    alt={post.title}
-                    fill
-                    className="object-cover transition duration-500 group-hover:scale-105"
-                  />
-                </div>
+        {posts.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No blog posts found.</p>
+          </div>
+        ) : (
+          <>
+            {/* Blog Posts Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {posts.map((post) => (
+                <Link key={post.id} href={`/blog/${post.slug}`}>
+                  <article className="group relative block overflow-hidden rounded-lg bg-white border border-gray-100">
+                    {/* Image */}
+                    {post.cover_image_url && (
+                      <div className="relative h-64 overflow-hidden">
+                        <Image
+                          src={post.cover_image_url}
+                          alt={post.title}
+                          fill
+                          className="object-cover transition duration-500 group-hover:scale-105"
+                        />
+                      </div>
+                    )}
 
-                {/* Content */}
-                <div className="p-6">
-                  {/* Meta */}
-                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                    <span>{post.author}</span>
-                    <span>•</span>
-                    <span>{post.date}</span>
-                    <span>•</span>
-                    <span>{post.readTime}</span>
-                  </div>
+                    {/* Content */}
+                    <div className="p-6">
+                      {/* Meta */}
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                        <span>{post.author}</span>
+                        <span>•</span>
+                        <span>
+                          {post.published_at
+                            ? new Date(post.published_at).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })
+                            : ""}
+                        </span>
+                      </div>
 
-                  {/* Title */}
-                  <h2 className="text-xl font-medium text-gray-900 mb-3 line-clamp-2">
-                    {post.title}
-                  </h2>
+                      {/* Title */}
+                      <h2 className="text-xl font-medium text-gray-900 mb-3 line-clamp-2">
+                        {post.title}
+                      </h2>
 
-                  {/* Excerpt */}
-                  <p className="text-gray-700 line-clamp-3 mb-4">
-                    {post.excerpt}
-                  </p>
+                      {/* Excerpt */}
+                      <p className="text-gray-700 line-clamp-3 mb-4">
+                        {post.excerpt}
+                      </p>
 
-                  {/* Read More Button */}
-                  <Button variant="link" className="p-0 h-auto font-medium text-gray-900 hover:text-gray-600">
-                    Read more →
+                      {/* Read More Button */}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-medium text-gray-900 hover:text-gray-600"
+                      >
+                        Read more →
+                      </Button>
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {pagination && pagination.total_pages > 1 && (
+              <div className="mt-12 flex justify-center">
+                <nav className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={!pagination.has_previous}
+                    asChild={pagination.has_previous}
+                  >
+                    {pagination.has_previous ? (
+                      <Link href={`/blog?page=${pagination.previous_page}`}>Previous</Link>
+                    ) : (
+                      <span>Previous</span>
+                    )}
                   </Button>
-                </div>
-              </article>
-            </Link>
-          ))}
-        </div>
-
-        {/* Optional: Pagination (static for now) */}
-        <div className="mt-12 flex justify-center">
-          <nav className="flex gap-2">
-            <Button variant="outline" disabled>
-              Previous
-            </Button>
-            <Button variant="outline" className="bg-gray-900 text-white hover:bg-gray-800">
-              1
-            </Button>
-            <Button variant="outline">2</Button>
-            <Button variant="outline">3</Button>
-            <Button variant="outline">Next</Button>
-          </nav>
-        </div>
+                  {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map(
+                    (pageNum) => (
+                      <Button
+                        key={pageNum}
+                        variant="outline"
+                        className={
+                          pageNum === pagination.current_page
+                            ? "bg-gray-900 text-white hover:bg-gray-800"
+                            : ""
+                        }
+                        asChild={pageNum !== pagination.current_page}
+                      >
+                        {pageNum !== pagination.current_page ? (
+                          <Link href={`/blog?page=${pageNum}`}>{pageNum}</Link>
+                        ) : (
+                          <span>{pageNum}</span>
+                        )}
+                      </Button>
+                    )
+                  )}
+                  <Button
+                    variant="outline"
+                    disabled={!pagination.has_next}
+                    asChild={pagination.has_next}
+                  >
+                    {pagination.has_next ? (
+                      <Link href={`/blog?page=${pagination.next_page}`}>Next</Link>
+                    ) : (
+                      <span>Next</span>
+                    )}
+                  </Button>
+                </nav>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
