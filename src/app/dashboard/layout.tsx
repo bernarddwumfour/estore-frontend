@@ -368,7 +368,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* MAIN CONTENT AREA */}
       <main className={cn(
-        "flex-1 flex flex-col transition-all duration-500 ease-in-out",
+        "flex-1 min-w-0 flex flex-col transition-all duration-500 ease-in-out",
         isCollapsed ? "lg:ml-20" : "lg:ml-64"
       )}>
         {/* HEADER */}
@@ -482,7 +482,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Page Content */}
         <div className={cn(
-          "p-4 sm:p-6 lg:p-8 lg:px-10 mx-auto w-full relative",
+          "p-4 sm:p-6 lg:p-8 lg:px-10 mx-auto w-full relative overflow-x-auto",
           isCollapsed ? "max-w-full lg:max-w-[calc(100vw-100px)]" : "max-w-full lg:max-w-[calc(100vw-300px)]"
         )}>
           {children}
