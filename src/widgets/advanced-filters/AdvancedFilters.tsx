@@ -47,6 +47,129 @@ const fetchBrands = async () => {
     }
 }
 
+// Hoisted to module scope (not defined inside AdvancedFilters) so their
+// component identity stays stable across renders — otherwise every keystroke
+// in a controlled input (e.g. price) triggers a parent re-render that hands
+// React a brand-new function reference, which it treats as a different
+// component type and remounts, dropping focus.
+function FilterSection({
+    id, title, children, isOpen, onToggle
+}: {
+    id: string
+    title: string
+    children: React.ReactNode
+    isOpen: boolean
+    onToggle: (id: string) => void
+}) {
+    return (
+        <div className="border-b border-slate-100 py-4 last:border-0">
+            <button
+                type="button"
+                onClick={() => onToggle(id)}
+                className="flex w-full items-center justify-between text-sm font-medium text-slate-900 hover:text-slate-700 transition-colors cursor-pointer"
+            >
+                <span>{title}</span>
+                {isOpen ? (
+                    <ChevronUp className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                ) : (
+                    <ChevronDown className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                )}
+            </button>
+            {isOpen && <div className="mt-3 space-y-3">{children}</div>}
+        </div>
+    )
+}
+
+function FilterButton({
+    onClick, hasActiveFilters, activeFilterCount, className
+}: {
+    onClick: () => void
+    hasActiveFilters: boolean
+    activeFilterCount: number
+    className?: string
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all cursor-pointer text-sm",
+                hasActiveFilters
+                    ? "bg-slate-900 text-white hover:bg-slate-800 shadow-sm"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                className
+            )}
+            aria-label="Open filters"
+        >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span>Filter</span>
+            {hasActiveFilters && (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] text-white font-medium">
+                    {activeFilterCount}
+                </span>
+            )}
+        </button>
+    )
+}
+
+function StandaloneFilters({
+    className, hasActiveFilters, activeFilterCount, activeFilterSummary,
+    onOpenModal, onClearAll, filterContent, actionButtons
+}: {
+    className?: string
+    hasActiveFilters: boolean
+    activeFilterCount: number
+    activeFilterSummary: string[]
+    onOpenModal: () => void
+    onClearAll: () => void
+    filterContent: React.ReactNode
+    actionButtons: React.ReactNode
+}) {
+    return (
+        <div className={cn("space-y-2", className)}>
+            {/* Header with filter button and clear */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                    <FilterButton onClick={onOpenModal} hasActiveFilters={hasActiveFilters} activeFilterCount={activeFilterCount} />
+                    {hasActiveFilters && (
+                        <span className="text-xs text-slate-500">
+                            {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active
+                        </span>
+                    )}
+                </div>
+                {hasActiveFilters && (
+                    <button
+                        type="button"
+                        onClick={onClearAll}
+                        className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+                    >
+                        <RotateCcw className="h-3 w-3" />
+                        Clear all
+                    </button>
+                )}
+            </div>
+
+            {/* Active filters summary */}
+            {hasActiveFilters && (
+                <div className="flex flex-wrap gap-1.5 pb-2">
+                    {activeFilterSummary.map((filter, index) => (
+                        <span
+                            key={index}
+                            className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700"
+                        >
+                            {filter}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* Filter content */}
+            {filterContent}
+            {actionButtons}
+        </div>
+    )
+}
+
 export function AdvancedFilters({
     className,
     showSort = true
@@ -223,32 +346,6 @@ export function AdvancedFilters({
 
     const isLoading = isLoadingCategories || isLoadingBrands
 
-    const FilterSection = ({
-        id, title, children, defaultOpen = true
-    }: {
-        id: string, title: string, children: React.ReactNode, defaultOpen?: boolean
-    }) => {
-        const isOpen = expandedSections[id] !== undefined ? expandedSections[id] : defaultOpen
-
-        return (
-            <div className="border-b border-slate-100 py-4 last:border-0">
-                <button
-                    type="button"
-                    onClick={() => toggleSection(id)}
-                    className="flex w-full items-center justify-between text-sm font-medium text-slate-900 hover:text-slate-700 transition-colors cursor-pointer"
-                >
-                    <span>{title}</span>
-                    {isOpen ? (
-                        <ChevronUp className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                    ) : (
-                        <ChevronDown className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                    )}
-                </button>
-                {isOpen && <div className="mt-3 space-y-3">{children}</div>}
-            </div>
-        )
-    }
-
     // Prepare select items
     const sortItems: selectField[] = [
         { id: "created_at", label: "Newest", value: "created_at" },
@@ -304,7 +401,7 @@ export function AdvancedFilters({
         <>
             {/* Sort */}
             {showSort && (
-                <FilterSection id="sort" title="Sort By">
+                <FilterSection id="sort" title="Sort By" isOpen={expandedSections.sort ?? true} onToggle={toggleSection}>
                     <CustomSelect
                         items={sortItems}
                         selectField={getCurrentSort()}
@@ -316,7 +413,7 @@ export function AdvancedFilters({
 
             {/* Category */}
             {categories.length > 0 && (
-                <FilterSection id="category" title="Category">
+                <FilterSection id="category" title="Category" isOpen={expandedSections.category ?? true} onToggle={toggleSection}>
                     <CustomSelect
                         items={categoryItems}
                         selectField={getCurrentCategory()}
@@ -328,7 +425,7 @@ export function AdvancedFilters({
 
             {/* Brand */}
             {brands.length > 0 && (
-                <FilterSection id="brand" title="Brand">
+                <FilterSection id="brand" title="Brand" isOpen={expandedSections.brand ?? true} onToggle={toggleSection}>
                     <CustomSelect
                         items={brandItems}
                         selectField={getCurrentBrand()}
@@ -339,7 +436,7 @@ export function AdvancedFilters({
             )}
 
             {/* Price Range */}
-            <FilterSection id="price" title="Price Range">
+            <FilterSection id="price" title="Price Range" isOpen={expandedSections.price ?? true} onToggle={toggleSection}>
                 <div className="space-y-4">
                     <div className="flex items-center gap-3">
                         <div className="flex-1">
@@ -385,7 +482,7 @@ export function AdvancedFilters({
             </FilterSection>
 
             {/* Availability */}
-            <FilterSection id="availability" title="Availability">
+            <FilterSection id="availability" title="Availability" isOpen={expandedSections.availability ?? true} onToggle={toggleSection}>
                 <div className="flex items-center justify-between">
                     <label className="text-sm cursor-pointer select-none">In Stock Only</label>
                     <button
@@ -407,7 +504,7 @@ export function AdvancedFilters({
             </FilterSection>
 
             {/* Product Tags */}
-            <FilterSection id="tags" title="Product Tags">
+            <FilterSection id="tags" title="Product Tags" isOpen={expandedSections.tags ?? true} onToggle={toggleSection}>
                 <div className="space-y-4">
                     {[
                         { key: "featured" as const, label: "Featured" },
@@ -464,85 +561,25 @@ export function AdvancedFilters({
         </div>
     )
 
-    // Filter button with badge (shown on all screens)
-    const FilterButton = () => (
-        <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all cursor-pointer text-sm",
-                hasActiveFilters
-                    ? "bg-slate-900 text-white hover:bg-slate-800 shadow-sm"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200",
-                className
-            )}
-            aria-label="Open filters"
-        >
-            <SlidersHorizontal className="h-4 w-4" />
-            <span>Filter</span>
-            {hasActiveFilters && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] text-white font-medium">
-                    {getActiveFilterCount()}
-                </span>
-            )}
-        </button>
-    )
-
-    // Standalone version (desktop)
-    const StandaloneFilters = () => (
-        <div className={cn("space-y-2", className)}>
-            {/* Header with filter button and clear */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                    <FilterButton />
-                    {hasActiveFilters && (
-                        <span className="text-xs text-slate-500">
-                            {getActiveFilterCount()} filter{getActiveFilterCount() > 1 ? 's' : ''} active
-                        </span>
-                    )}
-                </div>
-                {hasActiveFilters && (
-                    <button
-                        type="button"
-                        onClick={clearAllAppliedFilters}
-                        className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
-                    >
-                        <RotateCcw className="h-3 w-3" />
-                        Clear all
-                    </button>
-                )}
-            </div>
-
-            {/* Active filters summary */}
-            {hasActiveFilters && (
-                <div className="flex flex-wrap gap-1.5 pb-2">
-                    {getActiveFilterSummary().map((filter, index) => (
-                        <span
-                            key={index}
-                            className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700"
-                        >
-                            {filter}
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            {/* Filter content */}
-            {filterContent}
-            {actionButtons}
-        </div>
-    )
-
     return (
         <>
             {/* Desktop: Show standalone with all filters */}
             <div className="hidden lg:block">
-                <StandaloneFilters />
+                <StandaloneFilters
+                    className={className}
+                    hasActiveFilters={hasActiveFilters}
+                    activeFilterCount={getActiveFilterCount()}
+                    activeFilterSummary={getActiveFilterSummary()}
+                    onOpenModal={() => setIsModalOpen(true)}
+                    onClearAll={clearAllAppliedFilters}
+                    filterContent={filterContent}
+                    actionButtons={actionButtons}
+                />
             </div>
 
             {/* Mobile: Show only the filter button */}
             <div className="lg:hidden flex gap-3 justify-between mx-6">
-                <FilterButton />
+                <FilterButton onClick={() => setIsModalOpen(true)} hasActiveFilters={hasActiveFilters} activeFilterCount={getActiveFilterCount()} />
                 {hasActiveFilters && (
                     <button
                         type="button"
