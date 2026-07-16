@@ -574,7 +574,7 @@ export default function ProductForm({ productId, onSuccess, onCancel }: ProductF
                         variant="outline"
                         size="sm"
                         disabled={isSubmitting}
-                        className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                        className="border-gray-300 dark:border-gray-700 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>

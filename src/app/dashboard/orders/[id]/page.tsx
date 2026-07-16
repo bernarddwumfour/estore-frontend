@@ -583,7 +583,7 @@ export default function OrderDetailPage() {
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                         We couldn't find the order you're looking for.
                     </p>
-                    <Button asChild variant="outline" className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg">
+                    <Button asChild variant="outline" className="border-gray-300 dark:border-gray-700 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg">
                         <Link href="/dashboard/orders">
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back to Orders
@@ -941,7 +941,7 @@ export default function OrderDetailPage() {
                             <Button
                                 variant="outline"
                                 onClick={() => setUpdatingStatus(false)}
-                                className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
+                                className="border-gray-300 dark:border-gray-700 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
                             >
                                 Cancel
                             </Button>
@@ -976,7 +976,7 @@ export default function OrderDetailPage() {
                         <Button
                             variant="outline"
                             onClick={() => setUpdatingPayment(false)}
-                            className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
+                            className="border-gray-300 dark:border-gray-700 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-lg"
                         >
                             Cancel
                         </Button>

@@ -96,7 +96,7 @@ export function InfoDialog({
                     <div className="flex gap-3 w-full">
                         <Button
                             variant="outline"
-                            className="flex-1 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-full text-[10px] font-black uppercase tracking-widest"
+                            className="flex-1 border-gray-300 dark:border-gray-700 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-full text-[10px] font-black uppercase tracking-widest"
                             onClick={secondaryAction}
                         >
                             {secondaryButtonText}
