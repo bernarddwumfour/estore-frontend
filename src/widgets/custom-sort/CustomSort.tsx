@@ -12,6 +12,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { CustomDialog } from '../custom-dialog/CustomDialog';
 
 export interface SortOption {
     value: string;
@@ -40,6 +41,7 @@ export function CustomSort({
     const [hasChanges, setHasChanges] = useState(false);
     const [appliedSortBy, setAppliedSortBy] = useState(config.defaultSortBy || config.options[0]?.value || '');
     const [appliedSortOrder, setAppliedSortOrder] = useState<'asc' | 'desc'>(config.defaultSortOrder || 'desc');
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     // Check if current temp values differ from applied values
     useEffect(() => {
@@ -83,7 +85,7 @@ export function CustomSort({
         return appliedSortBy !== defaultSortBy || appliedSortOrder !== defaultSortOrder;
     };
 
-    return (
+    const desktopRow = (
         <div className={cn("space-y-2", className)}>
             <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Sort by:</span>
@@ -149,5 +151,104 @@ export function CustomSort({
                 </div>
             )}
         </div>
+    );
+
+    return (
+        <>
+            <div className="hidden lg:block">{desktopRow}</div>
+
+            <div className="lg:hidden relative inline-block">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMobileOpen(true)}
+                    className="gap-2 h-9 border-gray-300 dark:border-gray-700 text-gray-700"
+                >
+                    <ArrowUpDown size={14} />
+                    Sort
+                </Button>
+                {hasActiveSort() && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-gray-900 dark:bg-white pointer-events-none" />
+                )}
+            </div>
+
+            <CustomDialog
+                title="Sort"
+                open={mobileOpen}
+                onOpenChange={setMobileOpen}
+                contentWidth="max-w-[400px]"
+            >
+                <div className="space-y-4">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Sort by</label>
+                        <Select value={tempSortBy} onValueChange={handleSortByChange}>
+                            <SelectTrigger className="w-full h-9 border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white">
+                                <SelectValue placeholder="Sort by" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
+                                {config.options.map((option) => (
+                                    <SelectItem
+                                        key={option.value}
+                                        value={option.value}
+                                        className="text-gray-900 dark:text-white focus:bg-gray-100 dark:focus:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    >
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Order</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                type="button"
+                                variant={tempSortOrder === 'asc' ? 'default' : 'outline'}
+                                className={cn(
+                                    "h-9",
+                                    tempSortOrder === 'asc' && "bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100"
+                                )}
+                                onClick={() => setTempSortOrder('asc')}
+                            >
+                                ↑ Ascending
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={tempSortOrder === 'desc' ? 'default' : 'outline'}
+                                className={cn(
+                                    "h-9",
+                                    tempSortOrder === 'desc' && "bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100"
+                                )}
+                                onClick={() => setTempSortOrder('desc')}
+                            >
+                                ↓ Descending
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-800 sticky bottom-0 bg-white dark:bg-[#111114]">
+                    <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={handleReset}
+                        disabled={!hasActiveSort()}
+                    >
+                        Reset
+                    </Button>
+                    <Button
+                        className="flex-1 gap-2 bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700"
+                        onClick={() => {
+                            handleApplySort();
+                            setMobileOpen(false);
+                        }}
+                    >
+                        <ArrowUpDown size={14} />
+                        Apply Sort
+                    </Button>
+                </div>
+            </CustomDialog>
+        </>
     );
 }

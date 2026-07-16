@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-    ArrowLeft, BarChart3, CheckCircle, ChevronLeft, ChevronRight, Clock, Eye, EyeOff, Filter,
+    ArrowLeft, BarChart3, CheckCircle, ChevronLeft, ChevronRight, Clock, Eye, EyeOff,
     Globe, Heart, Inbox, Loader2, MessageCircle, MousePointerClick, Plus, Search, Send, Share,
     ThumbsUp, Trash2, Users, XCircle,
 } from 'lucide-react';
@@ -17,6 +17,7 @@ import { apiMessage } from '@/lib/api-message';
 import { formatNumber, timeAgo } from '@/lib/format-time';
 import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
 import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
+import { CustomFilter, type FilterConfig } from '@/widgets/custom-filter/CustomFilter';
 import RefreshButton from '@/widgets/refresh-button/RefreshButton';
 import { UserAvatar } from '@/widgets/user-avatar/UserAvatar';
 import {
@@ -45,6 +46,42 @@ interface PaginationMeta {
 }
 
 const emptyFilters: PostFilters = { status: '', date_from: '', date_to: '' };
+
+const postFilterConfig: FilterConfig = {
+    showSearch: false,
+    fields: [
+        {
+            name: 'status',
+            type: 'select',
+            placeholder: 'Status',
+            options: [
+                { value: 'pending_approval', label: 'Pending approval' },
+                { value: 'sent', label: 'Published' },
+                { value: 'failed', label: 'Failed' },
+                { value: 'rejected', label: 'Rejected' },
+            ],
+        },
+        { name: 'date_from', type: 'date', placeholder: 'From' },
+        { name: 'date_to', type: 'date', placeholder: 'To' },
+    ],
+};
+
+const parseDateInput = (value: string): Date | undefined => {
+    if (!value) return undefined;
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+};
+
+const formatDateInput = (value: unknown): string => {
+    if (!value) return '';
+    if (value instanceof Date) {
+        const yyyy = value.getFullYear();
+        const mm = String(value.getMonth() + 1).padStart(2, '0');
+        const dd = String(value.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+    return String(value);
+};
 
 const fetchAccounts = async (): Promise<SocialAccount[]> => {
     const response = await securityAxios.get(endpoints.social.adminAccounts);
@@ -618,8 +655,6 @@ export default function SocialManagerPage() {
     const [search, setSearch] = useState('');
     const [searchInput, setSearchInput] = useState('');
     const [filters, setFilters] = useState<PostFilters>(emptyFilters);
-    const [draftFilters, setDraftFilters] = useState<PostFilters>(emptyFilters);
-    const [filterOpen, setFilterOpen] = useState(false);
     const [composerOpen, setComposerOpen] = useState(false);
     const [selectedId, setSelectedId] = useState('');
     const [mobilePane, setMobilePane] = useState<MobilePane>('list');
@@ -734,11 +769,6 @@ export default function SocialManagerPage() {
         },
     });
 
-    const activeFilterCount = [filters.status, filters.date_from, filters.date_to].filter(Boolean).length;
-
-    const inputClass =
-        'w-full p-2 text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-400/40';
-
     return (
         <div className="space-y-4">
             {/* Header */}
@@ -771,18 +801,23 @@ export default function SocialManagerPage() {
                                 className="flex-1 py-2 text-sm bg-transparent focus:outline-none text-gray-900 dark:text-white min-w-0"
                             />
                         </div>
-                        <button
-                            onClick={() => { setDraftFilters(filters); setFilterOpen(true); }}
-                            className="relative p-2.5 rounded-lg border border-gray-200 dark:border-gray-800 text-gray-500 hover:text-gray-900 dark:hover:text-white hover:border-gray-500 transition-colors"
-                            title="Filters"
-                        >
-                            <Filter size={15} />
-                            {activeFilterCount > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[9px] font-bold flex items-center justify-center">
-                                    {activeFilterCount}
-                                </span>
-                            )}
-                        </button>
+                        <CustomFilter
+                            config={postFilterConfig}
+                            filters={{
+                                status: filters.status,
+                                date_from: parseDateInput(filters.date_from),
+                                date_to: parseDateInput(filters.date_to),
+                            }}
+                            onFilterChange={(f) => {
+                                setFilters({
+                                    status: f.status || '',
+                                    date_from: formatDateInput(f.date_from),
+                                    date_to: formatDateInput(f.date_to),
+                                });
+                                setPage(1);
+                            }}
+                            forceCompact
+                        />
                     </div>
 
                     <div className="flex-1 overflow-y-auto space-y-1 -mx-1 px-1">
@@ -889,74 +924,6 @@ export default function SocialManagerPage() {
                 />
             </CustomDialog>
 
-            {/* Filter dialog */}
-            <CustomDialog
-                title="Filter Posts"
-                description="Narrow the post list by status and date"
-                open={filterOpen}
-                onOpenChange={setFilterOpen}
-                contentWidth="max-w-[440px]"
-            >
-                <div className="space-y-4">
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                        <select
-                            value={draftFilters.status}
-                            onChange={(e) => setDraftFilters((f) => ({ ...f, status: e.target.value }))}
-                            className={inputClass}
-                        >
-                            <option value="">All statuses</option>
-                            <option value="pending_approval">Pending approval</option>
-                            <option value="sent">Published</option>
-                            <option value="failed">Failed</option>
-                            <option value="rejected">Rejected</option>
-                        </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">From</label>
-                            <input
-                                type="date"
-                                value={draftFilters.date_from}
-                                onChange={(e) => setDraftFilters((f) => ({ ...f, date_from: e.target.value }))}
-                                className={inputClass}
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">To</label>
-                            <input
-                                type="date"
-                                value={draftFilters.date_to}
-                                onChange={(e) => setDraftFilters((f) => ({ ...f, date_to: e.target.value }))}
-                                className={inputClass}
-                            />
-                        </div>
-                    </div>
-                    <div className="flex justify-between pt-2">
-                        <Button
-                            variant="ghost" size="sm"
-                            onClick={() => {
-                                setDraftFilters(emptyFilters);
-                                setFilters(emptyFilters);
-                                setPage(1);
-                                setFilterOpen(false);
-                            }}
-                        >
-                            Clear all
-                        </Button>
-                        <Button
-                            size="sm" className="rounded-full px-5"
-                            onClick={() => {
-                                setFilters(draftFilters);
-                                setPage(1);
-                                setFilterOpen(false);
-                            }}
-                        >
-                            Apply filters
-                        </Button>
-                    </div>
-                </div>
-            </CustomDialog>
 
             <InfoDialog
                 open={confirmDialog.open}

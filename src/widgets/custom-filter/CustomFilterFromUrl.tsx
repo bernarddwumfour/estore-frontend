@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { DateRangePicker } from '../date-picker/DateRangePicker';
 import { DatePicker } from '../date-picker/DatePicker';
+import { CustomDialog } from '../custom-dialog/CustomDialog';
 
 export interface FilterField {
     name: string;
@@ -142,6 +143,7 @@ function CustomFilterContent({
     const [tempSearch, setTempSearch] = useState('');
     const [hasChanges, setHasChanges] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
     const searchDebounceTimer = useRef<NodeJS.Timeout>(undefined);
@@ -303,7 +305,7 @@ function CustomFilterContent({
         return value;
     };
 
-    const renderField = (field: FilterField) => {
+    const renderField = (field: FilterField, stacked: boolean = false) => {
         const value = tempFilters[field.name] !== undefined ? tempFilters[field.name] : (field.defaultValue !== undefined ? field.defaultValue : '');
         const displayValue = getDisplayValue(field, value);
 
@@ -318,8 +320,11 @@ function CustomFilterContent({
                         onValueChange={(v) => handleFieldChange(field.name, v)}
                     >
                         <SelectTrigger
-                            className="h-9 border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900/50 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
-                            style={{ width: `${increasedWidth}px` }}
+                            className={cn(
+                                "h-9 border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900/50 focus:border-gray-400 dark:focus:border-gray-600 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600",
+                                stacked && "w-full"
+                            )}
+                            style={stacked ? undefined : { width: `${increasedWidth}px` }}
                         >
                             <SelectValue placeholder={field.placeholder || 'All'}>
                                 {displayValue && (
@@ -331,7 +336,7 @@ function CustomFilterContent({
                         </SelectTrigger>
                         <SelectContent
                             className="bg-white dark:bg-black border-gray-200 dark:border-gray-800"
-                            style={{ minWidth: `${increasedWidth}px` }}
+                            style={stacked ? undefined : { minWidth: `${increasedWidth}px` }}
                         >
                             <SelectItem value="all" className="text-gray-900 dark:text-white focus:bg-gray-100 dark:focus:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800">
                                 All
@@ -349,7 +354,7 @@ function CustomFilterContent({
                 const rangeValue = value as { min?: string; max?: string } || { min: '', max: '' };
                 const rangeWidth = field.width ? parseInt(field.width) : 200;
                 return (
-                    <div className="flex items-center gap-1" style={{ width: `${rangeWidth}px` }}>
+                    <div className={cn("flex items-center gap-1", stacked && "w-full")} style={stacked ? undefined : { width: `${rangeWidth}px` }}>
                         <Input
                             type="number"
                             placeholder={`Min ${field.placeholder}`}
@@ -383,7 +388,9 @@ function CustomFilterContent({
         return <div className="h-9 w-full animate-pulse bg-gray-100 dark:bg-gray-800 rounded" />;
     }
 
-    return (
+    const activeCount = getActiveFilterCount();
+
+    const desktopRow = (
         <div className={cn("space-y-2", className)}>
             <div className="flex flex-wrap gap-2 gap-y-4 items-center">
                 {config.showSearch !== false && (
@@ -420,7 +427,7 @@ function CustomFilterContent({
                     Apply Filters
                 </Button>
 
-                {getActiveFilterCount() > 0 && (
+                {activeCount > 0 && (
                     <Button
                         variant="ghost"
                         size="sm"
@@ -429,11 +436,9 @@ function CustomFilterContent({
                     >
                         <X size={14} />
                         Clear
-                        {getActiveFilterCount() > 0 && (
-                            <Badge variant="secondary" className="ml-1 h-5 px-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                                {getActiveFilterCount()}
-                            </Badge>
-                        )}
+                        <Badge variant="secondary" className="ml-1 h-5 px-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                            {activeCount}
+                        </Badge>
                     </Button>
                 )}
             </div>
@@ -445,6 +450,88 @@ function CustomFilterContent({
                 </div>
             )}
         </div>
+    );
+
+    const compactTrigger = (
+        <div className="relative inline-block">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileOpen(true)}
+                className="gap-2 h-9 border-gray-300 dark:border-gray-700 text-gray-700"
+            >
+                <Filter size={14} />
+                Filters
+            </Button>
+            {activeCount > 0 && (
+                <Badge
+                    className="absolute -top-2 -right-2 h-5 min-w-5 justify-center rounded-full px-1 text-[10px] border-0 bg-gray-900 text-white dark:bg-white dark:text-gray-900 pointer-events-none"
+                >
+                    {activeCount}
+                </Badge>
+            )}
+        </div>
+    );
+
+    return (
+        <>
+            <div className="hidden lg:block">{desktopRow}</div>
+            <div className="lg:hidden">{compactTrigger}</div>
+
+            <CustomDialog
+                title="Filters"
+                open={mobileOpen}
+                onOpenChange={setMobileOpen}
+                contentWidth="max-w-[480px]"
+            >
+                <div className="space-y-4">
+                    {config.showSearch !== false && (
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Search</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                <Input
+                                    placeholder={config.searchPlaceholder || "Search..."}
+                                    value={tempSearch}
+                                    onChange={(e) => handleSearchChange(e.target.value)}
+                                    className="pl-9 h-9 w-full border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {config.fields.map((field) => (
+                        <div key={field.name} className="space-y-1.5">
+                            <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                {field.placeholder}
+                            </label>
+                            {renderField(field, true)}
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-800 sticky bottom-0 bg-white dark:bg-[#111114]">
+                    <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={handleReset}
+                        disabled={activeCount === 0}
+                    >
+                        Clear
+                    </Button>
+                    <Button
+                        className="flex-1 gap-2 bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 hover:bg-gray-800 dark:hover:bg-gray-700"
+                        onClick={() => {
+                            handleApplyFilters();
+                            setMobileOpen(false);
+                        }}
+                    >
+                        <Filter size={14} />
+                        Apply Filters
+                    </Button>
+                </div>
+            </CustomDialog>
+        </>
     );
 }
 

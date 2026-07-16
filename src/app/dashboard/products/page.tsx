@@ -960,7 +960,7 @@ function ProductsPageContent() {
       </div>
 
       {/* Filters and Sort - CustomFilter and CustomSortFromUrl have their own Suspense internally */}
-      <div className="flex flex-wrap gap-32 items-start justify-between">
+      <div className="flex flex-wrap gap-4 items-start justify-between">
         <div className="flex-1">
           <CustomFilter config={filterConfig} />
         </div>
