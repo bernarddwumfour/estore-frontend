@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     TrendingUp, TrendingDown, Users, UserPlus, UserCheck, UserX,
     Mail, MailCheck, MailX, Calendar, Clock, MapPin, Globe,
@@ -41,11 +41,16 @@ import {
     Area
 } from 'recharts';
 import { addDays, format } from 'date-fns';
-import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { DataTable } from '@/widgets/custom-table/DataTable';
 import { DateRangePicker } from '@/widgets/date-picker/DateRangePicker';
 import RefreshButton from '@/widgets/refresh-button/RefreshButton';
+import { AlertMessage } from '@/widgets/alert-message/AlertMessage';
+import { useAnalyticsQuery } from '@/hooks/use-analytics-query';
+import { useChartColors } from '@/hooks/use-chart-colors';
+import { CustomTooltip } from '@/widgets/analytics/CustomTooltip';
+import { KPICardSkeleton, ChartSkeleton, TableSkeleton } from '@/widgets/analytics/skeletons';
+import { AnalyticsStatTile } from '@/widgets/analytics/AnalyticsStatTile';
 
 // ==================== Types ====================
 
@@ -224,66 +229,6 @@ const formatCompactNumber = (value: number) => {
     }).format(value);
 };
 
-// ==================== Custom Tooltip ====================
-
-const CustomTooltip = ({ active, payload, label, formatter }: any) => {
-    if (active && payload && payload.length) {
-        return (
-            <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg p-3">
-                <p className="text-gray-900 dark:text-white font-medium text-sm mb-1">{label}</p>
-                {payload.map((entry: any, index: number) => (
-                    <p key={index} className="text-sm" style={{ color: entry.color }}>
-                        {entry.name}: {formatter ? formatter(entry.value) : entry.value}
-                    </p>
-                ))}
-            </div>
-        );
-    }
-    return null;
-};
-
-// ==================== Loading Skeletons ====================
-
-const KPICardSkeleton = () => (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-        <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-                </div>
-                <div className="h-12 w-12 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />
-            </div>
-        </CardContent>
-    </Card>
-);
-
-const ChartSkeleton = () => (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-        <CardHeader>
-            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-        </CardHeader>
-        <CardContent>
-            <div className="h-[350px] w-full bg-gray-100 dark:bg-gray-900 rounded animate-pulse" />
-        </CardContent>
-    </Card>
-);
-
-const TableSkeleton = () => (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-        <CardHeader>
-            <div className="h-6 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-        </CardHeader>
-        <CardContent>
-            <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="h-12 w-full bg-gray-100 dark:bg-gray-900 rounded animate-pulse" />
-                ))}
-            </div>
-        </CardContent>
-    </Card>
-);
-
 // ==================== KPI Cards Component ====================
 
 interface KPICardsProps {
@@ -305,175 +250,99 @@ const KPICards = ({ overview, engagement, isLoading }: KPICardsProps) => {
         <>
             {/* First Row KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Users</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatNumber(overview?.summary.total_users || 0)}
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                    <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
-                                        {overview?.summary.active_users || 0} Active
-                                    </Badge>
-                                    <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400">
-                                        {overview?.summary.inactive_users || 0} Inactive
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                                <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                            </div>
+                <AnalyticsStatTile
+                    label="Total Users"
+                    value={formatNumber(overview?.summary.total_users || 0)}
+                    icon={<Users className="h-6 w-6" />}
+                    color="purple"
+                    footer={
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
+                                {overview?.summary.active_users || 0} Active
+                            </Badge>
+                            <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400">
+                                {overview?.summary.inactive_users || 0} Inactive
+                            </Badge>
                         </div>
-                    </CardContent>
-                </Card>
+                    }
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Email Verified</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {overview?.summary.verified_percentage || 0}%
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                    <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600">
-                                        {formatNumber(overview?.summary.verified_emails || 0)} Verified
-                                    </Badge>
-                                    <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600">
-                                        {formatNumber(overview?.summary.unverified_emails || 0)} Unverified
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                                <MailCheck className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                            </div>
+                <AnalyticsStatTile
+                    label="Email Verified"
+                    value={`${overview?.summary.verified_percentage || 0}%`}
+                    icon={<MailCheck className="h-6 w-6" />}
+                    color="blue"
+                    footer={
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600">
+                                {formatNumber(overview?.summary.verified_emails || 0)} Verified
+                            </Badge>
+                            <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600">
+                                {formatNumber(overview?.summary.unverified_emails || 0)} Unverified
+                            </Badge>
                         </div>
-                    </CardContent>
-                </Card>
+                    }
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Customers</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {engagement?.customer_engagement.active_percentage || 0}%
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formatNumber(engagement?.customer_engagement.active_customers || 0)} of {formatNumber(engagement?.customer_engagement.total_customers || 0)}
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                                <UserCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Active Customers"
+                    value={`${engagement?.customer_engagement.active_percentage || 0}%`}
+                    icon={<UserCheck className="h-6 w-6" />}
+                    color="emerald"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatNumber(engagement?.customer_engagement.active_customers || 0)} of {formatNumber(engagement?.customer_engagement.total_customers || 0)}</p>}
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Repeat Purchase Rate</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {engagement?.customer_engagement.repeat_purchase_rate || 0}%
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formatNumber(engagement?.customer_engagement.repeat_customers || 0)} repeat customers
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
-                                <TrendingUp className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Repeat Purchase Rate"
+                    value={`${engagement?.customer_engagement.repeat_purchase_rate || 0}%`}
+                    icon={<TrendingUp className="h-6 w-6" />}
+                    color="amber"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatNumber(engagement?.customer_engagement.repeat_customers || 0)} repeat customers</p>}
+                />
             </div>
 
             {/* Second Row KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">New Users (30d)</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatNumber(overview?.growth.new_users_30d || 0)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formatNumber(overview?.growth.new_users_7d || 0)} in last 7 days
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center">
-                                <UserPlus className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="New Users (30d)"
+                    value={formatNumber(overview?.growth.new_users_30d || 0)}
+                    icon={<UserPlus className="h-6 w-6" />}
+                    color="cyan"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatNumber(overview?.growth.new_users_7d || 0)} in last 7 days</p>}
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Average CLV</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatCurrency(engagement?.customer_lifetime_value.average_clv || 0)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {engagement?.customer_lifetime_value.average_orders_per_customer || 0} avg orders
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
-                                <DollarSign className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Average CLV"
+                    value={formatCurrency(engagement?.customer_lifetime_value.average_clv || 0)}
+                    icon={<DollarSign className="h-6 w-6" />}
+                    color="indigo"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{engagement?.customer_lifetime_value.average_orders_per_customer || 0} avg orders</p>}
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Guest Conversion</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {engagement?.guest_conversion.conversion_rate || 0}%
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formatNumber(engagement?.guest_conversion.converted_guests || 0)} converted
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-                                <Users className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Guest Conversion"
+                    value={`${engagement?.guest_conversion.conversion_rate || 0}%`}
+                    icon={<Users className="h-6 w-6" />}
+                    color="orange"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatNumber(engagement?.guest_conversion.converted_guests || 0)} converted</p>}
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Role Distribution</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {overview?.role_distribution.customer_percentage || 0}%
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                    <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950/30 text-blue-600">
-                                        {formatNumber(overview?.role_distribution.customers || 0)} Customers
-                                    </Badge>
-                                    <Badge variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-600">
-                                        {formatNumber(overview?.role_distribution.staff || 0)} Staff
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center">
-                                <Target className="h-6 w-6 text-teal-600 dark:text-teal-400" />
-                            </div>
+                <AnalyticsStatTile
+                    label="Role Distribution"
+                    value={`${overview?.role_distribution.customer_percentage || 0}%`}
+                    icon={<Target className="h-6 w-6" />}
+                    color="teal"
+                    footer={
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950/30 text-blue-600">
+                                {formatNumber(overview?.role_distribution.customers || 0)} Customers
+                            </Badge>
+                            <Badge variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-600">
+                                {formatNumber(overview?.role_distribution.staff || 0)} Staff
+                            </Badge>
                         </div>
-                    </CardContent>
-                </Card>
+                    }
+                />
             </div>
         </>
     );
@@ -977,72 +846,64 @@ export default function UsersAnalyticsPage() {
     const [appliedDateRange, setAppliedDateRange] = useState({ from: addDays(new Date(), -30), to: new Date() });
     const [growthInterval, setGrowthInterval] = useState('day');
     const [affiliateInterval, setAffiliateInterval] = useState('month');
-    const [isDarkMode, setIsDarkMode] = useState(false);
-
-    useEffect(() => {
-        const checkDarkMode = () => setIsDarkMode(document.documentElement.classList.contains('dark'));
-        checkDarkMode();
-        const observer = new MutationObserver(checkDarkMode);
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-        return () => observer.disconnect();
-    }, []);
+    const { grid, text } = useChartColors();
 
     const startDate = format(appliedDateRange.from, 'yyyy-MM-dd');
     const endDate = format(appliedDateRange.to, 'yyyy-MM-dd');
+    const chartColors = { grid, text };
 
-    const chartColors = {
-        grid: isDarkMode ? '#374151' : '#e5e7eb',
-        text: isDarkMode ? '#9ca3af' : '#6b7280',
-    };
+    // Individual queries for each section - they load independently
+    const { data: overview, isLoading: overviewLoading, isError: overviewError, refetch: refetchOverview } = useAnalyticsQuery<UserOverviewStats>(
+        ['user-analytics-overview', startDate, endDate],
+        endpoints.users.analytics.overview,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    // Individual queries for each section
-    const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useQuery({
-        queryKey: ['user-analytics-overview', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.users.analytics.overview, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: growthTrends, isLoading: growthLoading, isError: growthError, refetch: refetchGrowth } = useAnalyticsQuery<UserGrowthTrend[]>(
+        ['user-analytics-growth', startDate, endDate, growthInterval],
+        endpoints.users.analytics.growthTrends,
+        { start_date: startDate, end_date: endDate, interval: growthInterval },
+    );
 
-    const { data: growthTrends, isLoading: growthLoading, refetch: refetchGrowth } = useQuery({
-        queryKey: ['user-analytics-growth', startDate, endDate, growthInterval],
-        queryFn: () => securityAxios.get(endpoints.users.analytics.growthTrends, { params: { start_date: startDate, end_date: endDate, interval: growthInterval } }).then(res => res.data.data),
-    });
+    const { data: engagement, isLoading: engagementLoading, isError: engagementError, refetch: refetchEngagement } = useAnalyticsQuery<UserEngagement>(
+        ['user-analytics-engagement', startDate, endDate],
+        endpoints.users.analytics.engagement,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: engagement, isLoading: engagementLoading, refetch: refetchEngagement } = useQuery({
-        queryKey: ['user-analytics-engagement', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.users.analytics.engagement, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: geographic, isLoading: geographicLoading, isError: geographicError, refetch: refetchGeographic } = useAnalyticsQuery<GeographicDistribution>(
+        ['user-analytics-geographic'],
+        endpoints.users.analytics.geographic,
+    );
 
-    const { data: geographic, isLoading: geographicLoading, refetch: refetchGeographic } = useQuery({
-        queryKey: ['user-analytics-geographic'],
-        queryFn: () => securityAxios.get(endpoints.users.analytics.geographic).then(res => res.data.data),
-    });
+    const { data: activity, isLoading: activityLoading, isError: activityError, refetch: refetchActivity } = useAnalyticsQuery<UserActivity>(
+        ['user-analytics-activity', startDate, endDate],
+        endpoints.users.analytics.activity,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: activity, isLoading: activityLoading, refetch: refetchActivity } = useQuery({
-        queryKey: ['user-analytics-activity', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.users.analytics.activity, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: affiliates, isLoading: affiliatesLoading, isError: affiliatesError, refetch: refetchAffiliates } = useAnalyticsQuery<AffiliateAnalytics>(
+        ['user-analytics-affiliates', startDate, endDate],
+        endpoints.users.analytics.affiliates,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: affiliates, isLoading: affiliatesLoading, refetch: refetchAffiliates } = useQuery({
-        queryKey: ['user-analytics-affiliates', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.users.analytics.affiliates, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: affiliateGrowth, isLoading: affiliateGrowthLoading, isError: affiliateGrowthError, refetch: refetchAffiliateGrowth } = useAnalyticsQuery<AffiliateGrowthTrend[]>(
+        ['user-analytics-affiliate-growth', startDate, endDate, affiliateInterval],
+        endpoints.users.analytics.affiliateGrowth,
+        { start_date: startDate, end_date: endDate, interval: affiliateInterval },
+    );
 
-    const { data: affiliateGrowth, isLoading: affiliateGrowthLoading, refetch: refetchAffiliateGrowth } = useQuery({
-        queryKey: ['user-analytics-affiliate-growth', startDate, endDate, affiliateInterval],
-        queryFn: () => securityAxios.get(endpoints.users.analytics.affiliateGrowth, { params: { start_date: startDate, end_date: endDate, interval: affiliateInterval } }).then(res => res.data.data),
-    });
+    const { data: demographics, isLoading: demographicsLoading, isError: demographicsError, refetch: refetchDemographics } = useAnalyticsQuery<CustomerDemographics>(
+        ['user-analytics-demographics'],
+        endpoints.users.analytics.customerDemographics,
+    );
 
-    const { data: demographics, isLoading: demographicsLoading, refetch: refetchDemographics } = useQuery({
-        queryKey: ['user-analytics-demographics'],
-        queryFn: () => securityAxios.get(endpoints.users.analytics.customerDemographics).then(res => res.data.data),
-    });
-
-    const { data: topCustomers, isLoading: topCustomersLoading, refetch: refetchTopCustomers } = useQuery({
-        queryKey: ['user-analytics-top-customers', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.users.analytics.topCustomers, { params: { start_date: startDate, end_date: endDate, limit: 10 } }).then(res => res.data.data),
-    });
-
-    const isLoading = overviewLoading || growthLoading || engagementLoading || geographicLoading ||
-        activityLoading || affiliatesLoading || affiliateGrowthLoading || demographicsLoading || topCustomersLoading;
+    const { data: topCustomers, isLoading: topCustomersLoading, isError: topCustomersError, refetch: refetchTopCustomers } = useAnalyticsQuery<TopCustomer[]>(
+        ['user-analytics-top-customers', startDate, endDate],
+        endpoints.users.analytics.topCustomers,
+        { start_date: startDate, end_date: endDate, limit: 10 },
+    );
 
     const handleApplyDateRange = () => { setAppliedDateRange(tempDateRange); toast.success('Date range applied'); };
     const handleResetDateRange = () => { const newRange = { from: addDays(new Date(), -30), to: new Date() }; setTempDateRange(newRange); setAppliedDateRange(newRange); toast.success('Date range reset'); };
@@ -1069,22 +930,30 @@ export default function UsersAnalyticsPage() {
                 </div>
             </div>
 
-            {/* KPI Cards */}
+            {/* KPI Cards - Loads independently */}
+            {(overviewError || engagementError) && (
+                <AlertMessage variant="error" message="Failed to load some overview metrics. Try refreshing." />
+            )}
             <KPICards overview={overview} engagement={engagement} isLoading={overviewLoading || engagementLoading} />
 
-            {/* Tabs */}
+            {/* Tabs - Each tab content loads independently */}
             <Tabs defaultValue="overview" className="space-y-4">
-                <TabsList className="bg-gray-100 dark:bg-gray-900/50">
-                    <TabsTrigger value="overview" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Overview</TabsTrigger>
-                    <TabsTrigger value="growth" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Growth & Activity</TabsTrigger>
-                    <TabsTrigger value="geographic" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Geographic</TabsTrigger>
-                    <TabsTrigger value="affiliates" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Affiliates</TabsTrigger>
-                    <TabsTrigger value="demographics" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Demographics</TabsTrigger>
-                    <TabsTrigger value="top-customers" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Top Customers</TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto">
+                    <TabsList className="bg-gray-100 dark:bg-gray-900/50">
+                        <TabsTrigger value="overview" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Overview</TabsTrigger>
+                        <TabsTrigger value="growth" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Growth & Activity</TabsTrigger>
+                        <TabsTrigger value="geographic" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Geographic</TabsTrigger>
+                        <TabsTrigger value="affiliates" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Affiliates</TabsTrigger>
+                        <TabsTrigger value="demographics" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Demographics</TabsTrigger>
+                        <TabsTrigger value="top-customers" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black">Top Customers</TabsTrigger>
+                    </TabsList>
+                </div>
 
                 {/* Overview Tab */}
                 <TabsContent value="overview" className="space-y-4">
+                    {(growthError || overviewError || activityError) && (
+                        <AlertMessage variant="error" message="Failed to load overview data." />
+                    )}
                     <UserGrowthTrendChart
                         data={growthTrends || []}
                         isLoading={growthLoading}
@@ -1098,6 +967,9 @@ export default function UsersAnalyticsPage() {
 
                 {/* Growth & Activity Tab */}
                 <TabsContent value="growth" className="space-y-4">
+                    {(activityError || engagementError) && (
+                        <AlertMessage variant="error" message="Failed to load growth & activity data." />
+                    )}
                     <RegistrationTimingSection data={activity} isLoading={activityLoading} chartColors={chartColors} />
 
                     <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
@@ -1128,11 +1000,15 @@ export default function UsersAnalyticsPage() {
 
                 {/* Geographic Tab */}
                 <TabsContent value="geographic" className="space-y-4">
+                    {geographicError && <AlertMessage variant="error" message="Failed to load geographic data." />}
                     <GeographicDistributionSection data={geographic} isLoading={geographicLoading} />
                 </TabsContent>
 
                 {/* Affiliates Tab */}
                 <TabsContent value="affiliates" className="space-y-4">
+                    {(affiliatesError || affiliateGrowthError) && (
+                        <AlertMessage variant="error" message="Failed to load affiliate data." />
+                    )}
                     <AffiliateAnalyticsSection
                         data={affiliates}
                         growthData={affiliateGrowth}
@@ -1143,11 +1019,13 @@ export default function UsersAnalyticsPage() {
 
                 {/* Demographics Tab */}
                 <TabsContent value="demographics" className="space-y-4">
+                    {demographicsError && <AlertMessage variant="error" message="Failed to load demographics data." />}
                     <CustomerDemographicsSection data={demographics} isLoading={demographicsLoading} />
                 </TabsContent>
 
                 {/* Top Customers Tab */}
                 <TabsContent value="top-customers" className="space-y-4">
+                    {topCustomersError && <AlertMessage variant="error" message="Failed to load top customers data." />}
                     <TopCustomersTable data={topCustomers} isLoading={topCustomersLoading} />
                 </TabsContent>
             </Tabs>

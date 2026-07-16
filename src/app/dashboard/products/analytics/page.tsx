@@ -1,8 +1,8 @@
 // app/dashboard/products/analytics/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     TrendingUp, TrendingDown, Package, DollarSign, Star,
     AlertTriangle, Layers, Target, Activity, Award, BadgePercent, Zap,
@@ -31,12 +31,17 @@ import {
     Line
 } from 'recharts';
 import { addDays, format } from 'date-fns';
-import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { DataTable } from '@/widgets/custom-table/DataTable';
 import { ActionItem, ActionsDropdown } from '@/widgets/actions-dropdown/ActionsDropdown';
 import { DateRangePicker } from '@/widgets/date-picker/DateRangePicker';
 import RefreshButton from '@/widgets/refresh-button/RefreshButton';
+import { AlertMessage } from '@/widgets/alert-message/AlertMessage';
+import { useAnalyticsQuery } from '@/hooks/use-analytics-query';
+import { useChartColors } from '@/hooks/use-chart-colors';
+import { CustomTooltip } from '@/widgets/analytics/CustomTooltip';
+import { KPICardSkeleton, ChartSkeleton, TableSkeleton } from '@/widgets/analytics/skeletons';
+import { AnalyticsStatTile } from '@/widgets/analytics/AnalyticsStatTile';
 
 // ==================== Types ====================
 interface OverviewStats {
@@ -208,64 +213,6 @@ const formatCompactNumber = (value: number) => {
     }).format(value);
 };
 
-// ==================== Custom Chart Tooltip ====================
-const CustomTooltip = ({ active, payload, label, formatter }: any) => {
-    if (active && payload && payload.length) {
-        return (
-            <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg p-3">
-                <p className="text-gray-900 dark:text-white font-medium text-sm mb-1">{label}</p>
-                {payload.map((entry: any, index: number) => (
-                    <p key={index} className="text-sm" style={{ color: entry.color }}>
-                        {entry.name}: {formatter ? formatter(entry.value) : entry.value}
-                    </p>
-                ))}
-            </div>
-        );
-    }
-    return null;
-};
-
-// ==================== Loading Skeleton Components ====================
-const KPICardSkeleton = () => (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-        <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-                </div>
-                <div className="h-12 w-12 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />
-            </div>
-        </CardContent>
-    </Card>
-);
-
-const ChartSkeleton = () => (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-        <CardHeader>
-            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-        </CardHeader>
-        <CardContent>
-            <div className="h-[350px] w-full bg-gray-100 dark:bg-gray-900 rounded animate-pulse" />
-        </CardContent>
-    </Card>
-);
-
-const TableSkeleton = () => (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-        <CardHeader>
-            <div className="h-6 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-        </CardHeader>
-        <CardContent>
-            <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="h-12 w-full bg-gray-100 dark:bg-gray-900 rounded animate-pulse" />
-                ))}
-            </div>
-        </CardContent>
-    </Card>
-);
-
 // ==================== KPI Cards Component ====================
 interface KPICardsProps {
     overview?: OverviewStats;
@@ -288,175 +235,99 @@ const KPICards = ({ overview, salesPerformance, productFunnel, inventoryHealth, 
         <>
             {/* First Row KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Products</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatNumber(overview?.summary.total_products || 0)}
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                    <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
-                                        {overview?.summary.active_products} Active
-                                    </Badge>
-                                    <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
-                                        {overview?.summary.draft_products} Draft
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                                <Package className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                            </div>
+                <AnalyticsStatTile
+                    label="Total Products"
+                    value={formatNumber(overview?.summary.total_products || 0)}
+                    icon={<Package className="h-6 w-6" />}
+                    color="purple"
+                    footer={
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                                {overview?.summary.active_products} Active
+                            </Badge>
+                            <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+                                {overview?.summary.draft_products} Draft
+                            </Badge>
                         </div>
-                    </CardContent>
-                </Card>
+                    }
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Revenue</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatCurrency(salesPerformance?.sales_summary.total_revenue || 0)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formatNumber(salesPerformance?.sales_summary.total_orders || 0)} orders
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                                <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Total Revenue"
+                    value={formatCurrency(salesPerformance?.sales_summary.total_revenue || 0)}
+                    icon={<DollarSign className="h-6 w-6" />}
+                    color="emerald"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatNumber(salesPerformance?.sales_summary.total_orders || 0)} orders</p>}
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Average Order Value</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatCurrency(salesPerformance?.sales_summary.average_order_value || 0)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {salesPerformance?.sales_summary.items_per_order || 0} items per order
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                                <ShoppingCart className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Average Order Value"
+                    value={formatCurrency(salesPerformance?.sales_summary.average_order_value || 0)}
+                    icon={<ShoppingCart className="h-6 w-6" />}
+                    color="blue"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{salesPerformance?.sales_summary.items_per_order || 0} items per order</p>}
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Average Rating</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {overview?.engagement.average_rating || 0} ★
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formatNumber(overview?.engagement.total_reviews || 0)} reviews
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
-                                <Star className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Average Rating"
+                    value={`${overview?.engagement.average_rating || 0} ★`}
+                    icon={<Star className="h-6 w-6" />}
+                    color="amber"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatNumber(overview?.engagement.total_reviews || 0)} reviews</p>}
+                />
             </div>
 
             {/* Second Row KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Inventory Value</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatCurrency(overview?.inventory_summary.total_inventory_value || 0)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formatNumber(overview?.inventory_summary.total_stock || 0)} units
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
-                                <Wallet className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Inventory Value"
+                    value={formatCurrency(overview?.inventory_summary.total_inventory_value || 0)}
+                    icon={<Wallet className="h-6 w-6" />}
+                    color="indigo"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatNumber(overview?.inventory_summary.total_stock || 0)} units</p>}
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Stock Turnover</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {inventoryHealth?.summary.average_turnover_rate || 0}x
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                    <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
-                                        {inventoryHealth?.summary.fast_movers_count || 0} Fast
-                                    </Badge>
-                                    <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
-                                        {inventoryHealth?.summary.slow_movers_count || 0} Slow
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-                                <Activity className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-                            </div>
+                <AnalyticsStatTile
+                    label="Stock Turnover"
+                    value={`${inventoryHealth?.summary.average_turnover_rate || 0}x`}
+                    icon={<Activity className="h-6 w-6" />}
+                    color="orange"
+                    footer={
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                                {inventoryHealth?.summary.fast_movers_count || 0} Fast
+                            </Badge>
+                            <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+                                {inventoryHealth?.summary.slow_movers_count || 0} Slow
+                            </Badge>
                         </div>
-                    </CardContent>
-                </Card>
+                    }
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Variants</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatNumber(overview?.summary.total_variants || 0)}
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                    <Badge variant="outline" className="bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800">
-                                        {overview?.inventory_summary.out_of_stock_variants || 0} Out
-                                    </Badge>
-                                    <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
-                                        {overview?.inventory_summary.low_stock_variants || 0} Low
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center">
-                                <Layers className="h-6 w-6 text-teal-600 dark:text-teal-400" />
-                            </div>
+                <AnalyticsStatTile
+                    label="Total Variants"
+                    value={formatNumber(overview?.summary.total_variants || 0)}
+                    icon={<Layers className="h-6 w-6" />}
+                    color="teal"
+                    footer={
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800">
+                                {overview?.inventory_summary.out_of_stock_variants || 0} Out
+                            </Badge>
+                            <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+                                {overview?.inventory_summary.low_stock_variants || 0} Low
+                            </Badge>
                         </div>
-                    </CardContent>
-                </Card>
+                    }
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Conversion Rate</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {productFunnel?.conversion_rates.overall_conversion || 0}%
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {productFunnel?.products_with_purchases || 0} products selling
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center">
-                                <Target className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Conversion Rate"
+                    value={`${productFunnel?.conversion_rates.overall_conversion || 0}%`}
+                    icon={<Target className="h-6 w-6" />}
+                    color="cyan"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{productFunnel?.products_with_purchases || 0} products selling</p>}
+                />
             </div>
         </>
     );
@@ -857,55 +728,53 @@ export default function ProductsAnalyticsPage() {
     const queryClient = useQueryClient();
     const [tempDateRange, setTempDateRange] = useState({ from: addDays(new Date(), -30), to: new Date() });
     const [appliedDateRange, setAppliedDateRange] = useState({ from: addDays(new Date(), -30), to: new Date() });
-    const [isDarkMode, setIsDarkMode] = useState(false);
-
-    useEffect(() => {
-        const checkDarkMode = () => setIsDarkMode(document.documentElement.classList.contains('dark'));
-        checkDarkMode();
-        const observer = new MutationObserver(checkDarkMode);
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-        return () => observer.disconnect();
-    }, []);
+    const { grid, text } = useChartColors();
 
     const startDate = format(appliedDateRange.from, 'yyyy-MM-dd');
     const endDate = format(appliedDateRange.to, 'yyyy-MM-dd');
-    const chartColors = { grid: isDarkMode ? '#374151' : '#e5e7eb', text: isDarkMode ? '#9ca3af' : '#6b7280' };
+    const chartColors = { grid, text };
 
     // Individual queries for each section - they load independently
-    const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useQuery({
-        queryKey: ['product-analytics-overview', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.products.analytics.overview, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: overview, isLoading: overviewLoading, isError: overviewError, refetch: refetchOverview } = useAnalyticsQuery(
+        ['product-analytics-overview', startDate, endDate],
+        endpoints.products.analytics.overview,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: salesPerformance, isLoading: salesLoading, refetch: refetchSales } = useQuery({
-        queryKey: ['product-analytics-sales', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.products.analytics.salesPerformance, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: salesPerformance, isLoading: salesLoading, isError: salesError, refetch: refetchSales } = useAnalyticsQuery(
+        ['product-analytics-sales', startDate, endDate],
+        endpoints.products.analytics.salesPerformance,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: productFunnel, isLoading: funnelLoading, refetch: refetchFunnel } = useQuery({
-        queryKey: ['product-analytics-funnel', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.products.analytics.productFunnel, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: productFunnel, isLoading: funnelLoading, isError: funnelError, refetch: refetchFunnel } = useAnalyticsQuery(
+        ['product-analytics-funnel', startDate, endDate],
+        endpoints.products.analytics.productFunnel,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: inventoryHealth, isLoading: healthLoading, refetch: refetchHealth } = useQuery({
-        queryKey: ['product-analytics-inventory-health'],
-        queryFn: () => securityAxios.get(endpoints.products.analytics.inventoryHealth).then(res => res.data.data),
-    });
+    const { data: inventoryHealth, isLoading: healthLoading, isError: healthError, refetch: refetchHealth } = useAnalyticsQuery(
+        ['product-analytics-inventory-health'],
+        endpoints.products.analytics.inventoryHealth,
+    );
 
-    const { data: pricingAnalytics, isLoading: pricingLoading, refetch: refetchPricing } = useQuery({
-        queryKey: ['product-analytics-pricing'],
-        queryFn: () => securityAxios.get(endpoints.products.analytics.pricing).then(res => res.data.data),
-    });
+    const { data: pricingAnalytics, isLoading: pricingLoading, isError: pricingError, refetch: refetchPricing } = useAnalyticsQuery(
+        ['product-analytics-pricing'],
+        endpoints.products.analytics.pricing,
+    );
 
-    const { data: categoryAnalytics, isLoading: categoriesLoading, refetch: refetchCategories } = useQuery({
-        queryKey: ['product-analytics-categories', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.products.analytics.categories, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: categoryAnalytics, isLoading: categoriesLoading, isError: categoriesError, refetch: refetchCategories } = useAnalyticsQuery(
+        ['product-analytics-categories', startDate, endDate],
+        endpoints.products.analytics.categories,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: variants, isLoading: variantsLoading, refetch: refetchVariants } = useQuery({
-        queryKey: ['product-analytics-variants', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.products.analytics.variants, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data.variants),
-    });
+    const { data: variantsResponse, isLoading: variantsLoading, isError: variantsError, refetch: refetchVariants } = useAnalyticsQuery<{ variants: VariantAnalytics[] }>(
+        ['product-analytics-variants', startDate, endDate],
+        endpoints.products.analytics.variants,
+        { start_date: startDate, end_date: endDate },
+    );
+    const variants = variantsResponse?.variants;
 
     const handleApplyDateRange = () => { setAppliedDateRange(tempDateRange); toast.success('Date range applied'); };
     const handleResetDateRange = () => { const newRange = { from: addDays(new Date(), -30), to: new Date() }; setTempDateRange(newRange); setAppliedDateRange(newRange); toast.success('Date range reset'); };
@@ -935,41 +804,52 @@ export default function ProductsAnalyticsPage() {
             </div>
 
             {/* KPI Cards - Loads independently */}
+            {(overviewError || salesError || funnelError || healthError) && (
+                <AlertMessage variant="error" message="Failed to load some overview metrics. Try refreshing." />
+            )}
             <KPICards overview={overview} salesPerformance={salesPerformance} productFunnel={productFunnel} inventoryHealth={inventoryHealth} isLoading={overviewLoading || salesLoading || funnelLoading || healthLoading} />
 
             {/* Tabs - Each tab content loads independently */}
             <Tabs defaultValue="overview" className="space-y-4">
-                <TabsList className="bg-gray-100 dark:bg-gray-900/50">
-                    <TabsTrigger value="overview" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Overview</TabsTrigger>
-                    <TabsTrigger value="sales" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Sales</TabsTrigger>
-                    <TabsTrigger value="inventory" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Inventory</TabsTrigger>
-                    <TabsTrigger value="pricing" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Pricing</TabsTrigger>
-                    <TabsTrigger value="categories" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Categories</TabsTrigger>
-                    <TabsTrigger value="variants" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Variants</TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto">
+                    <TabsList className="bg-gray-100 dark:bg-gray-900/50">
+                        <TabsTrigger value="overview" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Overview</TabsTrigger>
+                        <TabsTrigger value="sales" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Sales</TabsTrigger>
+                        <TabsTrigger value="inventory" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Inventory</TabsTrigger>
+                        <TabsTrigger value="pricing" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Pricing</TabsTrigger>
+                        <TabsTrigger value="categories" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Categories</TabsTrigger>
+                        <TabsTrigger value="variants" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200 hover:!text-gray-200">Variants</TabsTrigger>
+                    </TabsList>
+                </div>
 
                 <TabsContent value="overview" className="space-y-4">
+                    {salesError && <AlertMessage variant="error" message="Failed to load sales trend data." />}
                     <RevenueTrendChart data={revenueTrendData} isLoading={salesLoading} chartColors={chartColors} />
                     <OverviewSummaryCards salesPerformance={salesPerformance} isLoading={salesLoading} />
                 </TabsContent>
 
                 <TabsContent value="sales">
+                    {salesError && <AlertMessage variant="error" message="Failed to load sales data." />}
                     <TopProductsTable data={salesPerformance?.top_products || []} isLoading={salesLoading} />
                 </TabsContent>
 
                 <TabsContent value="inventory">
+                    {healthError && <AlertMessage variant="error" message="Failed to load inventory health data." />}
                     <InventoryHealthSection data={inventoryHealth} isLoading={healthLoading} />
                 </TabsContent>
 
                 <TabsContent value="pricing">
+                    {pricingError && <AlertMessage variant="error" message="Failed to load pricing data." />}
                     <PricingAnalyticsSection data={pricingAnalytics} isLoading={pricingLoading} chartColors={chartColors} />
                 </TabsContent>
 
                 <TabsContent value="categories">
+                    {categoriesError && <AlertMessage variant="error" message="Failed to load category data." />}
                     <CategoryAnalyticsSection data={categoryAnalytics} isLoading={categoriesLoading} chartColors={chartColors} />
                 </TabsContent>
 
                 <TabsContent value="variants">
+                    {variantsError && <AlertMessage variant="error" message="Failed to load variant data." />}
                     <VariantAnalyticsTable data={variants} isLoading={variantsLoading} />
                 </TabsContent>
             </Tabs>

@@ -1,8 +1,8 @@
 // app/dashboard/orders/analytics/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     TrendingUp, TrendingDown, Package, DollarSign, Star,
     AlertTriangle, Layers, Target, Activity, Award, BadgePercent, Zap,
@@ -42,11 +42,17 @@ import {
     Area
 } from 'recharts';
 import { addDays, format } from 'date-fns';
-import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { DataTable } from '@/widgets/custom-table/DataTable';
 import { DateRangePicker } from '@/widgets/date-picker/DateRangePicker';
 import RefreshButton from '@/widgets/refresh-button/RefreshButton';
+import { AlertMessage } from '@/widgets/alert-message/AlertMessage';
+import { useAnalyticsQuery } from '@/hooks/use-analytics-query';
+import { useChartColors } from '@/hooks/use-chart-colors';
+import { CustomTooltip } from '@/widgets/analytics/CustomTooltip';
+import { KPICardSkeleton, ChartSkeleton, TableSkeleton } from '@/widgets/analytics/skeletons';
+import { AnalyticsStatTile } from '@/widgets/analytics/AnalyticsStatTile';
+import { PIE_COLORS } from '@/widgets/analytics/constants';
 
 // ==================== Types ====================
 
@@ -194,66 +200,6 @@ const formatCompactNumber = (value: number) => {
     }).format(value);
 };
 
-// ==================== Custom Tooltip ====================
-
-const CustomTooltip = ({ active, payload, label, formatter }: any) => {
-    if (active && payload && payload.length) {
-        return (
-            <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg p-3">
-                <p className="text-gray-900 dark:text-white font-medium text-sm mb-1">{label}</p>
-                {payload.map((entry: any, index: number) => (
-                    <p key={index} className="text-sm" style={{ color: entry.color }}>
-                        {entry.name}: {formatter ? formatter(entry.value) : entry.value}
-                    </p>
-                ))}
-            </div>
-        );
-    }
-    return null;
-};
-
-// ==================== Loading Skeletons ====================
-
-const KPICardSkeleton = () => (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-        <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-                </div>
-                <div className="h-12 w-12 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />
-            </div>
-        </CardContent>
-    </Card>
-);
-
-const ChartSkeleton = () => (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-        <CardHeader>
-            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-        </CardHeader>
-        <CardContent>
-            <div className="h-[350px] w-full bg-gray-100 dark:bg-gray-900 rounded animate-pulse" />
-        </CardContent>
-    </Card>
-);
-
-const TableSkeleton = () => (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-        <CardHeader>
-            <div className="h-6 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-        </CardHeader>
-        <CardContent>
-            <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="h-12 w-full bg-gray-100 dark:bg-gray-900 rounded animate-pulse" />
-                ))}
-            </div>
-        </CardContent>
-    </Card>
-);
-
 // ==================== KPI Cards Component ====================
 
 interface KPICardsProps {
@@ -277,118 +223,75 @@ const KPICards = ({ orderSummary, fulfillment, refunds, retention, isLoading }: 
         <>
             {/* First Row KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Orders</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatNumber(orderSummary?.summary.total_orders || 0)}
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                    <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
-                                        {orderSummary?.summary.paid_orders || 0} Paid
-                                    </Badge>
-                                    <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
-                                        {orderSummary?.summary.unpaid_orders || 0} Unpaid
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                                <Package className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                            </div>
+                <AnalyticsStatTile
+                    label="Total Orders"
+                    value={formatNumber(orderSummary?.summary.total_orders || 0)}
+                    icon={<Package className="h-6 w-6" />}
+                    color="purple"
+                    footer={
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                                {orderSummary?.summary.paid_orders || 0} Paid
+                            </Badge>
+                            <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+                                {orderSummary?.summary.unpaid_orders || 0} Unpaid
+                            </Badge>
                         </div>
-                    </CardContent>
-                </Card>
+                    }
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Revenue</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatCurrency(orderSummary?.summary.total_revenue || 0)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formatNumber(orderSummary?.summary.total_items_sold || 0)} items sold
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                                <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Total Revenue"
+                    value={formatCurrency(orderSummary?.summary.total_revenue || 0)}
+                    icon={<DollarSign className="h-6 w-6" />}
+                    color="emerald"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatNumber(orderSummary?.summary.total_items_sold || 0)} items sold</p>}
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Average Order Value</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {formatCurrency(orderSummary?.summary.average_order_value || 0)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Per transaction
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                                <ShoppingCart className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Average Order Value"
+                    value={formatCurrency(orderSummary?.summary.average_order_value || 0)}
+                    icon={<ShoppingCart className="h-6 w-6" />}
+                    color="blue"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Per transaction</p>}
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer Retention</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {retention?.retention_metrics.repeat_purchase_rate || 0}%
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                    <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600">
-                                        {retention?.customer_segments.repeat_customers || 0} Returning
-                                    </Badge>
-                                    <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600">
-                                        {retention?.customer_segments.one_time_buyers || 0} One-time
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center">
-                                <Users className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
-                            </div>
+                <AnalyticsStatTile
+                    label="Customer Retention"
+                    value={`${retention?.retention_metrics.repeat_purchase_rate || 0}%`}
+                    icon={<Users className="h-6 w-6" />}
+                    color="cyan"
+                    footer={
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600">
+                                {retention?.customer_segments.repeat_customers || 0} Returning
+                            </Badge>
+                            <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600">
+                                {retention?.customer_segments.one_time_buyers || 0} One-time
+                            </Badge>
                         </div>
-                    </CardContent>
-                </Card>
+                    }
+                />
             </div>
 
             {/* Second Row KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Registered vs Guest</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {orderSummary?.customer_breakdown.registered_percentage || 0}%
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                    <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950/30 text-blue-600">
-                                        {orderSummary?.customer_breakdown.registered_customers || 0} Registered
-                                    </Badge>
-                                    <Badge variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-600">
-                                        {orderSummary?.customer_breakdown.guest_customers || 0} Guest
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
-                                <Users className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                            </div>
+                <AnalyticsStatTile
+                    label="Registered vs Guest"
+                    value={`${orderSummary?.customer_breakdown.registered_percentage || 0}%`}
+                    icon={<Users className="h-6 w-6" />}
+                    color="indigo"
+                    footer={
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950/30 text-blue-600">
+                                {orderSummary?.customer_breakdown.registered_customers || 0} Registered
+                            </Badge>
+                            <Badge variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-600">
+                                {orderSummary?.customer_breakdown.guest_customers || 0} Guest
+                            </Badge>
                         </div>
-                    </CardContent>
-                </Card>
+                    }
+                />
 
                 <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
                     <CardContent className="p-6">
@@ -409,48 +312,30 @@ const KPICards = ({ orderSummary, fulfillment, refunds, retention, isLoading }: 
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Fulfillment Time</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {fulfillment?.fulfillment_times.average_fulfillment_days || 0} days
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    +{fulfillment?.fulfillment_times.average_delivery_days || 0} days delivery
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-                                <Truck className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <AnalyticsStatTile
+                    label="Avg Fulfillment Time"
+                    value={`${fulfillment?.fulfillment_times.average_fulfillment_days || 0} days`}
+                    icon={<Truck className="h-6 w-6" />}
+                    color="orange"
+                    footer={<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">+{fulfillment?.fulfillment_times.average_delivery_days || 0} days delivery</p>}
+                />
 
-                <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Online vs POD</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                                    {orderSummary?.payment_type_stats.online.count || 0} / {orderSummary?.payment_type_stats.pod.count || 0}
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                    <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600">
-                                        Online: {formatCurrency(orderSummary?.payment_type_stats.online.revenue || 0)}
-                                    </Badge>
-                                    <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600">
-                                        POD: {formatCurrency(orderSummary?.payment_type_stats.pod.revenue || 0)}
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center">
-                                <CreditCard className="h-6 w-6 text-teal-600 dark:text-teal-400" />
-                            </div>
+                <AnalyticsStatTile
+                    label="Online vs POD"
+                    value={`${orderSummary?.payment_type_stats.online.count || 0} / ${orderSummary?.payment_type_stats.pod.count || 0}`}
+                    icon={<CreditCard className="h-6 w-6" />}
+                    color="teal"
+                    footer={
+                        <div className="flex gap-2 mt-2">
+                            <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600">
+                                Online: {formatCurrency(orderSummary?.payment_type_stats.online.revenue || 0)}
+                            </Badge>
+                            <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-600">
+                                POD: {formatCurrency(orderSummary?.payment_type_stats.pod.revenue || 0)}
+                            </Badge>
                         </div>
-                    </CardContent>
-                </Card>
+                    }
+                />
             </div>
         </>
     );
@@ -981,74 +866,72 @@ export default function OrdersAnalyticsPage() {
     const [tempDateRange, setTempDateRange] = useState({ from: addDays(new Date(), -30), to: new Date() });
     const [appliedDateRange, setAppliedDateRange] = useState({ from: addDays(new Date(), -30), to: new Date() });
     const [salesInterval, setSalesInterval] = useState('day');
-    const [isDarkMode, setIsDarkMode] = useState(false);
-
-    useEffect(() => {
-        const checkDarkMode = () => setIsDarkMode(document.documentElement.classList.contains('dark'));
-        checkDarkMode();
-        const observer = new MutationObserver(checkDarkMode);
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-        return () => observer.disconnect();
-    }, []);
+    const { grid, text } = useChartColors();
 
     const startDate = format(appliedDateRange.from, 'yyyy-MM-dd');
     const endDate = format(appliedDateRange.to, 'yyyy-MM-dd');
-
-    const chartColors = {
-        grid: isDarkMode ? '#374151' : '#e5e7eb',
-        text: isDarkMode ? '#9ca3af' : '#6b7280',
-    };
+    const chartColors = { grid, text };
 
     // Individual queries for each section
-    const { data: orderSummary, isLoading: summaryLoading, refetch: refetchSummary } = useQuery({
-        queryKey: ['order-analytics-summary', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.orders.analytics.summary, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: orderSummary, isLoading: summaryLoading, isError: summaryError, refetch: refetchSummary } = useAnalyticsQuery<OrderSummaryStats>(
+        ['order-analytics-summary', startDate, endDate],
+        endpoints.orders.analytics.summary,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: salesTrends, isLoading: trendsLoading, refetch: refetchTrends } = useQuery({
-        queryKey: ['order-analytics-sales-trends', startDate, endDate, salesInterval],
-        queryFn: () => securityAxios.get(endpoints.orders.analytics.salesTrends, { params: { start_date: startDate, end_date: endDate, interval: salesInterval } }).then(res => res.data.data),
-    });
+    const { data: salesTrends, isLoading: trendsLoading, isError: trendsError, refetch: refetchTrends } = useAnalyticsQuery<SalesTrend[]>(
+        ['order-analytics-sales-trends', startDate, endDate, salesInterval],
+        endpoints.orders.analytics.salesTrends,
+        { start_date: startDate, end_date: endDate, interval: salesInterval },
+    );
 
-    const { data: orderStatus, isLoading: statusLoading, refetch: refetchStatus } = useQuery({
-        queryKey: ['order-analytics-status', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.orders.analytics.statusDistribution, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: orderStatus, isLoading: statusLoading, isError: statusError, refetch: refetchStatus } = useAnalyticsQuery<StatusDistribution>(
+        ['order-analytics-status', startDate, endDate],
+        endpoints.orders.analytics.statusDistribution,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: paymentStatus, isLoading: paymentLoading, refetch: refetchPayment } = useQuery({
-        queryKey: ['order-analytics-payment-status', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.orders.analytics.paymentStatusDistribution, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: paymentStatus, isLoading: paymentLoading, isError: paymentError, refetch: refetchPayment } = useAnalyticsQuery<StatusDistribution>(
+        ['order-analytics-payment-status', startDate, endDate],
+        endpoints.orders.analytics.paymentStatusDistribution,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: topCustomers, isLoading: customersLoading, refetch: refetchCustomers } = useQuery({
-        queryKey: ['order-analytics-top-customers', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.orders.analytics.topCustomers, { params: { start_date: startDate, end_date: endDate, limit: 10 } }).then(res => res.data.data),
-    });
+    const { data: topCustomers, isLoading: customersLoading, isError: customersError, refetch: refetchCustomers } = useAnalyticsQuery<TopCustomer[]>(
+        ['order-analytics-top-customers', startDate, endDate],
+        endpoints.orders.analytics.topCustomers,
+        { start_date: startDate, end_date: endDate, limit: 10 },
+    );
 
-    const { data: fulfillment, isLoading: fulfillmentLoading, refetch: refetchFulfillment } = useQuery({
-        queryKey: ['order-analytics-fulfillment', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.orders.analytics.fulfillment, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: fulfillment, isLoading: fulfillmentLoading, isError: fulfillmentError, refetch: refetchFulfillment } = useAnalyticsQuery<FulfillmentAnalytics>(
+        ['order-analytics-fulfillment', startDate, endDate],
+        endpoints.orders.analytics.fulfillment,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: refunds, isLoading: refundsLoading, refetch: refetchRefunds } = useQuery({
-        queryKey: ['order-analytics-refunds', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.orders.analytics.refunds, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: refunds, isLoading: refundsLoading, isError: refundsError, refetch: refetchRefunds } = useAnalyticsQuery<RefundAnalytics>(
+        ['order-analytics-refunds', startDate, endDate],
+        endpoints.orders.analytics.refunds,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: retention, isLoading: retentionLoading, refetch: refetchRetention } = useQuery({
-        queryKey: ['order-analytics-retention', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.orders.analytics.customerRetention, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: retention, isLoading: retentionLoading, isError: retentionError, refetch: refetchRetention } = useAnalyticsQuery<CustomerRetention>(
+        ['order-analytics-retention', startDate, endDate],
+        endpoints.orders.analytics.customerRetention,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: hourlyData, isLoading: hourlyLoading, refetch: refetchHourly } = useQuery({
-        queryKey: ['order-analytics-hourly', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.orders.analytics.hourlyDistribution, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: hourlyData, isLoading: hourlyLoading, isError: hourlyError, refetch: refetchHourly } = useAnalyticsQuery<HourlyDistribution[]>(
+        ['order-analytics-hourly', startDate, endDate],
+        endpoints.orders.analytics.hourlyDistribution,
+        { start_date: startDate, end_date: endDate },
+    );
 
-    const { data: dayOfWeekData, isLoading: dayOfWeekLoading, refetch: refetchDayOfWeek } = useQuery({
-        queryKey: ['order-analytics-day-of-week', startDate, endDate],
-        queryFn: () => securityAxios.get(endpoints.orders.analytics.dayOfWeekDistribution, { params: { start_date: startDate, end_date: endDate } }).then(res => res.data.data),
-    });
+    const { data: dayOfWeekData, isLoading: dayOfWeekLoading, isError: dayOfWeekError, refetch: refetchDayOfWeek } = useAnalyticsQuery<DayOfWeekDistribution[]>(
+        ['order-analytics-day-of-week', startDate, endDate],
+        endpoints.orders.analytics.dayOfWeekDistribution,
+        { start_date: startDate, end_date: endDate },
+    );
 
     const isLoading = summaryLoading || trendsLoading || statusLoading || paymentLoading ||
         customersLoading || fulfillmentLoading || refundsLoading || retentionLoading ||
@@ -1082,8 +965,6 @@ export default function OrdersAnalyticsPage() {
         percentage: value.percentage,
     })) : [];
 
-    const PIE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B', '#4ECDC4'];
-
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -1103,6 +984,9 @@ export default function OrdersAnalyticsPage() {
             </div>
 
             {/* KPI Cards - Loads independently */}
+            {(summaryError || fulfillmentError || refundsError || retentionError) && (
+                <AlertMessage variant="error" message="Failed to load some overview metrics. Try refreshing." />
+            )}
             <KPICards
                 orderSummary={orderSummary}
                 fulfillment={fulfillment}
@@ -1113,17 +997,20 @@ export default function OrdersAnalyticsPage() {
 
             {/* Tabs - Each tab content loads independently */}
             <Tabs defaultValue="overview" className="space-y-4">
-                <TabsList className="bg-gray-100 dark:bg-gray-900/50">
-                    <TabsTrigger value="overview" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Overview</TabsTrigger>
-                    <TabsTrigger value="revenue" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Revenue & Trends</TabsTrigger>
-                    <TabsTrigger value="customers" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Customers</TabsTrigger>
-                    <TabsTrigger value="fulfillment" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Fulfillment</TabsTrigger>
-                    <TabsTrigger value="refunds" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Refunds</TabsTrigger>
-                    <TabsTrigger value="timing" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Timing Analytics</TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto">
+                    <TabsList className="bg-gray-100 dark:bg-gray-900/50">
+                        <TabsTrigger value="overview" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Overview</TabsTrigger>
+                        <TabsTrigger value="revenue" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Revenue & Trends</TabsTrigger>
+                        <TabsTrigger value="customers" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Customers</TabsTrigger>
+                        <TabsTrigger value="fulfillment" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Fulfillment</TabsTrigger>
+                        <TabsTrigger value="refunds" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Refunds</TabsTrigger>
+                        <TabsTrigger value="timing" className="data-[state=active]:bg-white dark:data-[state=active]:bg-black dark:data-[state=active]:text-gray-200">Timing Analytics</TabsTrigger>
+                    </TabsList>
+                </div>
 
                 {/* Overview Tab */}
                 <TabsContent value="overview" className="space-y-4">
+                    {trendsError && <AlertMessage variant="error" message="Failed to load sales trend data." />}
                     <RevenueTrendChart
                         data={revenueTrendData}
                         isLoading={trendsLoading}
@@ -1132,6 +1019,9 @@ export default function OrdersAnalyticsPage() {
                         onIntervalChange={setSalesInterval}
                     />
 
+                    {(statusError || paymentError) && (
+                        <AlertMessage variant="error" message="Failed to load status distribution data." />
+                    )}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
                             <CardHeader>
@@ -1192,12 +1082,14 @@ export default function OrdersAnalyticsPage() {
                         </Card>
                     </div>
 
+                    {summaryError && <AlertMessage variant="error" message="Failed to load payment method and summary data." />}
                     <PaymentMethodsSection data={orderSummary?.payment_method_stats} isLoading={summaryLoading} />
                     <OverviewSummaryCards orderSummary={orderSummary} isLoading={summaryLoading} />
                 </TabsContent>
 
                 {/* Revenue & Trends Tab */}
                 <TabsContent value="revenue" className="space-y-4">
+                    {summaryError && <AlertMessage variant="error" message="Failed to load payment type and performance summary data." />}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
                             <CardHeader>
@@ -1247,6 +1139,7 @@ export default function OrdersAnalyticsPage() {
                         </Card>
                     </div>
 
+                    {trendsError && <AlertMessage variant="error" message="Failed to load items sold trend data." />}
                     <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
                         <CardHeader>
                             <CardTitle className="text-gray-900 dark:text-white">Items Sold Over Time</CardTitle>
@@ -1270,22 +1163,27 @@ export default function OrdersAnalyticsPage() {
 
                 {/* Customers Tab */}
                 <TabsContent value="customers" className="space-y-4">
+                    {customersError && <AlertMessage variant="error" message="Failed to load top customers data." />}
                     <TopCustomersTable data={topCustomers} isLoading={customersLoading} />
+                    {retentionError && <AlertMessage variant="error" message="Failed to load customer retention data." />}
                     <CustomerRetentionSection data={retention} isLoading={retentionLoading} />
                 </TabsContent>
 
                 {/* Fulfillment Tab */}
                 <TabsContent value="fulfillment" className="space-y-4">
+                    {fulfillmentError && <AlertMessage variant="error" message="Failed to load fulfillment data." />}
                     <FulfillmentSection data={fulfillment} isLoading={fulfillmentLoading} />
                 </TabsContent>
 
                 {/* Refunds Tab */}
                 <TabsContent value="refunds" className="space-y-4">
+                    {refundsError && <AlertMessage variant="error" message="Failed to load refund data." />}
                     <RefundSection data={refunds} isLoading={refundsLoading} />
                 </TabsContent>
 
                 {/* Timing Analytics Tab */}
                 <TabsContent value="timing" className="space-y-4">
+                    {(hourlyError || dayOfWeekError) && <AlertMessage variant="error" message="Failed to load timing analytics data." />}
                     <TimingAnalyticsSection
                         hourlyData={hourlyData}
                         dayOfWeekData={dayOfWeekData}
