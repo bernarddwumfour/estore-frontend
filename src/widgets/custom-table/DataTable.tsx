@@ -255,6 +255,7 @@ export function DataTable<T extends { id: string | number }>({
         onClose: () => void
     } | null>(null);
     const [showMoreBulkActions, setShowMoreBulkActions] = useState(false);
+    const [showMobileBulkActions, setShowMobileBulkActions] = useState(false);
     const [expandedData, setExpandedData] = useState<{ data: any; title: string; onClose: () => void } | null>(null);
 
     const allKeys = useMemo(() => (data.length > 0 ? Object.keys(data[0]) : []), [data]);
@@ -431,16 +432,19 @@ export function DataTable<T extends { id: string | number }>({
     const hasActions = actions.length > 0 || renderActions;
     const showCheckboxes = bulkActions.length > 0;
 
+    // Sticky positioning only kicks in at lg: and up — on phone screens a
+    // pinned actions/checkbox column eats too much of the already-narrow
+    // viewport, so below lg it scrolls with the rest of the table instead.
     const stickyCheckboxClass = stickyActions && actionsFirst && showCheckboxes
-        ? "sticky left-0 bg-white dark:bg-black z-10 after:absolute after:right-0 after:top-0 after:h-full after:w-[1px] after:bg-gray-200 dark:after:bg-gray-800"
+        ? "lg:sticky lg:left-0 lg:bg-white lg:dark:bg-black lg:z-10 lg:after:absolute lg:after:right-0 lg:after:top-0 lg:after:h-full lg:after:w-[1px] lg:after:bg-gray-200 lg:dark:after:bg-gray-800"
         : "";
 
     const stickyActionsLeftClass = stickyActions && actionsFirst && hasActions
-        ? `sticky ${showCheckboxes ? 'left-[40px]' : 'left-0'} bg-white dark:bg-black z-10 after:absolute after:right-0 after:top-0 after:h-full after:w-[1px] after:bg-gray-200 dark:after:bg-gray-800`
+        ? `lg:sticky ${showCheckboxes ? 'lg:left-[40px]' : 'lg:left-0'} lg:bg-white lg:dark:bg-black lg:z-10 lg:after:absolute lg:after:right-0 lg:after:top-0 lg:after:h-full lg:after:w-[1px] lg:after:bg-gray-200 lg:dark:after:bg-gray-800`
         : "";
 
     const stickyActionsRightClass = stickyActions && !actionsFirst && hasActions
-        ? "sticky right-0 bg-white dark:bg-black z-10 before:absolute before:left-0 before:top-0 before:h-full before:w-[1px] before:bg-gray-200 dark:before:bg-gray-800"
+        ? "lg:sticky lg:right-0 lg:bg-white lg:dark:bg-black lg:z-10 lg:before:absolute lg:before:left-0 lg:before:top-0 lg:before:h-full lg:before:w-[1px] lg:before:bg-gray-200 lg:dark:before:bg-gray-800"
         : "";
 
     if (data.length === 0) {
@@ -466,15 +470,41 @@ export function DataTable<T extends { id: string | number }>({
                     {showCheckboxes && selectedIds.size > 0 && bulkActions.length > 0 && (
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg tracking-widest">
-                                {selectedIds.size} Selected
+                                {selectedIds.size} <span className="hidden md:inline">Selected</span>
                             </span>
+
+                            {/* Mobile: no room for multiple buttons — a single dropdown with every action */}
+                            <DropdownMenu open={showMobileBulkActions} onOpenChange={setShowMobileBulkActions}>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm" className="sm:hidden h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700">
+                                        Actions <ChevronDown size={12} />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-48 rounded-xl shadow-2xl bg-white dark:bg-black border-gray-200 dark:text-gray-300 dark:border-gray-800">
+                                    {bulkActions.map((action, i) => (
+                                        <DropdownMenuItem
+                                            key={i}
+                                            onClick={() => {
+                                                action.onClick(data.filter(d => selectedIds.has(d.id)));
+                                                setShowMobileBulkActions(false);
+                                            }}
+                                            className={cn("font-bold text-xs gap-3 py-3 px-3 cursor-pointer rounded-lg dark:hover:bg-gray-800/90", action.variant === 'destructive' && "text-rose-600 dark:text-rose-400")}
+                                            disabled={action.disabled}
+                                        >
+                                            {action.icon}{action.label}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            {/* sm and up: first 3 actions as buttons, the rest behind "More Actions" */}
                             {visibleBulkActions.map((action, i) => (
                                 <Button
                                     key={i}
                                     variant={action.variant === 'destructive' ? "destructive" : "default"}
                                     size="sm"
                                     onClick={() => action.onClick(data.filter(d => selectedIds.has(d.id)))}
-                                    className={cn("h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg", action.color && getButtonColorClasses(action.color))}
+                                    className={cn("hidden sm:inline-flex h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg", action.color && getButtonColorClasses(action.color))}
                                     disabled={action.disabled}
                                 >
                                     {action.icon}{action.label}
@@ -483,7 +513,7 @@ export function DataTable<T extends { id: string | number }>({
                             {moreBulkActions.length > 0 && (
                                 <DropdownMenu open={showMoreBulkActions} onOpenChange={setShowMoreBulkActions}>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700">
+                                        <Button variant="outline" size="sm" className="hidden sm:inline-flex h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700">
                                             More Actions <ChevronDown size={12} />
                                         </Button>
                                     </DropdownMenuTrigger>
@@ -507,12 +537,15 @@ export function DataTable<T extends { id: string | number }>({
                         </div>
                     )}
                     {showCheckboxes && selectedIds.size === 0 && (
-                        <p className='p-2 text-sm bg-gray-100 rounded-md text-gray-600 dark:text-gray-300 dark:bg-gray-900/90'>{bulkActionsMessage}</p>
+                        <p className='p-2 text-sm bg-gray-100 rounded-md text-gray-600 dark:text-gray-300 dark:bg-gray-900/90'>
+                            <span className="sm:hidden">Select rows</span>
+                            <span className="hidden sm:inline">{bulkActionsMessage}</span>
+                        </p>
                     )}
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={exportToCSV} className="h-8 text-[10px] font-black uppercase tracking-widest gap-2 rounded-lg border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 dark:bg-gray-800/70">
-                        <Download size={14} /> Export
+                        <Download size={14} /> <span className="hidden md:inline">Export</span>
                     </Button>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

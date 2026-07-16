@@ -111,19 +111,19 @@ export function CustomPagination({
     }
 
     return (
-        <div className={cn("flex flex-col sm:flex-row items-center justify-between gap-4 py-4", className)}>
+        <div className={cn("flex flex-col sm:flex-row items-center sm:justify-between gap-4 py-4", className)}>
             {/* Info section */}
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-center text-gray-600 dark:text-gray-400">
                 Showing <span className="font-medium text-gray-900 dark:text-white">{start_index}</span> to{' '}
                 <span className="font-medium text-gray-900 dark:text-white">{end_index}</span> of{' '}
                 <span className="font-medium text-gray-900 dark:text-white">{total}</span> results
             </div>
 
-            {/* Pagination controls */}
-            <div className="flex items-center gap-2">
+            {/* Limit selector + Pagination controls — stacked & centered on mobile, grouped side-by-side from sm: up */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-2">
                 {/* Limit selector */}
                 {showLimitSelector && onLimitChange && (
-                    <div className="flex items-center gap-2 mr-4">
+                    <div className="flex items-center gap-2 sm:mr-4">
                         <span className="text-sm text-gray-600 dark:text-gray-400">Show</span>
                         <Select
                             value={per_page.toString()}
@@ -148,74 +148,77 @@ export function CustomPagination({
                     </div>
                 )}
 
-                {/* First page button */}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onPageChange(1)}
-                    disabled={!has_previous}
-                    className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <ChevronsLeft size={16} />
-                </Button>
+                {/* Pagination controls */}
+                <div className="flex items-center gap-2">
+                    {/* First page button */}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onPageChange(1)}
+                        disabled={!has_previous}
+                        className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <ChevronsLeft size={16} />
+                    </Button>
 
-                {/* Previous page button */}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => previous_page && onPageChange(previous_page)}
-                    disabled={!has_previous}
-                    className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <ChevronLeft size={16} />
-                </Button>
+                    {/* Previous page button */}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => previous_page && onPageChange(previous_page)}
+                        disabled={!has_previous}
+                        className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <ChevronLeft size={16} />
+                    </Button>
 
-                {/* Page numbers */}
-                <div className="flex items-center gap-1">
-                    {getPageNumbers().map((page, index) => (
-                        <React.Fragment key={index}>
-                            {page === '...' ? (
-                                <span className="px-2 text-gray-500 dark:text-gray-400">...</span>
-                            ) : (
-                                <Button
-                                    variant={current_page === page ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => typeof page === 'number' && onPageChange(page)}
-                                    className={cn(
-                                        "h-8 w-8 p-0 rounded-md",
-                                        current_page === page
-                                            ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200"
-                                            : "border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
-                                    )}
-                                >
-                                    {page}
-                                </Button>
-                            )}
-                        </React.Fragment>
-                    ))}
+                    {/* Page numbers */}
+                    <div className="flex items-center gap-1">
+                        {getPageNumbers().map((page, index) => (
+                            <React.Fragment key={index}>
+                                {page === '...' ? (
+                                    <span className="px-2 text-gray-500 dark:text-gray-400">...</span>
+                                ) : (
+                                    <Button
+                                        variant={current_page === page ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => typeof page === 'number' && onPageChange(page)}
+                                        className={cn(
+                                            "h-8 w-8 p-0 rounded-md",
+                                            current_page === page
+                                                ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200"
+                                                : "border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                                        )}
+                                    >
+                                        {page}
+                                    </Button>
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </div>
+
+                    {/* Next page button */}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => next_page && onPageChange(next_page)}
+                        disabled={!has_next}
+                        className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <ChevronRight size={16} />
+                    </Button>
+
+                    {/* Last page button */}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onPageChange(total_pages)}
+                        disabled={!has_next}
+                        className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <ChevronsRight size={16} />
+                    </Button>
                 </div>
-
-                {/* Next page button */}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => next_page && onPageChange(next_page)}
-                    disabled={!has_next}
-                    className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <ChevronRight size={16} />
-                </Button>
-
-                {/* Last page button */}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onPageChange(total_pages)}
-                    disabled={!has_next}
-                    className="h-8 w-8 p-0 rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <ChevronsRight size={16} />
-                </Button>
             </div>
         </div>
     );
