@@ -1,7 +1,22 @@
 // app/(web)/products/(components)/ProductsGrid.tsx
+import Link from "next/link"
 import { ProductType } from "@/types/productTypes"
 import { T } from "@/templates/registry"
 import { endpoints } from "@/constants/endpoints/endpoints"
+
+// Builds a /products URL for a given target page, preserving the current
+// filters. Plain <Link> href — ProductsGrid is a Server Component, so it
+// can't attach onClick handlers to its own elements.
+function buildPageHref(targetPage: number, filters: Record<string, unknown>) {
+  const params = new URLSearchParams()
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, String(value))
+    }
+  })
+  params.set('page', String(targetPage))
+  return `/products?${params.toString()}`
+}
 
 interface ProductsGridProps {
   category?: string,
@@ -166,12 +181,12 @@ export default async function ProductsGrid({
           }
         </p>
         {(category || search || brand || min_price !== undefined || max_price !== undefined || in_stock || featured || bestseller || isNew) && (
-          <button
-            onClick={() => window.location.href = '/products'}
-            className="mt-4 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+          <Link
+            href="/products"
+            className="mt-4 inline-block text-sm text-slate-500 hover:text-slate-900 transition-colors"
           >
             Clear all filters
-          </button>
+          </Link>
         )}
       </div>
     )
@@ -209,16 +224,15 @@ export default async function ProductsGrid({
         <div className="flex justify-center mt-12">
           <div className="flex items-center gap-2">
             {pagination.has_previous && (
-              <button
-                onClick={() => {
-                  const params = new URLSearchParams(window.location.search)
-                  params.set('page', String(pagination.current_page - 1))
-                  window.location.href = `/products?${params.toString()}`
-                }}
+              <Link
+                href={buildPageHref(pagination.current_page - 1, {
+                  category, brand, min_price, max_price, in_stock, featured, bestseller,
+                  new: isNew, sort_by, sort_order, search, limit,
+                })}
                 className="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Previous
-              </button>
+              </Link>
             )}
 
             <span className="px-4 py-2 text-sm text-slate-600">
@@ -226,16 +240,15 @@ export default async function ProductsGrid({
             </span>
 
             {pagination.has_next && (
-              <button
-                onClick={() => {
-                  const params = new URLSearchParams(window.location.search)
-                  params.set('page', String(pagination.current_page + 1))
-                  window.location.href = `/products?${params.toString()}`
-                }}
+              <Link
+                href={buildPageHref(pagination.current_page + 1, {
+                  category, brand, min_price, max_price, in_stock, featured, bestseller,
+                  new: isNew, sort_by, sort_order, search, limit,
+                })}
                 className="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Next
-              </button>
+              </Link>
             )}
           </div>
         </div>
