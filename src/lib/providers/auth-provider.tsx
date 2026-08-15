@@ -57,6 +57,7 @@ type AuthContextType = {
   user: User | null;
   tokens: Tokens | null;
   login: (email: string, password: string) => Promise<void>;
+  staffLogin: (email: string, password: string) => Promise<void>;
   signup: (userData: Partial<User & { password: string }>) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
@@ -135,6 +136,7 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   tokens: null,
   login: async () => {},
+  staffLogin: async () => {},
   signup: async () => {},
   logout: async () => {},
   forgotPassword: async () => {},
@@ -216,16 +218,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     } catch (error: any) {
       console.error("Login error:", error);
-      
+
       // CHANGED: Extract error from Django API response structure
-      const errorMessage = error?.response?.data?.error || 
-                          error?.response?.data?.message || 
+      const errorMessage = error?.response?.data?.error ||
+                          error?.response?.data?.message ||
                           "Login failed";
       toast.error(errorMessage);
     }
   };
 
- 
+  /**
+   * Staff/admin login. Hits the dedicated staff-login endpoint, which rejects
+   * customer credentials, and lands on the dashboard instead of the storefront.
+   */
+  const staffLogin = async (email: string, password: string): Promise<void> => {
+    try {
+      const response = await securityAxios.post(endpoints.auth.staffLogin, {
+        email,
+        password,
+      });
+
+      if (response.status < 200 || response.status >= 300) {
+        throw new Error("Login failed");
+      }
+
+      const apiResponse = response.data;
+
+      if (!apiResponse.success) {
+        throw new Error(apiResponse.error || "Login failed");
+      }
+
+      const { user: userData, tokens: tokenData } = apiResponse.data;
+
+      const authData: AuthData = {
+        user: userData,
+        tokens: tokenData,
+      };
+
+      setAuthCookie(authData);
+      setUser(userData);
+      setTokens(tokenData);
+
+      securityAxios.defaults.headers.common["Authorization"] =
+        `Bearer ${tokenData.access_token}`;
+
+      toast.success(apiResponse.message || "Login successful");
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Staff login error:", error);
+
+      const errorMessage = error?.response?.data?.error ||
+                          error?.response?.data?.message ||
+                          "Login failed";
+      toast.error(errorMessage);
+    }
+  };
+
+
   const signup = async (
     userData: Partial<User & { password: string }>
   ): Promise<void> => {
@@ -273,6 +322,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   const logout = async (): Promise<void> => {
+    const isStaff = user?.role === "staff" || user?.role === "admin";
+
     try {
       const authData = getAuthCookie();
       const refreshToken = authData?.tokens.refresh_token;
@@ -291,10 +342,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       removeAuthCookie();
       setUser(null);
       setTokens(null);
-      
+
       delete securityAxios.defaults.headers.common["Authorization"];
-      
-      router.push("/login");
+
+      router.push(isStaff ? "/admin/login" : "/login");
     }
   };
 
@@ -566,6 +617,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     tokens,
     login,
+    staffLogin,
     signup,
     logout,
     forgotPassword,
