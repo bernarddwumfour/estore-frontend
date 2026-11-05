@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { ProductType } from "@/types/productTypes";
 import type { BlogPostType } from "@/types/blogTypes";
+import type { AssistantTheme } from "@/widgets/ai-assistant/theme";
 
 /**
  * The set of presentational slots a store template may override.
@@ -51,6 +52,8 @@ export interface BlogPageProps {
 }
 
 export interface Template {
+  /** Theme tokens for the shared shopping-assistant UI. */
+  assistantTheme: AssistantTheme;
   /** The storefront homepage composition. */
   HomePage: ComponentType;
   /** A single product card, used by the shared ProductsGrid container. */

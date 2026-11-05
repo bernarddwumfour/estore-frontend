@@ -31,6 +31,8 @@ interface ProductsGridProps {
   sort_order?: string,
   search?: string,
   endpoint?: string,
+  display?: "products" | "variants",
+  showPagination?: boolean,
   page?: number,
   limit?: number
 }
@@ -48,6 +50,7 @@ async function getProducts(filters: {
   sort_order?: string,
   search?: string,
   endpoint?: string,
+  display?: "products" | "variants",
   page?: number,
   limit?: number
 }) {
@@ -129,6 +132,8 @@ export default async function ProductsGrid({
   sort_order = "desc",
   search,
   endpoint,
+  display = "variants",
+  showPagination = true,
   page = 1,
   limit = 20
 }: ProductsGridProps) {
@@ -150,6 +155,7 @@ export default async function ProductsGrid({
       sort_order,
       search,
       endpoint,
+      display,
       page,
       limit
     })
@@ -220,7 +226,7 @@ export default async function ProductsGrid({
       </ul>
 
       {/* Pagination */}
-      {pagination && pagination.total_pages > 1 && (
+      {showPagination && pagination && pagination.total_pages > 1 && (
         <div className="flex justify-center mt-12">
           <div className="flex items-center gap-2">
             {pagination.has_previous && (
@@ -228,6 +234,7 @@ export default async function ProductsGrid({
                 href={buildPageHref(pagination.current_page - 1, {
                   category, brand, min_price, max_price, in_stock, featured, bestseller,
                   new: isNew, sort_by, sort_order, search, limit,
+                  display,
                 })}
                 className="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
               >

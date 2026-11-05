@@ -29,11 +29,11 @@ interface AddToWishListProps {
   productTitle?: string
   className?: string
   iconSize?: string
-
-
+  variant?: "overlay" | "button";
 }
 
-const AddToWishList = ({ variantId, productTitle, className, iconSize }: AddToWishListProps) => {
+const AddToWishList = ({ variantId, productTitle, className, iconSize,variant = "overlay",
+ }: AddToWishListProps) => {
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const router = useRouter()
@@ -134,20 +134,45 @@ const AddToWishList = ({ variantId, productTitle, className, iconSize }: AddToWi
 
   return (
     <>
-      <button
-        onClick={handleWishlistAction}
-        disabled={isAdding || !hasHydrated}
-        className={`absolute flex gap-1 items-center bottom-2 md:bottom-4 left-2 md:left-4 rounded-full bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed  scale-80 md:scale-100 ${className}`}
-        aria-label={
-          !hasHydrated ? 'Loading...' :
-            isAdding ? 'Processing...' :
-              isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'
-        }
-      >
-        <Heart
-          className={`w-4 ${iconSize} ${isInWishlist ? 'fill-primary stroke-primary' : ''} ${isAdding ? 'animate-pulse' : ''}`}
-        />
-      </button>
+     
+<button
+  type="button"
+  onClick={handleWishlistAction}
+  disabled={isAdding || !hasHydrated}
+  className={
+    variant === "button"
+      ? `inline-flex h-9 w-full items-center justify-center gap-1.5
+         rounded-md border border-border bg-background px-2
+         text-xs font-medium text-foreground transition-colors
+         hover:bg-accent hover:text-accent-foreground
+         disabled:cursor-not-allowed disabled:opacity-50
+         ${className ?? ""}`
+      : `absolute bottom-2 left-2 flex items-center gap-1
+         rounded-full bg-black/60 px-2 py-2 text-xs text-white
+         transition-colors hover:bg-black/80
+         disabled:cursor-not-allowed disabled:opacity-50
+         md:bottom-4 md:left-4 ${className ?? ""}`
+  }
+  aria-label={
+    !hasHydrated
+      ? "Loading wishlist"
+      : isAdding
+        ? "Processing wishlist"
+        : isInWishlist
+          ? "Remove from wishlist"
+          : "Add to wishlist"
+  }
+>
+  <Heart
+    className={`size-4 ${
+      isInWishlist ? "fill-primary text-primary" : ""
+    } ${isAdding ? "animate-pulse" : ""} ${iconSize ?? ""}`}
+  />
+  {variant === "button" && (
+    <span>{isInWishlist ? "Saved" : "Wishlist"}</span>
+  )}
+</button>
+
 
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
         <DialogContent className="sm:max-w-[425px]" onClick={(e) => e.stopPropagation()}>

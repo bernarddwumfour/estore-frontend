@@ -52,12 +52,15 @@ const Product = ({ product, isMinimal = false }: ProductProps) => {
   }
 
   const stockDisplay = getStockDisplay()
+  const productHref = product.variant_slug
+    ? `/products/${product.slug}/${product.variant_slug}`
+    : `/products/${product.slug}`
 
   return (
     <li className="group relative list-none flex flex-col justify-between bg-white overflow-hidden transition-all duration-300">
 
       {/* Upper Content and Image Structure */}
-      <Link href={`/products/${product.slug}`} className="block w-full">
+      <Link href={productHref} className="block w-full">
 
         {/* Top Section: Media Container */}
         <div className={`relative bg-[#f8f9fa] rounded-[2rem] overflow-hidden border border-slate-100/50 transition-all duration-300 group-hover:bg-[#f1f3f5] flex items-center justify-center

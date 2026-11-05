@@ -57,6 +57,7 @@ export const endpoints = {
       orderReviewCreate: "/products/orders/:id/reviews/create",
       productReviewCreate: "/products/:slug/reviews/create",
       productReviewHelpful: "/products/reviews/product/:id/helpful",
+      featuredReviews: "/products/reviews/featured",
       getReviews: "/products/:slug/reviews",
 
 

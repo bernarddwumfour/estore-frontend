@@ -17,6 +17,7 @@ export interface ProductVariantImage {
 
 export interface ProductVariant {
   id: string;
+  slug?: string;
   sku: string;  // Masked for non-admin users
   attributes: VariantAttributes;
   price: number;
@@ -56,6 +57,8 @@ export interface ProductType {
   id: string;
   title: string;
   slug: string;
+  /** Present only when this card represents one purchasable variant. */
+  variant_slug?: string;
   description: string;
   features: string[];
   options: Record<string, string[]>;

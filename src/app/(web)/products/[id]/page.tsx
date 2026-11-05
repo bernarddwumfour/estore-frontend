@@ -31,6 +31,7 @@ interface ProductDetailData {
   is_new: boolean;
   variants: Array<{
     id: string;
+    slug: string;
     sku: string;
     attributes: Record<string, string>;
     price: number;
@@ -83,12 +84,13 @@ async function getProductDetail(slug: string): Promise<ProductDetailData | null>
   }
 }
 
-export default async function ProductDetailPage({
-  params,
+export async function ProductDetailPageContent({
+  id,
+  variantSlug,
 }: {
-  params: Promise<{ id: string }>
+  id: string;
+  variantSlug?: string;
 }) {
-  const { id } = await params
   const product = await getProductDetail(id)
 
   if (!product) {
@@ -101,7 +103,19 @@ export default async function ProductDetailPage({
     )
   }
 
-  const defaultVariant = product.variants.find(v => v.is_default) || product.variants[0]
+  const defaultVariant = variantSlug
+    ? product.variants.find(v => v.slug === variantSlug)
+    : product.variants.find(v => v.is_default) || product.variants[0]
+
+  if (!defaultVariant) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-32">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-red-600 mb-4">Product variant not found</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-32">
@@ -195,11 +209,6 @@ export default async function ProductDetailPage({
                 {defaultVariant.is_in_stock ? 'In Stock' : 'Out of Stock'}
               </p>
 
-              <ProductOptions
-                product={product}
-                defaultVariant={defaultVariant}
-              />
-
               <ExpandableFeatures
                 features={product.features}
                 Features={(<>
@@ -221,7 +230,8 @@ export default async function ProductDetailPage({
             </div>
 
             {/* Interactive Client Components */}
-            <CartActions product={product} />
+            <ProductOptions product={product} defaultVariant={defaultVariant} />
+            <CartActions product={product} selectedVariant={defaultVariant} />
 
             <div className="text-center pt-8">
               <Link
@@ -256,4 +266,13 @@ export default async function ProductDetailPage({
       </div>
     </div>
   )
+}
+
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params
+  return <ProductDetailPageContent id={id} />
 }

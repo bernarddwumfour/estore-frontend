@@ -27,6 +27,9 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
       ? defaultVariant.images
       : [];
   const rating = product.average_rating ?? 0;
+  const productHref = product.variant_slug
+    ? `/products/${product.slug}/${product.variant_slug}`
+    : `/products/${product.slug}`;
 
   return (
     <li className="group list-none flex flex-col">
@@ -51,7 +54,7 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
       </div>
 
       {/* Meta */}
-      <Link href={`/products/${product.slug}`} className="block px-1 pt-4">
+      <Link href={productHref} className="block px-1 pt-4">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-medium text-[#a6a08f]">
             {product.category?.name ?? "Furniture"}

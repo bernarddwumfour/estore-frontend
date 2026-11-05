@@ -2,47 +2,24 @@
 
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination } from 'swiper/modules';
-import Image from 'next/image';
 import { Star } from 'lucide-react';
 
 // Import Swiper styles
 import 'swiper/css';
 import 'swiper/css/pagination';
 
-const testimonials = [
-    {
-        name: 'Jane D.',
-        role: 'Verified Buyer',
-        text: 'My MacBook arrived in absolute flawless mint condition. Looks and runs exactly like brand new out of the box from Apple!',
-        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    },
-    {
-        name: 'Harsh P.',
-        role: 'Creative Director',
-        text: 'Traded in my old iPad system and upgraded here effortlessly. Got an incredible deal on an M3 device with perfect setup diagnostics.',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    },
-    {
-        name: 'Alex K.',
-        role: 'Software Engineer',
-        text: 'Incredible customer support. They walked me through the battery health and warranty matrices before shipping out my factory-sealed hardware.',
-        avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    },
-    {
-        name: 'Sarah M.',
-        role: 'Verified Buyer',
-        text: 'Best place to get premium Apple tech without paying standard retail premiums. Quick shipping, full warranty protection, and impeccable quality.',
-        avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    },
-    {
-        name: 'Alex K.',
-        role: 'Software Engineer',
-        text: 'Incredible customer support. They walked me through the battery health and warranty matrices before shipping out my factory-sealed hardware.',
-        avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-    },
-];
+export interface TestimonialReview {
+    id: string;
+    rating: number;
+    title: string;
+    comment: string;
+    user?: {
+        name?: string;
+        initials?: string;
+    };
+}
 
-export default function TestimonialsSlider() {
+export default function TestimonialsSlider({ reviews = [] }: { reviews?: TestimonialReview[] }) {
     return (
         <div className="w-full py-12">
             <Swiper
@@ -67,8 +44,13 @@ export default function TestimonialsSlider() {
                 }}
                 className="mySwiper pb-16 px-4 mx-auto"
             >
-                {testimonials.map((testimonial, index) => (
-                    <SwiperSlide key={index} className="h-auto flex">
+                {reviews.map((review) => {
+                    const name = review.user?.name || 'Verified customer';
+                    const initials = review.user?.initials || name.slice(0, 1);
+                    const rating = Math.max(0, Math.min(5, review.rating));
+
+                    return (
+                    <SwiperSlide key={review.id} className="h-auto flex">
                         <div className="group bg-[#f8f9fa] rounded-[2rem] p-6 flex flex-col justify-between border border-slate-100/60 transition-all duration-300 hover:bg-[#f1f3f5] w-full">
 
                             {/* Star Rating Section */}
@@ -76,40 +58,43 @@ export default function TestimonialsSlider() {
                                 <div className="flex items-center mb-5 gap-1">
                                     <div className="flex items-center gap-0.5">
                                         {[...Array(5)].map((_, i) => (
-                                            <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                            <Star
+                                                key={i}
+                                                className={`h-3.5 w-3.5 ${i < Math.round(rating)
+                                                    ? 'fill-amber-400 text-amber-400'
+                                                    : 'text-slate-200'
+                                                    }`}
+                                            />
                                         ))}
                                     </div>
-                                    <span className="text-xs font-extrabold text-slate-800 ml-1">5.0</span>
+                                    <span className="text-xs font-extrabold text-slate-800 ml-1">{rating.toFixed(1)}</span>
                                 </div>
 
                                 {/* Testimonial Body Text */}
                                 <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium tracking-tight mb-8">
-                                    "{testimonial.text}"
+                                    "{review.comment}"
                                 </p>
                             </div>
 
                             {/* User Profiler Block */}
                             <div className="flex items-center gap-4 border-t border-slate-200/50 pt-4">
-                                <Image
-                                    className="rounded-full h-9 w-9 object-cover border border-white shadow-xs"
-                                    src={testimonial.avatar}
-                                    alt={testimonial.name}
-                                    width={36}
-                                    height={36}
-                                />
+                                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white bg-slate-200 text-xs font-bold text-slate-700 shadow-xs">
+                                    {initials}
+                                </div>
                                 <div>
                                     <h5 className="text-slate-950 font-extrabold text-xs tracking-tight">
-                                        {testimonial.name}
+                                        {name}
                                     </h5>
                                     <span className="text-[11px] font-medium text-slate-400 block mt-0.5">
-                                        {testimonial.role}
+                                        {review.title || 'Verified review'}
                                     </span>
                                 </div>
                             </div>
 
                         </div>
                     </SwiperSlide>
-                ))}
+                    );
+                })}
             </Swiper>
         </div>
     );

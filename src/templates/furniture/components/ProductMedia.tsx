@@ -34,6 +34,9 @@ export default function ProductMedia({
 
   const available = defaultVariant?.is_in_stock === true;
   const current = images[index] || null;
+  const productHref = product.variant_slug
+    ? `/products/${product.slug}/${product.variant_slug}`
+    : `/products/${product.slug}`;
 
   const switchImage = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -71,7 +74,7 @@ export default function ProductMedia({
   return (
     <>
       <Link
-        href={`/products/${product.slug}`}
+        href={productHref}
         className="relative flex h-[88%] w-[88%] items-center justify-center mix-blend-multiply"
       >
         {current?.url ? (

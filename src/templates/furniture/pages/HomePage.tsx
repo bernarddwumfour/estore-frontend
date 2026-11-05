@@ -16,7 +16,9 @@ import type { ProductType } from "@/types/productTypes";
 import PromotionsCarousel from "@/app/(web)/products/(components)/Promotions/PromotionsCarousel";
 import HeroCarousel from "../components/HeroCarousel";
 import Faqs from "../components/Faqs";
-import TestimonialsCarousel from "../components/TestimonialsCarousel";
+import TestimonialsCarousel, {
+  type TestimonialReview,
+} from "../components/TestimonialsCarousel";
 
 export default function HomePage() {
   return (
@@ -26,7 +28,9 @@ export default function HomePage() {
       <ProductCollection />
       <Packages />
       <PromoBanners />
-      <Testimonials />
+      <Suspense fallback={null}>
+        <Testimonials />
+      </Suspense>
       <Blogs />
       <Instagram />
       <Faqs />
@@ -206,7 +210,7 @@ function ProductCollection() {
         <Categories />
       </Suspense>
       <Suspense fallback={<ProductsGridSkeleton />}>
-        <ProductsGrid />
+        <ProductsGrid limit={12} showPagination={false} />
       </Suspense>
     </section>
   );
@@ -283,13 +287,39 @@ function PromoBanner({
   );
 }
 
-function Testimonials() {
+async function getFeaturedReviews(): Promise<TestimonialReview[]> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "");
+
+    if (!baseUrl) return [];
+
+    const response = await fetch(`${baseUrl}${endpoints.products.reviews.featuredReviews}?limit=8`, {
+      next: { revalidate: 300, tags: ["featured-reviews"] },
+    });
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    return data?.success && Array.isArray(data?.data?.reviews)
+      ? data.data.reviews
+      : [];
+  } catch (error) {
+    console.error("Error fetching featured reviews:", error);
+    return [];
+  }
+}
+
+async function Testimonials() {
+  const reviews = await getFeaturedReviews();
+
+  if (reviews.length === 0) return null;
+
   return (
     <section className="container mx-auto px-4 py-16 lg:px-8">
       <SectionHeading tag="Testimonial">
         What <span className="text-[#3f4d2c]">Our Clients Say</span>
       </SectionHeading>
-      <TestimonialsCarousel />
+      <TestimonialsCarousel reviews={reviews} />
     </section>
   );
 }

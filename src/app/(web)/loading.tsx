@@ -1,11 +1,19 @@
-import Spinner from '@/widgets/loaders/Spinner'
+import Logo from "@/widgets/logo/Logo";
 
-const loading = () => {
+export default function WebLoading() {
   return (
-    <div className='minh-screen flex justify-center items-center'>
-        <Spinner size='lg'/>
+    <div
+      className="flex min-h-[70vh] items-center justify-center bg-white px-6"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading store"
+    >
+      <div className="flex flex-col items-center">
+        <Logo />
+        <p className="mt-3 text-xs font-semibold tracking-[0.18em] text-slate-400 uppercase">
+          <span className="web-loading-motto">Premium Apple Devices.</span>
+        </p>
+      </div>
     </div>
-  )
+  );
 }
-
-export default loading

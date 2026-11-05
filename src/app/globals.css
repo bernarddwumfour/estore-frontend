@@ -3,6 +3,32 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@keyframes web-loading-type {
+  0% {
+    width: 0;
+  }
+  100% {
+    width: 23ch;
+  }
+}
+
+@keyframes web-loading-caret {
+  50% {
+    border-color: transparent;
+  }
+}
+
+.web-loading-motto {
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 1px solid currentColor;
+  animation:
+    web-loading-type 1.8s steps(23, end) infinite alternate,
+    web-loading-caret 0.75s step-end infinite;
+}
+
 @theme inline {
 
   --color-background: var(--background);

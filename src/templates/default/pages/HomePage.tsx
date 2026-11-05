@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/accordion"
 import ProductVerticalCarousel from "@/app/(web)/products/(components)/ProductVerticalCarousel";
 import PromotionsCarousel from "@/app/(web)/products/(components)/Promotions/PromotionsCarousel";
+import { endpoints } from "@/constants/endpoints/endpoints";
+import type { TestimonialReview } from "@/widgets/slider/Slider";
 
 export default function HomePage() {
   return (
@@ -24,10 +26,12 @@ export default function HomePage() {
       <div className="pt-6 md:pt-12">
         <PromotionsCarousel />
       </div>
-      <Products1 />
+      <Products1 page={1} />
       <About />
-      <Products1 />
-      <Testimonials />
+      <Products1 page={2} />
+      <Suspense fallback={null}>
+        <Testimonials />
+      </Suspense>
     </>
   );
 }
@@ -216,7 +220,7 @@ function About() {
   )
 }
 
-function Products1() {
+function Products1({ page }: { page: number }) {
   return (
 
     <section className="relative py-24 bg-cover bg-center" >
@@ -236,7 +240,7 @@ function Products1() {
           </h3>
         </div>
         <Suspense fallback={<ProductsGridSkeleton />}>
-          <ProductsGrid />
+          <ProductsGrid page={page} limit={8} showPagination={false} />
         </Suspense>
       </div>
     </section>
@@ -270,7 +274,34 @@ function ProductCategories() {
 }
 
 
-function Testimonials() {
+async function getFeaturedReviews(): Promise<TestimonialReview[]> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "");
+
+    if (!baseUrl) return [];
+
+    const response = await fetch(
+      `${baseUrl}${endpoints.products.reviews.featuredReviews}?limit=8`,
+      { next: { revalidate: 300, tags: ["featured-reviews"] } },
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    return data?.success && Array.isArray(data?.data?.reviews)
+      ? data.data.reviews
+      : [];
+  } catch (error) {
+    console.error("Error fetching featured reviews:", error);
+    return [];
+  }
+}
+
+async function Testimonials() {
+  const reviews = await getFeaturedReviews();
+
+  if (reviews.length === 0) return null;
+
   return (
     <section className="py-24 bg-gray-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -287,7 +318,7 @@ function Testimonials() {
           </h3>
         </div>
 
-        <TestimonialsSlider />
+        <TestimonialsSlider reviews={reviews} />
       </div>
     </section>
   )

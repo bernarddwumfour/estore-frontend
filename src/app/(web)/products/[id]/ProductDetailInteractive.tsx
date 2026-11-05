@@ -95,6 +95,7 @@ export function ProductOptions({
   defaultVariant: any;
   onVariantChange?: (variant: any) => void;
 }) {
+  const router = useRouter();
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(
     defaultVariant.attributes || {}
   );
@@ -117,10 +118,19 @@ export function ProductOptions({
 
   // Handle option change
   const handleOptionChange = (optionKey: string, value: string) => {
-    setSelectedOptions(prev => ({
-      ...prev,
+    const nextOptions = {
+      ...selectedOptions,
       [optionKey]: value
-    }));
+    };
+    setSelectedOptions(nextOptions);
+
+    const nextVariant = product.variants.find((variant: any) =>
+      Object.keys(nextOptions).every(key => variant.attributes[key] === nextOptions[key])
+    );
+
+    if (nextVariant?.slug) {
+      router.push(`/products/${product.slug}/${nextVariant.slug}`);
+    }
   };
 
   // Check option availability
@@ -180,6 +190,42 @@ export function ProductOptions({
           </div>
         </div>
       ))}
+
+      {product.variants.length > 1 && (
+        <div className="pt-3">
+          <p className="mb-3 text-sm font-medium text-gray-900">Available configurations</p>
+          <div className="flex flex-wrap gap-3">
+            {product.variants.map((variant: any) => {
+              const image = variant.images?.[0];
+              const selected = variant.id === selectedVariant.id;
+              const label = Object.values(variant.attributes || {}).join(" · ");
+
+              return (
+                <button
+                  key={variant.id}
+                  type="button"
+                  onClick={() => {
+                    if (variant.slug) router.push(`/products/${product.slug}/${variant.slug}`);
+                  }}
+                  className={`group flex items-center gap-2 rounded-full border p-1 pr-3 text-left text-xs font-medium transition ${
+                    selected
+                      ? "border-gray-900 bg-gray-900 text-white"
+                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-500"
+                  }`}
+                  aria-label={`Select ${label}`}
+                >
+                  <span className="relative h-9 w-9 overflow-hidden rounded-full bg-gray-100">
+                    {image?.url ? (
+                      <Image src={image.url} alt={image.alt_text || label} fill className="object-cover" sizes="36px" />
+                    ) : null}
+                  </span>
+                  {label || "Configuration"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
