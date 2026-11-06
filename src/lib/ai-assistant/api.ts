@@ -47,6 +47,8 @@ export interface AssistantOrderDraft {
   shipping_options: Array<{ id: string; name: string; cost: number; estimated_days?: string }>;
   selected_shipping_method: string;
   shipping_address: { label: string };
+  payment_methods: Array<{ id: "pod" | "paystack"; name: string }>;
+  selected_payment_method: "pod" | "paystack" | "";
   error?: string;
 }
 

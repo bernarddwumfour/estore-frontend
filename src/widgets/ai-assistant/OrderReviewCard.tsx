@@ -10,7 +10,7 @@ import type { AssistantTheme } from "./theme";
 
 export function OrderReviewCard({ draft, theme }: { draft: AssistantOrderDraft; theme: AssistantTheme }) {
   const [shippingMethod, setShippingMethod] = useState(draft.selected_shipping_method);
-  const [paymentMethod, setPaymentMethod] = useState<"pod" | "paystack">("pod");
+  const [paymentMethod, setPaymentMethod] = useState<"pod" | "paystack" | "">(draft.selected_payment_method);
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
 
@@ -19,6 +19,7 @@ export function OrderReviewCard({ draft, theme }: { draft: AssistantOrderDraft; 
   const confirm = async () => {
     setLoading(true);
     try {
+      if (!paymentMethod) return;
       const result = await confirmAssistantOrder(draft, paymentMethod, shippingMethod);
       if (paymentMethod === "paystack" && result.payment?.authorization_url) {
         window.location.assign(result.payment.authorization_url);
@@ -40,9 +41,9 @@ export function OrderReviewCard({ draft, theme }: { draft: AssistantOrderDraft; 
     <select value={shippingMethod} onChange={(event) => setShippingMethod(event.target.value)} className="mt-3 h-9 w-full rounded-md border bg-background px-2 text-xs">
       {draft.shipping_options.map((option) => <option key={option.id} value={option.id}>{option.name} — {formatCurrency(option.cost)}</option>)}
     </select>
-    <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as "pod" | "paystack")} className="mt-2 h-9 w-full rounded-md border bg-background px-2 text-xs">
-      <option value="pod">Pay on delivery</option><option value="paystack">Pay securely with Paystack</option>
+    <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as "pod" | "paystack" | "")} className="mt-2 h-9 w-full rounded-md border bg-background px-2 text-xs">
+      {draft.payment_methods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
     </select>
-    <div className="mt-3 flex items-center justify-between"><span className="text-sm font-semibold">Total: {formatCurrency(draft.total)}</span>{complete ? <span className="flex items-center gap-1 text-xs text-emerald-600"><CheckCircle2 className="size-4" /> Confirmed</span> : <Button size="sm" disabled={loading || !shippingMethod} onClick={confirm} className={theme.cardPrimaryButton}>{loading ? <Loader2 className="size-4 animate-spin" /> : "Place order"}</Button>}</div>
+    <div className="mt-3 flex items-center justify-between"><span className="text-sm font-semibold">Total: {formatCurrency(draft.total)}</span>{complete ? <span className="flex items-center gap-1 text-xs text-emerald-600"><CheckCircle2 className="size-4" /> Confirmed</span> : <Button size="sm" disabled={loading || !shippingMethod || !paymentMethod} onClick={confirm} className={theme.cardPrimaryButton}>{loading ? <Loader2 className="size-4 animate-spin" /> : "Place order"}</Button>}</div>
   </section>;
 }
