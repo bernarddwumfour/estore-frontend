@@ -85,7 +85,8 @@ export function ProductImageGallery({
   );
 }
 
-// Product Options Component (with own state)
+// Compact configuration selector. A full variant is selected at once so the
+// customer never lands on an invalid combination of attributes.
 export function ProductOptions({
   product,
   defaultVariant,
@@ -96,105 +97,33 @@ export function ProductOptions({
   onVariantChange?: (variant: any) => void;
 }) {
   const router = useRouter();
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(
-    defaultVariant.attributes || {}
-  );
+  const selectedVariant = defaultVariant;
 
-  // Current selected variant based on options
-  const selectedVariant = useMemo(() => {
-    return (
-      product.variants.find((variant: any) =>
-        Object.keys(selectedOptions).every(key => variant.attributes[key] === selectedOptions[key])
-      ) || defaultVariant
-    );
-  }, [selectedOptions, product, defaultVariant]);
-
-  // Notify parent when variant changes
-  useEffect(() => {
-    if (onVariantChange) {
-      onVariantChange(selectedVariant);
-    }
-  }, [selectedVariant, onVariantChange]);
-
-  // Handle option change
-  const handleOptionChange = (optionKey: string, value: string) => {
-    const nextOptions = {
-      ...selectedOptions,
-      [optionKey]: value
-    };
-    setSelectedOptions(nextOptions);
-
-    const nextVariant = product.variants.find((variant: any) =>
-      Object.keys(nextOptions).every(key => variant.attributes[key] === nextOptions[key])
-    );
-
-    if (nextVariant?.slug) {
-      router.push(`/products/${product.slug}/${nextVariant.slug}`);
-    }
-  };
-
-  // Check option availability
-  const isOptionAvailable = (optionKey: string, value: string) => {
-    const testOptions = { ...selectedOptions, [optionKey]: value };
-    return product.variants.some((variant: any) =>
-      Object.keys(testOptions).every(key => variant.attributes[key] === testOptions[key])
-    );
-  };
-
-  if (!product.options || Object.keys(product.options).length === 0) {
+  if (!selectedVariant || product.variants.length === 0) {
     return null;
   }
 
   return (
-    <div className="space-y-1 mb-5 py-2">
-      <h3 className="text-lg font-medium mb-2">Options</h3>
-
-      {Object.entries(product.options).map(([optionKey, values]) => (
-        <div key={optionKey}>
-          <h3 className="text-sm font-medium capitalize mb-4">
-            {optionKey}:
-            <span className="ml-2 font-normal text-gray-700">
-              {selectedOptions[optionKey]}
+    <section className="mb-5 border-y border-gray-100 py-4">
+      <div>
+        <h3 className="mb-2 text-sm font-semibold text-gray-900">Current configuration</h3>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(selectedVariant.attributes || {}).map(([key, value]) => (
+            <span
+              key={key}
+              className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700"
+            >
+              <span className="font-semibold capitalize text-gray-900">{key.replaceAll('_', ' ')}:</span>{' '}
+              {String(value)}
             </span>
-          </h3>
-          <div className="flex flex-wrap gap-3">
-            {(values as string[]).map(value => {
-              const available = isOptionAvailable(optionKey, value);
-              const selected = selectedOptions[optionKey] === value;
-
-              return (
-                <label
-                  key={value}
-                  className={`
-                    px-2 py-1 border rounded-lg text-xs font-medium cursor-pointer transition-all
-                    ${selected
-                      ? 'border-gray-900 bg-gray-900 text-white shadow-md'
-                      : available
-                        ? 'border-gray-300 hover:border-gray-500 hover:shadow-sm'
-                        : 'border-gray-200 text-gray-400 cursor-not-allowed opacity-50'
-                    }
-                  `}
-                >
-                  <input
-                    type="radio"
-                    name={optionKey}
-                    value={value}
-                    checked={selected}
-                    onChange={() => handleOptionChange(optionKey, value)}
-                    className="sr-only"
-                  />
-                  {value}
-                </label>
-              );
-            })}
-          </div>
+          ))}
         </div>
-      ))}
+      </div>
 
       {product.variants.length > 1 && (
-        <div className="pt-3">
-          <p className="mb-3 text-sm font-medium text-gray-900">Available configurations</p>
-          <div className="flex flex-wrap gap-3">
+        <div className="pt-4">
+          <h3 className="mb-2 text-sm font-semibold text-gray-900">Available configurations</h3>
+          <div className="flex flex-wrap gap-2">
             {product.variants.map((variant: any) => {
               const image = variant.images?.[0];
               const selected = variant.id === selectedVariant.id;
@@ -205,6 +134,7 @@ export function ProductOptions({
                   key={variant.id}
                   type="button"
                   onClick={() => {
+                    onVariantChange?.(variant);
                     if (variant.slug) router.push(`/products/${product.slug}/${variant.slug}`);
                   }}
                   className={`group flex items-center gap-2 rounded-full border p-1 pr-3 text-left text-xs font-medium transition ${
@@ -226,7 +156,7 @@ export function ProductOptions({
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
 

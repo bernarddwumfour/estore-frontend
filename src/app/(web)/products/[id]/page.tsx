@@ -209,6 +209,8 @@ export async function ProductDetailPageContent({
                 {defaultVariant.is_in_stock ? 'In Stock' : 'Out of Stock'}
               </p>
 
+              <ProductOptions product={product} defaultVariant={defaultVariant} />
+
               <ExpandableFeatures
                 features={product.features}
                 Features={(<>
@@ -230,7 +232,6 @@ export async function ProductDetailPageContent({
             </div>
 
             {/* Interactive Client Components */}
-            <ProductOptions product={product} defaultVariant={defaultVariant} />
             <CartActions product={product} selectedVariant={defaultVariant} />
 
             <div className="text-center pt-8">
