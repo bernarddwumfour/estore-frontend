@@ -32,6 +32,21 @@ export interface AssistantResponse {
   response: string;
   created_at: string;
   products?: AssistantProduct[];
+  order_draft?: AssistantOrderDraft | null;
+}
+
+export interface AssistantOrderDraft {
+  id: string;
+  confirmation_token: string;
+  expires_at: string;
+  items: Array<{ title: string; quantity: number; attributes: Record<string, string>; unit_price: number }>;
+  subtotal: number;
+  total: number;
+  currency: string;
+  shipping_options: Array<{ id: string; name: string; cost: number; estimated_days?: string }>;
+  selected_shipping_method: string;
+  shipping_address: { label: string };
+  error?: string;
 }
 
 export interface SendMessagePayload {
@@ -126,4 +141,20 @@ export async function sendAssistantMessage(
 
     throw error;
   }
+}
+
+export async function confirmAssistantOrder(
+  draft: AssistantOrderDraft,
+  payment_method: "pod" | "paystack",
+  shipping_method: string,
+) {
+  const response = await securityAxios.post(`/assistant/orders/${draft.id}/confirm/`, {
+    confirmation_token: draft.confirmation_token,
+    payment_method,
+    shipping_method,
+  });
+  if (!response.data?.success || !response.data?.data) {
+    throw new Error(response.data?.message || "Unable to place order.");
+  }
+  return response.data.data;
 }

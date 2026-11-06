@@ -35,10 +35,12 @@ import {
 } from "./ChatMessage";
 
 import { ProductResults } from "./ProductResults";
+import { OrderReviewCard } from "./OrderReviewCard";
 
 import {
   sendAssistantMessage,
   type AssistantProduct,
+  type AssistantOrderDraft,
 } from "@/lib/ai-assistant/api";
 import type { AssistantTheme } from "./theme";
 
@@ -52,6 +54,7 @@ interface ChatAssistantProps {
 
 type AssistantChatMessage = ChatMessageData & {
   products?: AssistantProduct[];
+  orderDraft?: AssistantOrderDraft | null;
 };
 
 export function ChatAssistant({
@@ -162,6 +165,7 @@ export function ChatAssistant({
           role: "assistant",
           content: result.response,
           products: result.products ?? [],
+          orderDraft: result.order_draft ?? null,
         },
       ]);
     } catch (err) {
@@ -270,6 +274,9 @@ export function ChatAssistant({
                         theme={theme}
                       />
                     )}
+                  {message.role === "assistant" && message.orderDraft && (
+                    <OrderReviewCard draft={message.orderDraft} theme={theme} />
+                  )}
                 </div>
               ))}
 
