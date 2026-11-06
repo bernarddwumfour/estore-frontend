@@ -71,7 +71,7 @@ function ProductCard({
     !!selectedVariant && selectedVariant.is_in_stock;
 
   const inCart = selectedVariant
-    ? isInCart(selectedVariant.sku)
+    ? isInCart(`variant:${selectedVariant.id}`)
     : false;
 
   const selectedPrice = selectedVariant
@@ -85,7 +85,10 @@ function ProductCard({
   const handleAddToCart = () => {
     if (!selectedVariant?.is_in_stock) return;
 
-    if (isInCart(selectedVariant.sku)) {
+    // Public APIs mask SKUs, and different variants can share the same masked
+    // value. Use the unique variant ID as this assistant card's cart key.
+    const cartKey = `variant:${selectedVariant.id}`;
+    if (isInCart(cartKey)) {
       toast.info("This variant is already in your cart.");
       return;
     }
@@ -93,7 +96,7 @@ function ProductCard({
     addItem({
       id: product.id,
       slug: product.slug,
-      sku: selectedVariant.sku,
+      sku: cartKey,
       title: product.title,
       price:
         selectedVariant.discounted_price ??
