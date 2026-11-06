@@ -98,7 +98,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
             <>
               <ul className="space-y-6">
                 {items.map((item) => (
-                  <li key={item.sku} className="flex items-start gap-4">
+                  <li key={item.variantId || item.sku} className="flex items-start gap-4">
                     <Link href={!item.isBundle ? `/products/${item.slug}` : `/promotions/${item.slug}`} className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
                       <Image
                         width={88}
@@ -184,7 +184,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                       <div className="mt-3 flex items-center gap-1">
                         <button
                           className="h-5 w-5 border border-gray-300 rounded-sm text-sm font-medium transition hover:bg-gray-50"
-                          onClick={() => updateQuantity(item.sku, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.variantId || item.sku, item.quantity - 1)}
                         >
                           -
                         </button>
@@ -193,7 +193,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                         </span>
                         <button
                           className="h-5 w-5 border border-gray-300 rounded-sm text-sm font-medium transition hover:bg-gray-50"
-                          onClick={() => updateQuantity(item.sku, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.variantId || item.sku, item.quantity + 1)}
                         >
                           +
                         </button>
@@ -206,7 +206,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                       </p>
                       <button
                         className="mt-2 text-gray-600 transition hover:text-red-600"
-                        onClick={() => removeItem(item.sku)}
+                          onClick={() => removeItem(item.variantId || item.sku)}
                       >
                         <span className="sr-only">Remove item</span>
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-4">

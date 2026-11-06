@@ -54,8 +54,9 @@ const ProductActions = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const variantAvailable = isVariantAvailable(defaultVariant)
-  const inCart = isInCart(defaultVariant?.sku || '')
-  const quantity = getItemQuantity(defaultVariant?.sku || '')
+  const cartKey = defaultVariant?.id || defaultVariant?.sku || ''
+  const inCart = isInCart(cartKey)
+  const quantity = getItemQuantity(cartKey)
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -96,18 +97,19 @@ const ProductActions = ({
   const handleIncrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!defaultVariant?.sku) return
-    updateQuantity(defaultVariant.sku, quantity + 1)
+    if (!defaultVariant) return
+    updateQuantity(defaultVariant.id || defaultVariant.sku, quantity + 1)
   }
 
   const handleDecrement = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!defaultVariant?.sku) return
+    if (!defaultVariant) return
+    const key = defaultVariant.id || defaultVariant.sku
     if (quantity <= 1) {
-      removeItem(defaultVariant.sku)
+      removeItem(key)
     } else {
-      updateQuantity(defaultVariant.sku, quantity - 1)
+      updateQuantity(key, quantity - 1)
     }
   }
 
@@ -224,7 +226,7 @@ const ProductActions = ({
                             <div className="mt-3 flex items-center gap-1">
                               <button
                                 className="h-5 w-5 border border-gray-300 rounded-sm text-sm font-medium transition hover:bg-gray-50"
-                                onClick={() => updateQuantity(item.sku, item.quantity - 1)}
+                                onClick={() => updateQuantity(item.variantId || item.sku, item.quantity - 1)}
                               >
                                 -
                               </button>
@@ -233,7 +235,7 @@ const ProductActions = ({
                               </span>
                               <button
                                 className="h-5 w-5 border border-gray-300 rounded-sm text-sm font-medium transition hover:bg-gray-50"
-                                onClick={() => updateQuantity(item.sku, item.quantity + 1)}
+                                onClick={() => updateQuantity(item.variantId || item.sku, item.quantity + 1)}
                               >
                                 +
                               </button>
@@ -246,7 +248,7 @@ const ProductActions = ({
                             </p>
                             <button
                               className="mt-2 text-gray-600 transition hover:text-red-600"
-                              onClick={() => removeItem(item.sku)}
+                              onClick={() => removeItem(item.variantId || item.sku)}
                             >
                               <span className="sr-only">Remove item</span>
                               <Trash2 className='w-4' />

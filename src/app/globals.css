@@ -5,28 +5,18 @@
 
 @keyframes web-loading-type {
   0% {
-    width: 0;
+    clip-path: inset(0 100% 0 0);
   }
   100% {
-    width: 23ch;
-  }
-}
-
-@keyframes web-loading-caret {
-  50% {
-    border-color: transparent;
+    clip-path: inset(0 0 0 0);
   }
 }
 
 .web-loading-motto {
   display: inline-block;
-  width: 0;
-  overflow: hidden;
+  width: max-content;
   white-space: nowrap;
-  border-right: 1px solid currentColor;
-  animation:
-    web-loading-type 1.8s steps(23, end) infinite alternate,
-    web-loading-caret 0.75s step-end infinite;
+  animation: web-loading-type 2.4s steps(22, end) infinite alternate;
 }
 
 @theme inline {

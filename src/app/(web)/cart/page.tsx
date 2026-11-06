@@ -60,7 +60,7 @@ export default function CartPage() {
             <div className="bg-white border border-gray-100 rounded-lg p-6">
               <ul className="space-y-6">
                 {items.map((item) => (
-                  <li key={item.sku} className="flex flex-col gap-4 pb-6 border-b border-gray-100 last:border-0">
+                  <li key={item.variantId || item.sku} className="flex flex-col gap-4 pb-6 border-b border-gray-100 last:border-0">
                     {/* Main Item Row */}
                     <div className="flex gap-4">
                       <div className="relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 bg-gray-50">
@@ -106,14 +106,14 @@ export default function CartPage() {
                           <div className="flex items-center gap-3">
                             <button
                               className="h-8 w-8 border border-gray-300 rounded-md font-medium hover:bg-gray-50 transition"
-                              onClick={() => updateQuantity(item.sku, item.quantity - 1)}
+                              onClick={() => updateQuantity(item.variantId || item.sku, item.quantity - 1)}
                             >
                               -
                             </button>
                             <span className="font-medium w-12 text-center">{item.quantity}</span>
                             <button
                               className="h-8 w-8 border border-gray-300 rounded-md font-medium hover:bg-gray-50 transition"
-                              onClick={() => updateQuantity(item.sku, item.quantity + 1)}
+                              onClick={() => updateQuantity(item.variantId || item.sku, item.quantity + 1)}
                             >
                               +
                             </button>
@@ -122,7 +122,7 @@ export default function CartPage() {
                             variant="ghost"
                             size="sm"
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => removeItem(item.sku)}
+                            onClick={() => removeItem(item.variantId || item.sku)}
                           >
                             <Trash size={16} className="mr-1" />
                             Remove

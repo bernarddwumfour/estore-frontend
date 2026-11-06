@@ -28,6 +28,11 @@ export interface CartItem {
   bundleItems?: BundleItem[]
 }
 
+const matchesCartIdentity = (item: CartItem, key: string, items: CartItem[]) =>
+  items.some((candidate) => candidate.variantId === key)
+    ? item.variantId === key
+    : item.sku === key
+
 interface CartStore {
   items: CartItem[]
   hasHydrated: boolean
@@ -61,12 +66,18 @@ export const useCartStore = create<CartStore>()(
       addItem: (newItem) => {
         const quantity = newItem.quantity || 1
         set((state) => {
-          const existingItem = state.items.find((i) => i.sku === newItem.sku)
+          // Public SKUs are masked and can collide across sibling variants.
+          // A concrete variant ID is the cart identity whenever available.
+          const matchesItem = (item: CartItem) =>
+            newItem.variantId && item.variantId
+              ? item.variantId === newItem.variantId
+              : item.sku === newItem.sku
+          const existingItem = state.items.find(matchesItem)
 
           if (existingItem) {
             return {
               items: state.items.map((i) =>
-                i.sku === newItem.sku
+                matchesItem(i)
                   ? { ...i, quantity: i.quantity + quantity }
                   : i
               ),
@@ -119,7 +130,7 @@ export const useCartStore = create<CartStore>()(
 
       removeItem: (sku) => {
         set((state) => ({
-          items: state.items.filter((item) => item.sku !== sku),
+          items: state.items.filter((item) => !matchesCartIdentity(item, sku, state.items)),
         }))
       },
 
@@ -130,7 +141,7 @@ export const useCartStore = create<CartStore>()(
         }
         set((state) => ({
           items: state.items.map((item) =>
-            item.sku === sku ? { ...item, quantity } : item
+            matchesCartIdentity(item, sku, state.items) ? { ...item, quantity } : item
           ),
         }))
       },
@@ -151,11 +162,13 @@ export const useCartStore = create<CartStore>()(
       },
 
       isInCart: (sku) => {
-        return get().items.some((item) => item.sku === sku)
+        const items = get().items
+        return items.some((item) => matchesCartIdentity(item, sku, items))
       },
 
       getItemQuantity: (sku) => {
-        const item = get().items.find((item) => item.sku === sku)
+        const items = get().items
+        const item = items.find((item) => matchesCartIdentity(item, sku, items))
         return item ? item.quantity : 0
       },
 

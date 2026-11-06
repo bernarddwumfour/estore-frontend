@@ -200,7 +200,7 @@ export function CartActions({
 
   // Cart status for current variant - use is_in_stock instead of stock
   const cartItem = isMounted && selectedVariant
-    ? items.find(item => item.sku === selectedVariant.sku)
+    ? items.find(item => selectedVariant.id ? item.variantId === selectedVariant.id : item.sku === selectedVariant.sku)
     : null;
 
   const cartQuantity = cartItem?.quantity || 0;
@@ -238,15 +238,15 @@ export function CartActions({
 
     const newQuantity = cartQuantity + delta;
     if (newQuantity <= 0) {
-      removeItem(selectedVariant.sku);
+      removeItem(selectedVariant.id || selectedVariant.sku);
     } else {
-      updateQuantity(selectedVariant.sku, newQuantity);
+      updateQuantity(selectedVariant.id || selectedVariant.sku, newQuantity);
     }
   };
 
   const handleRemoveFromCart = () => {
     if (!selectedVariant) return;
-    removeItem(selectedVariant.sku);
+    removeItem(selectedVariant.id || selectedVariant.sku);
   };
 
   // Get button text based on stock status
