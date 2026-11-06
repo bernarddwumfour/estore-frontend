@@ -157,7 +157,8 @@ export default function ProfilePage() {
           const value = formData[field as keyof typeof formData];
           if (value) addressData[field] = value;
         });
-        payload.address_data = addressData;
+        // The profile API accepts address fields at the request root.
+        Object.assign(payload, addressData);
       }
 
       console.log("Sending payload:", payload);

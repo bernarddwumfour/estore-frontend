@@ -34,6 +34,8 @@ export interface AssistantResponse {
   created_at: string;
   products?: AssistantProduct[];
   order_draft?: AssistantOrderDraft | null;
+  order_tracking?: AssistantOrderTracking | null;
+  requires_shipping_address?: boolean;
 }
 
 export interface AssistantOrderDraft {
@@ -50,6 +52,46 @@ export interface AssistantOrderDraft {
   payment_methods: Array<{ id: "pod" | "paystack"; name: string }>;
   selected_payment_method: "pod" | "paystack" | "";
   error?: string;
+}
+
+export interface AssistantTrackedOrder {
+  order_number: string;
+  status: string;
+  status_display: string;
+  payment_status: string;
+  created_at: string;
+  total: number;
+  currency: string;
+  items: Array<{
+    product: string;
+    variant: Record<string, string>;
+    quantity: number;
+    image: string | null;
+  }>;
+  items_count: number;
+  shipment: {
+    status: string;
+    status_display: string;
+    carrier: string | null;
+    tracking_number: string | null;
+    tracking_url: string | null;
+    estimated_delivery: string | null;
+    shipped_at: string | null;
+    delivered_at: string | null;
+    tracking_history: Array<{
+      status: string;
+      status_display: string;
+      location: string | null;
+      description: string | null;
+      created_at: string;
+    }>;
+  } | null;
+}
+
+export interface AssistantOrderTracking {
+  orders: AssistantTrackedOrder[];
+  message?: string | null;
+  view?: "list" | "detail";
 }
 
 export interface SendMessagePayload {
