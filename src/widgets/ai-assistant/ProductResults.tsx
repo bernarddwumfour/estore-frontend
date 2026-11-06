@@ -55,9 +55,11 @@ function ProductCard({
 
   useEffect(() => {
     setSelectedVariantId(
-      variants.length === 1 ? variants[0].id : ""
+      product.selected_variant_id && variants.some((variant) => variant.id === product.selected_variant_id)
+        ? product.selected_variant_id
+        : variants.length === 1 ? variants[0].id : ""
     );
-  }, [product.id, product.variants]);
+  }, [product.id, product.variants, product.selected_variant_id]);
 
   const selectedVariant = variants.find(
     (variant) => variant.id === selectedVariantId

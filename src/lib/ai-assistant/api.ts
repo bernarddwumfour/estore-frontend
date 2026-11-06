@@ -22,6 +22,7 @@ export interface AssistantProduct {
   max_price: number | null;
   has_stock: boolean;
   image: string | null;
+  selected_variant_id?: string | null;
   variants?: AssistantProductVariant[];
 
 }
@@ -39,7 +40,7 @@ export interface AssistantOrderDraft {
   id: string;
   confirmation_token: string;
   expires_at: string;
-  items: Array<{ title: string; quantity: number; attributes: Record<string, string>; unit_price: number }>;
+  items: Array<{ product_id: string; variant_id: string; title: string; quantity: number; attributes: Record<string, string>; unit_price: number }>;
   subtotal: number;
   total: number;
   currency: string;
