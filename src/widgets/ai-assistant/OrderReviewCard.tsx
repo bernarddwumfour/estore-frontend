@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Package } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency";
@@ -34,8 +34,17 @@ export function OrderReviewCard({ draft, theme }: { draft: AssistantOrderDraft; 
 
   return <section className={`rounded-xl border p-3 ${theme.productCard}`}>
     <p className="text-sm font-semibold">Review your order</p>
-    <div className="mt-2 space-y-1 text-xs">
-      {draft.items.map((item, index) => <p key={index}>{item.quantity}× {item.title} · {formatCurrency(item.unit_price)}</p>)}
+    <div className="mt-2 space-y-3 text-xs">
+      {draft.items.map((item, index) => <div key={index} className="flex items-center gap-3 rounded-lg border p-2">
+        <div className="relative size-14 shrink-0 overflow-hidden rounded-md bg-white">
+          {item.image ? <img src={item.image} alt={item.title} className="size-full object-contain" /> : <div className="flex size-full items-center justify-center"><Package className="size-5 text-muted-foreground" /></div>}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">{item.title}</p>
+          <p className="text-muted-foreground">{Object.entries(item.attributes).map(([key, value]) => `${key.replaceAll('_', ' ')}: ${value}`).join(' · ')}</p>
+          <p>{item.quantity} × {formatCurrency(item.unit_price)}</p>
+        </div>
+      </div>)}
       <p className="pt-1 text-muted-foreground">Deliver to: {draft.shipping_address.label}</p>
     </div>
     <select value={shippingMethod} onChange={(event) => setShippingMethod(event.target.value)} className="mt-3 h-9 w-full rounded-md border bg-background px-2 text-xs">
