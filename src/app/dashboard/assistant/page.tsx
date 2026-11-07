@@ -1,0 +1,327 @@
+'use client';
+
+import { useState, type FormEvent } from 'react';
+import { AxiosError } from 'axios';
+import { Bot, Check, Loader2, Send, Sparkles, X } from 'lucide-react';
+
+import { useAuth } from '@/lib/use-auth';
+import { DataTable } from '@/widgets/custom-table/DataTable';
+import {
+  confirmAdminAction,
+  prepareAdminBulkProductAction,
+  prepareAdminMarketingAction,
+  sendAdminAgentMessage,
+  type AdminResultTable,
+  type PendingAdminAction,
+} from '@/lib/admin-assistant/api';
+
+type Message = {
+  id: number;
+  role: 'user' | 'assistant';
+  text: string;
+  actions?: PendingAdminAction[];
+  tables?: AdminResultTable[];
+};
+
+function tableValue(row: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((value, part) => {
+    if (!value || typeof value !== 'object') return undefined;
+    return (value as Record<string, unknown>)[part];
+  }, row);
+}
+
+function tableIntro(tables: AdminResultTable[]): string {
+  return tables.map(table => {
+    const subjects: Record<string, string> = {
+      Products: 'products',
+      Variants: 'variants',
+      Categories: 'categories',
+      'Inventory health': 'at-risk inventory items',
+      Users: 'users',
+      Affiliates: 'affiliates',
+      Promotions: 'promotions',
+      'Discount codes': 'discount codes',
+      'Blog posts': 'blog posts',
+      Reviews: 'reviews',
+    };
+    const subject = subjects[table.title] ?? table.title.toLowerCase();
+    if (!table.total) return `No matching ${subject} were found.`;
+    return `Showing ${table.rows.length} of ${table.total} ${subject} matching your request.`;
+  }).join(' ');
+}
+
+function ResultTable({ table, onPrepareAction }: {
+  table: AdminResultTable;
+  onPrepareAction: (entity: 'product' | 'promotion' | 'discount_code' | 'blog_post' | 'review', selected: Array<Record<string, unknown> & { id: string | number }>, action: string) => void;
+}) {
+  const hasImages = ['Products', 'Variants', 'Categories', 'Promotions', 'Blog posts'].includes(table.title);
+  const rows = table.rows.map((row, index) => {
+    const displayRow: Record<string, unknown> & { id: string | number } = {
+      id: String(row.id ?? row.variant_id ?? row.user_id ?? `${table.title}-${index}`),
+    };
+    if (hasImages) {
+      const directImages = Array.isArray(row.images)
+        ? row.images.map(image => typeof image === 'string' ? image : (image as Record<string, unknown>)?.url).filter((url): url is string => typeof url === 'string' && Boolean(url))
+        : [];
+      const product = row.default_variant as Record<string, unknown> | null;
+      const defaultImages = Array.isArray(product?.images)
+        ? product.images.map(image => (image as Record<string, unknown>)?.url).filter((url): url is string => typeof url === 'string' && Boolean(url))
+        : [];
+      const variants = Array.isArray(row.variants) ? row.variants as Array<Record<string, unknown>> : [];
+      const variantImages = variants.flatMap(variant => Array.isArray(variant.images)
+        ? variant.images.map(image => (image as Record<string, unknown>)?.url).filter((url): url is string => typeof url === 'string' && Boolean(url))
+        : []);
+      const categoryImage = typeof row.image === 'string' ? [row.image] : [];
+      const coverImage = typeof row.cover_image_url === 'string' ? [row.cover_image_url] : [];
+      displayRow.images = directImages.length ? directImages : defaultImages.length ? defaultImages : variantImages.length ? variantImages : categoryImage.length ? categoryImage : coverImage;
+    }
+    for (const column of table.columns) {
+      const key = column.key.replace(/\.([a-z])/g, (_, letter: string) => letter.toUpperCase()).replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+      displayRow[key] = tableValue(row, column.key);
+    }
+    return displayRow;
+  });
+
+  return (
+    <section className="mt-3 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-3 py-2 dark:border-slate-700">
+        <h3 className="text-sm font-semibold">{table.title}</h3>
+        <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">{table.total} total</span>
+      </div>
+      <DataTable
+        data={rows}
+        excludeColumns={['id']}
+        images={hasImages ? { images: item => item.images as string[] } : {}}
+        bulkActions={table.title === 'Products' ? [
+          { label: 'Publish', onClick: selected => onPrepareAction('product', selected, 'publish') },
+          { label: 'Set to draft', onClick: selected => onPrepareAction('product', selected, 'draft') },
+          { label: 'Archive', onClick: selected => onPrepareAction('product', selected, 'archive') },
+          { label: 'Feature', onClick: selected => onPrepareAction('product', selected, 'feature') },
+          { label: 'Unfeature', onClick: selected => onPrepareAction('product', selected, 'unfeature') },
+          { label: 'Delete', variant: 'destructive', onClick: selected => onPrepareAction('product', selected, 'delete') },
+        ] : table.title === 'Promotions' ? [
+          { label: 'Activate', onClick: selected => onPrepareAction('promotion', selected, 'activate') },
+          { label: 'Pause', onClick: selected => onPrepareAction('promotion', selected, 'pause') },
+          { label: 'Delete', variant: 'destructive', onClick: selected => onPrepareAction('promotion', selected, 'delete') },
+        ] : table.title === 'Discount codes' ? [
+          { label: 'Activate', onClick: selected => onPrepareAction('discount_code', selected, 'activate') },
+          { label: 'Deactivate', onClick: selected => onPrepareAction('discount_code', selected, 'deactivate') },
+        ] : table.title === 'Blog posts' ? [
+          { label: 'Publish', onClick: selected => onPrepareAction('blog_post', selected, 'publish') },
+          { label: 'Archive', onClick: selected => onPrepareAction('blog_post', selected, 'archive') },
+          { label: 'Delete', variant: 'destructive', onClick: selected => onPrepareAction('blog_post', selected, 'delete') },
+        ] : table.title === 'Reviews' ? [
+          { label: 'Approve', onClick: selected => onPrepareAction('review', selected, 'approve') },
+          { label: 'Reject', variant: 'destructive', onClick: selected => onPrepareAction('review', selected, 'reject') },
+        ] : []}
+        bulkActionsMessage="Select rows to prepare an action"
+        emptyTitle="No matching records"
+        emptyDescription="No records matched this request."
+      />
+      {table.pagination && <p className="border-t border-slate-200 px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+        Page {String(table.pagination.current_page ?? '—')} of {String(table.pagination.total_pages ?? '—')}
+      </p>}
+    </section>
+  );
+}
+
+function errorText(error: unknown): string {
+  if (error instanceof AxiosError) {
+    return error.response?.data?.message || error.message;
+  }
+  return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+}
+
+function ActionCard({ action, onConfirmed }: {
+  action: PendingAdminAction;
+  onConfirmed: (actionId: string, result: unknown) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [error, setError] = useState('');
+
+  if (dismissed) return null;
+
+  const confirm = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const result = await confirmAdminAction(action.confirmation_path);
+      onConfirmed(action.action_id, result);
+      setDismissed(true);
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mt-4 rounded-2xl border border-slate-300 bg-slate-50 p-4 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold">Review {action.action.replaceAll('_', ' ')}</h3>
+        <span className="text-xs text-slate-500 dark:text-slate-400">Expires in 10 minutes</span>
+      </div>
+      <dl className="mt-3 space-y-1 text-sm">
+        {action.details.target_id && <div><dt className="inline font-medium">Target: </dt><dd className="inline break-all">{action.details.target_id}</dd></div>}
+        {action.details.target_summary && <div><dt className="inline font-medium">Account: </dt><dd className="inline">{action.details.target_summary}</dd></div>}
+        {action.details.bulk_action && <div><dt className="inline font-medium">Action: </dt><dd className="inline">{action.details.bulk_action}</dd></div>}
+        {action.details.ids.length > 0 && <div><dt className="inline font-medium">Items: </dt><dd className="inline">{action.details.ids.length}</dd></div>}
+        {Object.entries(action.details.data).map(([key, value]) => (
+          <div key={key} className="grid grid-cols-[8rem_minmax(0,1fr)] gap-2">
+            <dt className="font-medium capitalize">{key.replaceAll('_', ' ')}</dt>
+            <dd className="break-words">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd>
+          </div>
+        ))}
+      </dl>
+      {error && <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
+      <div className="mt-4 flex gap-2">
+        <button type="button" disabled={busy} onClick={confirm}
+          className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+          Confirm change
+        </button>
+        <button type="button" disabled={busy} onClick={() => setDismissed(true)}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium dark:border-slate-700">
+          <X className="size-4" /> Dismiss
+        </button>
+      </div>
+    </section>
+  );
+}
+
+export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
+  const { user } = useAuth();
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const prepareTableAction = async (
+    entity: 'product' | 'promotion' | 'discount_code' | 'blog_post' | 'review',
+    selected: Array<Record<string, unknown> & { id: string | number }>,
+    action: string,
+  ) => {
+    const ids = selected.map(item => String(item.id));
+    const reviewTypes = [...new Set(selected.map(item => item.type).filter((type): type is string => typeof type === 'string'))];
+    if (entity === 'review' && reviewTypes.length !== 1) {
+      setError('Select reviews of one type at a time (product or order).');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const pendingAction = entity === 'product'
+        ? await prepareAdminBulkProductAction(ids, action)
+        : await prepareAdminMarketingAction(
+          entity, ids, action,
+          entity === 'review' ? reviewTypes[0] as 'product' | 'order' : undefined,
+        );
+      setMessages(current => [...current, {
+        id: Date.now(),
+        role: 'assistant',
+        text: `Review this ${action} ${entity.replaceAll('_', ' ')} action before confirming it.`,
+        actions: [pendingAction],
+      }]);
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const send = async (event: FormEvent) => {
+    event.preventDefault();
+    const message = input.trim();
+    if (!message || busy) return;
+    setInput('');
+    setError('');
+    setBusy(true);
+    setMessages(current => [...current, { id: Date.now(), role: 'user', text: message }]);
+    try {
+      const reply = await sendAdminAgentMessage(
+        message,
+        messages.slice(-12).map(({ role, text }) => ({ role, text })),
+      );
+      setMessages(current => [...current, {
+        id: Date.now() + 1, role: 'assistant',
+        // Use a compact table intro; the model's row-by-row answer would duplicate
+        // the structured rows in the table and in the history sent on the next turn.
+        text: reply.tables?.length ? tableIntro(reply.tables) : reply.response,
+        actions: reply.pending_actions || [],
+        tables: reply.tables || [],
+      }]);
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onConfirmed = (actionId: string, result: unknown) => {
+    setMessages(current => [...current, {
+      id: Date.now(), role: 'assistant',
+      text: `Change confirmed. Result: ${JSON.stringify(result)}`,
+    }]);
+  };
+
+  if (user && !['admin', 'staff'].includes(user.role || '')) {
+    return <div className="p-8 text-sm text-red-700">Admin or staff access is required.</div>;
+  }
+
+  return (
+    <div className={compact
+      ? 'flex h-full min-h-0 w-full flex-col p-4'
+      : 'mx-auto flex w-full max-w-5xl flex-1 flex-col p-4 sm:p-6 lg:p-8'}>
+      <div className={compact ? 'mb-3' : 'mb-6'}>
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+          <Sparkles className="size-3.5" /> Store management
+        </div>
+        <h1 className={compact ? 'text-lg font-bold text-slate-950 dark:text-white' : 'text-2xl font-bold text-slate-950 dark:text-white'}>Admin Agent</h1>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Ask about your catalog, promotions, discount codes, blog posts, and reviews. Confirm changes before they are applied.</p>
+      </div>
+
+      <div role="log" aria-label="Admin Agent conversation" className={compact
+        ? 'min-h-0 flex-1 space-y-5 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950'
+        : 'min-h-[26rem] flex-1 space-y-5 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950 sm:p-6'}>
+        {messages.length === 0 && (
+          <div className="flex min-h-72 flex-col items-center justify-center text-center">
+            <Bot className="mb-4 size-10 text-slate-700 dark:text-slate-300" />
+            <p className="font-semibold text-slate-900 dark:text-white">What would you like to manage?</p>
+            <p className="mt-1 max-w-md text-sm text-slate-500">Try “Show products with low stock” or “Find draft products”.</p>
+          </div>
+        )}
+        {messages.map(message => (
+          <div key={message.id} className={message.role === 'user' ? 'ml-auto max-w-[85%]' : message.tables?.length ? 'max-w-full' : 'max-w-[90%]'}>
+            {message.text && <div className={message.role === 'user'
+              ? 'whitespace-pre-wrap rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white dark:bg-slate-700'
+              : 'whitespace-pre-wrap rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-900 dark:bg-slate-900 dark:text-slate-100'}>
+              {message.text}
+            </div>}
+            {message.tables?.map((table, index) => <ResultTable key={`${table.title}-${index}`} table={table} onPrepareAction={prepareTableAction} />)}
+            {message.actions?.map(action => (
+              <ActionCard key={action.action_id} action={action} onConfirmed={onConfirmed} />
+            ))}
+          </div>
+        ))}
+        {busy && <p className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" /> Thinking…</p>}
+      </div>
+
+      <form onSubmit={send} className="mt-4 flex gap-3">
+        <label htmlFor="admin-agent-input" className="sr-only">Message Admin Agent</label>
+        <input id="admin-agent-input" value={input} onChange={event => setInput(event.target.value)}
+          maxLength={4000} placeholder="Ask about your catalog…"
+          className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+        <button type="submit" disabled={busy || !input.trim()}
+          className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 dark:bg-slate-700">
+          <Send className="size-4" /> Send
+        </button>
+      </form>
+      {error && <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
+    </div>
+  );
+}
+
+export default function AdminAssistantPage() {
+  return <AdminAssistantChat />;
+}
