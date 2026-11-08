@@ -190,6 +190,22 @@ function CreatePreview({ preview }: { preview: AdminActionPreview }) {
 }
 
 function DetailCard({ detail }: { detail: AdminEntityDetail }) {
+  const fields = Object.entries(detail.fields).filter(([, value]) => value !== '' && value != null);
+  const formatValue = (key: string, value: unknown) => {
+    if (typeof value === 'boolean') {
+      return <span className={`inline-flex rounded-full px-2 py-0.5 font-medium ${value ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{value ? 'Yes' : 'No'}</span>;
+    }
+    if (typeof value === 'string' && key.endsWith('_at')) {
+      const date = new Date(value);
+      if (!Number.isNaN(date.getTime())) {
+        return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+      }
+    }
+    if (key === 'slug') return <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] dark:bg-slate-800">{String(value)}</code>;
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  };
+
   return (
     <section className="mt-4 rounded-2xl border border-slate-300 bg-slate-50 p-4 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
       <h3 className="text-sm font-semibold">Detailed {detail.entity === 'promotion' ? 'promotion' : 'blog post'} · {detail.public_id}</h3>
@@ -207,10 +223,10 @@ function DetailCard({ detail }: { detail: AdminEntityDetail }) {
           </tr>)}</tbody>
         </table>
       </div>}
-      <dl className="mt-3 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
-        {Object.entries(detail.fields).map(([key, value]) => <div key={key} className="grid grid-cols-[8rem_minmax(0,1fr)] gap-2">
-          <dt className="font-medium capitalize">{key.replaceAll('_', ' ')}</dt>
-          <dd className="break-words">{value == null ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd>
+      <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+        {fields.map(([key, value]) => <div key={key} className="grid grid-cols-[8rem_minmax(0,1fr)] items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs dark:bg-slate-950">
+          <dt className="font-medium capitalize text-slate-500">{key === 'slug' ? 'URL slug' : key.replaceAll('_', ' ')}</dt>
+          <dd className="break-words">{formatValue(key, value)}</dd>
         </div>)}
       </dl>
     </section>
