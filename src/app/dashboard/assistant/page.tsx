@@ -191,6 +191,16 @@ function CreatePreview({ preview }: { preview: AdminActionPreview }) {
 
 function DetailCard({ detail }: { detail: AdminEntityDetail }) {
   const fields = Object.entries(detail.fields).filter(([, value]) => value !== '' && value != null);
+  const fieldLabel: Record<string, string> = {
+    slug: 'Article URL',
+    category: 'Category',
+    is_featured: 'Featured',
+    published_at: 'Published',
+    created_at: 'Created',
+    updated_at: 'Last updated',
+    starts_at: 'Starts',
+    ends_at: 'Ends',
+  };
   const formatValue = (key: string, value: unknown) => {
     if (typeof value === 'boolean') {
       return <span className={`inline-flex rounded-full px-2 py-0.5 font-medium ${value ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{value ? 'Yes' : 'No'}</span>;
@@ -201,7 +211,10 @@ function DetailCard({ detail }: { detail: AdminEntityDetail }) {
         return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
       }
     }
-    if (key === 'slug') return <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] dark:bg-slate-800">{String(value)}</code>;
+    if (key === 'slug' && detail.entity === 'blog_post') {
+      const path = `/blog/${String(value)}`;
+      return <a href={path} target="_blank" rel="noreferrer" className="break-all font-mono text-sky-700 underline decoration-sky-300 underline-offset-2 dark:text-sky-300">{path}</a>;
+    }
     if (typeof value === 'object') return JSON.stringify(value);
     return String(value);
   };
@@ -225,7 +238,7 @@ function DetailCard({ detail }: { detail: AdminEntityDetail }) {
       </div>}
       <dl className="mt-3 grid gap-2 sm:grid-cols-2">
         {fields.map(([key, value]) => <div key={key} className="grid grid-cols-[8rem_minmax(0,1fr)] items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs dark:bg-slate-950">
-          <dt className="font-medium capitalize text-slate-500">{key === 'slug' ? 'URL slug' : key.replaceAll('_', ' ')}</dt>
+          <dt className="font-medium text-slate-500">{fieldLabel[key] ?? key.replaceAll('_', ' ')}</dt>
           <dd className="break-words">{formatValue(key, value)}</dd>
         </div>)}
       </dl>
