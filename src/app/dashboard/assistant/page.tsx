@@ -12,6 +12,7 @@ import {
   prepareAdminBulkProductAction,
   prepareAdminMarketingAction,
   sendAdminAgentMessage,
+  type AdminEntityDetail,
   type AdminActionPreview,
   type AdminResultTable,
   type PendingAdminAction,
@@ -23,6 +24,7 @@ type Message = {
   text: string;
   actions?: PendingAdminAction[];
   tables?: AdminResultTable[];
+  details?: AdminEntityDetail[];
   attachments?: PickedMedia[];
 };
 
@@ -145,6 +147,7 @@ function CreatePreview({ preview }: { preview: AdminActionPreview }) {
           : <div className="flex aspect-[16/8] items-center justify-center bg-slate-100 text-sm text-slate-500 dark:bg-slate-900">No cover image selected</div>}
         <div className="p-4">
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold dark:bg-slate-800">{preview.public_id}</span>
             <span className="rounded-full bg-slate-100 px-2 py-1 capitalize dark:bg-slate-800">{preview.status}</span>
             <span>By {preview.author_name}</span>
           </div>
@@ -169,7 +172,7 @@ function CreatePreview({ preview }: { preview: AdminActionPreview }) {
         : <div className="flex aspect-[16/8] items-center justify-center bg-slate-100 text-sm text-slate-500 dark:bg-slate-900">No promotion images selected</div>}
       <div className="p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bundle offer</p><h4 className="mt-1 text-xl font-bold">{preview.name}</h4></div>
+          <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bundle offer · {preview.public_id}</p><h4 className="mt-1 text-xl font-bold">{preview.name}</h4></div>
           <p className="rounded-lg bg-slate-100 px-3 py-2 text-lg font-bold dark:bg-slate-800">{preview.bundle_price}</p>
         </div>
         {preview.description && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{preview.description}</p>}
@@ -186,6 +189,34 @@ function CreatePreview({ preview }: { preview: AdminActionPreview }) {
   );
 }
 
+function DetailCard({ detail }: { detail: AdminEntityDetail }) {
+  return (
+    <section className="mt-4 rounded-2xl border border-slate-300 bg-slate-50 p-4 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+      <h3 className="text-sm font-semibold">Detailed {detail.entity === 'promotion' ? 'promotion' : 'blog post'} · {detail.public_id}</h3>
+      <CreatePreview preview={detail.preview} />
+      {detail.items && detail.items.length > 0 && <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-100 dark:bg-slate-800"><tr>{['Product', 'SKU', 'Qty', 'Current price', 'Stock', 'Available'].map(label => <th key={label} className="px-3 py-2 font-semibold">{label}</th>)}</tr></thead>
+          <tbody>{detail.items.map((item, index) => <tr key={`${String(item.sku)}-${index}`} className="border-t border-slate-200 dark:border-slate-700">
+            <td className="px-3 py-2">{String(item.product_title ?? '')}{item.is_free ? ' (free)' : ''}</td>
+            <td className="px-3 py-2">{String(item.sku ?? '')}</td>
+            <td className="px-3 py-2">{String(item.quantity ?? '')}</td>
+            <td className="px-3 py-2">{String(item.current_price ?? '—')}</td>
+            <td className="px-3 py-2">{String(item.current_stock ?? '—')}</td>
+            <td className="px-3 py-2">{String(item.is_available ?? '—')}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>}
+      <dl className="mt-3 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+        {Object.entries(detail.fields).map(([key, value]) => <div key={key} className="grid grid-cols-[8rem_minmax(0,1fr)] gap-2">
+          <dt className="font-medium capitalize">{key.replaceAll('_', ' ')}</dt>
+          <dd className="break-words">{value == null ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd>
+        </div>)}
+      </dl>
+    </section>
+  );
+}
+
 function ActionCard({ action, onConfirmed }: {
   action: PendingAdminAction;
   onConfirmed: (actionId: string, result: unknown) => void;
@@ -195,8 +226,10 @@ function ActionCard({ action, onConfirmed }: {
   const [error, setError] = useState('');
   const preview = action.details.preview;
   const previewFields = preview?.type === 'blog_post'
-    ? new Set(['title', 'excerpt', 'content', 'cover_image_url', 'author_name', 'status'])
-    : preview?.type === 'promotion' ? new Set(['items', 'image_count']) : new Set<string>();
+    ? new Set(['title', 'post_code', 'excerpt', 'content', 'cover_image_url', 'author_name', 'status'])
+    : preview?.type === 'promotion'
+      ? new Set(['items', 'promotion_code', 'image_count', 'name', 'description', 'bundle_price'])
+      : new Set<string>();
 
   if (dismissed) return null;
 
@@ -312,13 +345,18 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
         messages.slice(-12).map(({ role, text }) => ({ role, text })),
         attachments.map(media => media.id).filter((id): id is string => Boolean(id)),
       );
+      const structuredIntro = [
+        ...(reply.tables?.length ? [tableIntro(reply.tables)] : []),
+        ...(reply.details || []).map(detail => `Here are the detailed ${detail.entity === 'promotion' ? 'promotion' : 'blog post'} details for ${detail.public_id}.`),
+      ];
       setMessages(current => [...current, {
         id: Date.now() + 1, role: 'assistant',
         // Use a compact table intro; the model's row-by-row answer would duplicate
         // the structured rows in the table and in the history sent on the next turn.
-        text: reply.tables?.length ? tableIntro(reply.tables) : reply.response,
+        text: structuredIntro.length ? structuredIntro.join(' ') : reply.response,
         actions: reply.pending_actions || [],
         tables: reply.tables || [],
+        details: reply.details || [],
       }]);
       setSelectedMedia([]);
     } catch (cause) {
@@ -372,6 +410,7 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
               {message.attachments.map(media => <img key={media.id ?? media.url} src={media.url} alt={media.title || 'Attached image'} className="size-20 rounded-lg border border-slate-200 object-cover dark:border-slate-700" />)}
             </div>}
             {message.tables?.map((table, index) => <ResultTable key={`${table.title}-${index}`} table={table} onPrepareAction={prepareTableAction} />)}
+            {message.details?.map((detail, index) => <DetailCard key={`${detail.public_id}-${index}`} detail={detail} />)}
             {message.actions?.map(action => (
               <ActionCard key={action.action_id} action={action} onConfirmed={onConfirmed} />
             ))}

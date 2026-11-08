@@ -18,6 +18,7 @@ export interface PendingAdminAction {
 export type AdminActionPreview =
   | {
       type: 'promotion';
+      public_id: string;
       name: string;
       description: string;
       bundle_price: string;
@@ -26,6 +27,7 @@ export type AdminActionPreview =
     }
   | {
       type: 'blog_post';
+      public_id: string;
       title: string;
       excerpt: string;
       content: string;
@@ -34,10 +36,19 @@ export type AdminActionPreview =
       status: string;
     };
 
+export interface AdminEntityDetail {
+  entity: 'promotion' | 'blog_post';
+  public_id: string;
+  preview: AdminActionPreview;
+  fields: Record<string, unknown>;
+  items?: Array<Record<string, unknown>>;
+}
+
 export interface AdminAgentReply {
   response: string;
   pending_actions: PendingAdminAction[];
   tables?: AdminResultTable[];
+  details?: AdminEntityDetail[];
 }
 
 export interface AdminResultTable {
