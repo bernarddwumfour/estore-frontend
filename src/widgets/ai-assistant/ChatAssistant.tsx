@@ -36,12 +36,15 @@ import {
 } from "./ChatMessage";
 
 import { ProductResults } from "./ProductResults";
+import { PromotionResults } from "./PromotionResults";
 import { OrderReviewCard } from "./OrderReviewCard";
 import { OrderTrackingCard } from "./OrderTrackingCard";
 
 import {
   sendAssistantMessage,
+  sendGuestAssistantMessage,
   type AssistantProduct,
+  type AssistantPromotion,
   type AssistantOrderDraft,
   type AssistantOrderTracking,
 } from "@/lib/ai-assistant/api";
@@ -57,6 +60,7 @@ interface ChatAssistantProps {
 
 type AssistantChatMessage = ChatMessageData & {
   products?: AssistantProduct[];
+  promotions?: AssistantPromotion[];
   orderDraft?: AssistantOrderDraft | null;
   orderTracking?: AssistantOrderTracking | null;
   requiresShippingAddress?: boolean;
@@ -87,6 +91,8 @@ export function ChatAssistant({
 
   useEffect(() => {
     try {
+      // Hydrate the launcher hint from browser-only preference storage.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowLauncherPrompt(
         window.localStorage.getItem("shopping-assistant-prompt-dismissed") !== "true"
       );
@@ -138,11 +144,6 @@ export function ChatAssistant({
 
     if (!message || sendingRef.current) return;
 
-    if (!token) {
-      setError("Please sign in to use the assistant.");
-      return;
-    }
-
     if (message.length > 4000) {
       setError(
         "Message cannot exceed 4000 characters."
@@ -170,15 +171,15 @@ export function ChatAssistant({
     abortRef.current = controller;
 
     try {
-      const result = await sendAssistantMessage(
-        {
-          message,
-          ...(conversationId
-            ? { conversation_id: conversationId }
-            : {}),
-        },
-        controller.signal
-      );
+      const result = token
+        ? await sendAssistantMessage(
+            { message, ...(conversationId ? { conversation_id: conversationId } : {}) },
+            controller.signal,
+          )
+        : await sendGuestAssistantMessage({
+            message,
+            history: messages.slice(-12).map(({ role, content }) => ({ role, content })),
+          }, controller.signal);
 
       if (controller.signal.aborted) return;
 
@@ -191,6 +192,7 @@ export function ChatAssistant({
           role: "assistant",
           content: result.response,
           products: result.products ?? [],
+          promotions: result.promotions ?? [],
           orderDraft: result.order_draft ?? null,
           orderTracking: result.order_tracking ?? null,
           requiresShippingAddress: result.requires_shipping_address ?? false,
@@ -364,10 +366,13 @@ export function ChatAssistant({
                     Boolean(message.products?.length) && (
                       <ProductResults
                         products={message.products ?? []}
-                        getProductHref={(product) => `/products/${product.slug}`}
+                        getProductHref={getProductHref ?? ((product) => `/products/${product.slug}`)}
                         theme={theme}
                       />
                     )}
+                  {message.role === "assistant" && Boolean(message.promotions?.length) && (
+                    <PromotionResults promotions={message.promotions ?? []} theme={theme} />
+                  )}
                   {message.role === "assistant" && message.orderDraft && (
                     <OrderReviewCard draft={message.orderDraft} theme={theme} />
                   )}
@@ -458,8 +463,7 @@ export function ChatAssistant({
                 size="icon"
                 disabled={
                   loading ||
-                  !input.trim() ||
-                  !token
+                  !input.trim()
                 }
                 aria-label="Send message"
                 className={`shrink-0 ${theme.primaryButton}`}
@@ -472,11 +476,9 @@ export function ChatAssistant({
               </Button>
             </form>
 
-            {!token && (
-              <p className={`mt-2 text-xs ${theme.mutedText}`}>
-                Sign in to use the shopping assistant.
-              </p>
-            )}
+            {!token && <p className={`mt-2 text-center text-xs ${theme.mutedText}`}>
+              Browsing as a guest. <Link href="/login" className="font-semibold underline">Sign in</Link> for wishlist and order features.
+            </p>}
 
             <p className={`mt-3 text-center text-xs ${theme.mutedText}`}>
               Verify product details before purchasing.

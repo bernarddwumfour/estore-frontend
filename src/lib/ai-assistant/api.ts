@@ -27,12 +27,27 @@ export interface AssistantProduct {
 
 }
 
+export interface AssistantPromotion {
+  slug: string;
+  name: string;
+  description: string;
+  bundle_price: number;
+  original_total: number;
+  savings_amount: number;
+  savings_percentage: number;
+  ends_at: string | null;
+  images: Array<{ url: string; alt_text: string }>;
+  items: Array<{ product_title: string; product_slug: string; quantity: number; is_free: boolean; attributes: Record<string, string>; image_url: string | null }>;
+  has_stock: boolean;
+}
+
 export interface AssistantResponse {
-  conversation_id: string;
+  conversation_id: string | null;
   message_id: string;
   response: string;
   created_at: string;
   products?: AssistantProduct[];
+  promotions?: AssistantPromotion[];
   order_draft?: AssistantOrderDraft | null;
   order_tracking?: AssistantOrderTracking | null;
   requires_shipping_address?: boolean;
@@ -97,6 +112,35 @@ export interface AssistantOrderTracking {
 export interface SendMessagePayload {
   message: string;
   conversation_id?: string;
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+}
+
+export async function sendGuestAssistantMessage(
+  payload: SendMessagePayload,
+  signal?: AbortSignal,
+): Promise<AssistantResponse> {
+  const message = payload.message.trim();
+  if (!message) throw new Error('Message cannot be empty.');
+  if (message.length > 4000) throw new Error('Message cannot exceed 4000 characters.');
+  try {
+    const response = await securityAxios.post<APIResponse<AssistantResponse>>(
+      '/assistant/guest/chat/',
+      { message, history: payload.history ?? [] },
+      { signal },
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.message || 'Unable to send message.');
+    }
+    return response.data.data;
+  } catch (error) {
+    if (axios.isCancel(error)) throw error;
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 429) throw new Error('Too many messages. Please try again later.');
+      if (error.response?.status && error.response.status >= 500) throw new Error('The shopping assistant is temporarily unavailable.');
+      throw new Error(error.response?.data?.message || error.message || 'Unable to send message.');
+    }
+    throw error;
+  }
 }
 
 interface APIResponse<T> {
