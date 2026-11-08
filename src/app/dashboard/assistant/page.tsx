@@ -194,16 +194,28 @@ function CreatePreview({ preview }: { preview: AdminActionPreview }) {
 }
 
 function DetailCard({ detail }: { detail: AdminEntityDetail }) {
-  const fields = Object.entries(detail.fields).filter(([, value]) => value !== '' && value != null);
+  const fields = Object.entries(detail.fields).filter(([key, value]) => key !== 'promotion_code' && value !== '' && value != null);
   const fieldLabel: Record<string, string> = {
-    slug: 'Article URL',
+    slug: 'URL slug',
+    promotion_code: 'Promotion ID',
     category: 'Category',
     is_featured: 'Featured',
+    status: 'Status',
     published_at: 'Published',
     created_at: 'Created',
     updated_at: 'Last updated',
     starts_at: 'Starts',
     ends_at: 'Ends',
+    original_total: 'Original total',
+    savings_amount: 'Total savings',
+    savings_percentage: 'Savings percentage',
+    has_stock: 'Stock available',
+    unavailable_items: 'Items with low stock',
+    bundle_cost: 'Bundle cost',
+    bundle_gross_profit: 'Bundle gross profit',
+    bundle_margin_percentage: 'Bundle margin',
+    meta_title: 'SEO title',
+    meta_description: 'SEO description',
   };
   const formatValue = (key: string, value: unknown) => {
     if (typeof value === 'boolean') {
@@ -215,13 +227,25 @@ function DetailCard({ detail }: { detail: AdminEntityDetail }) {
         return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
       }
     }
-    if (key === 'slug' && detail.entity === 'blog_post') {
-      const path = `/blog/${String(value)}`;
+    if (key === 'slug') {
+      const path = detail.entity === 'blog_post' ? `/blog/${String(value)}` : `/promotions/${String(value)}`;
       return <a href={path} target="_blank" rel="noreferrer" className="break-all font-mono text-sky-700 underline decoration-sky-300 underline-offset-2 dark:text-sky-300">{path}</a>;
     }
-    if (typeof value === 'object') return JSON.stringify(value);
+    if (Array.isArray(value)) {
+      if (value.length === 0) return 'None';
+      if (value.every(item => item == null || ['string', 'number', 'boolean'].includes(typeof item))) {
+        return value.map(String).join(', ');
+      }
+      return <ul className="space-y-1">{value.map((item, index) => <li key={index} className="rounded-md bg-slate-50 px-2 py-1 dark:bg-slate-900">
+        {item && typeof item === 'object' ? Object.entries(item).map(([itemKey, itemValue]) => <span key={itemKey} className="mr-3 inline-block"><span className="text-slate-500">{itemKey.replaceAll('_', ' ')}: </span>{String(itemValue)}</span>) : String(item)}
+      </li>)}</ul>;
+    }
+    if (value && typeof value === 'object') {
+      return <div className="space-y-1">{Object.entries(value).map(([itemKey, itemValue]) => <div key={itemKey}><span className="text-slate-500">{itemKey.replaceAll('_', ' ')}: </span>{String(itemValue)}</div>)}</div>;
+    }
     return String(value);
   };
+  const wideFields = new Set(['slug', 'unavailable_items', 'meta_title', 'meta_description']);
 
   return (
     <section className="mt-4 rounded-2xl border border-slate-300 bg-slate-50 p-4 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
@@ -240,10 +264,10 @@ function DetailCard({ detail }: { detail: AdminEntityDetail }) {
           </tr>)}</tbody>
         </table>
       </div>}
-      <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-        {fields.map(([key, value]) => <div key={key} className="grid grid-cols-[8rem_minmax(0,1fr)] items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs dark:bg-slate-950">
-          <dt className="font-medium text-slate-500">{fieldLabel[key] ?? key.replaceAll('_', ' ')}</dt>
-          <dd className="break-words">{formatValue(key, value)}</dd>
+      <dl className="mt-3 grid min-w-0 gap-2 sm:grid-cols-2">
+        {fields.map(([key, value]) => <div key={key} className={`min-w-0 rounded-lg bg-white px-3 py-2 text-xs dark:bg-slate-950 ${wideFields.has(key) ? 'sm:col-span-2' : ''}`}>
+          <dt className="mb-1 font-medium text-slate-500">{fieldLabel[key] ?? key.replaceAll('_', ' ')}</dt>
+          <dd className="min-w-0 whitespace-pre-wrap break-words">{formatValue(key, value)}</dd>
         </div>)}
       </dl>
     </section>
