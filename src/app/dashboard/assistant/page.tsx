@@ -551,9 +551,15 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
           className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200">
           <ImagePlus className="size-4" />
         </button>
-        <input id="admin-agent-input" value={input} onChange={event => setInput(event.target.value)}
-          maxLength={4000} placeholder="Ask about your store…"
-          className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+        <textarea id="admin-agent-input" value={input} onChange={event => setInput(event.target.value)}
+          onKeyDown={event => {
+            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              if (!busy && input.trim()) event.currentTarget.form?.requestSubmit();
+            }
+          }}
+          rows={2} maxLength={4000} placeholder="Ask about your store…" aria-label="Message Admin Agent"
+          className="min-w-0 max-h-32 min-h-11 flex-1 resize-none overflow-y-auto rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
         <button type="submit" disabled={busy || !input.trim()}
           className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 dark:bg-slate-700">
           <Send className="size-4" /> Send
