@@ -31,10 +31,11 @@ export interface AdminResultTable {
 export async function sendAdminAgentMessage(
   message: string,
   history: Array<{ role: 'user' | 'assistant'; text: string }> = [],
+  mediaIds: string[] = [],
 ): Promise<AdminAgentReply> {
   const response = await securityAxios.post<{ data: AdminAgentReply }>(
     "/assistant/admin/chat/",
-    { message, history },
+    { message, history, media_ids: mediaIds },
   );
   return response.data.data;
 }

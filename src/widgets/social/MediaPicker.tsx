@@ -14,6 +14,7 @@ import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
 import RefreshButton from '@/widgets/refresh-button/RefreshButton';
 
 export interface PickedMedia {
+    id?: string;
     url: string;
     type: 'image' | 'video';
     title?: string;
@@ -55,9 +56,10 @@ interface QueuedUpload {
     previewUrl: string;
 }
 
-function UploadTab({ remainingSlots, onSelect }: {
+function UploadTab({ remainingSlots, onSelect, mediaTypes }: {
     remainingSlots: number;
     onSelect: (media: PickedMedia[]) => void;
+    mediaTypes?: Array<'image' | 'video'>;
 }) {
     const [files, setFiles] = useState<QueuedUpload[]>([]);
     const [dragOver, setDragOver] = useState(false);
@@ -71,8 +73,13 @@ function UploadTab({ remainingSlots, onSelect }: {
 
     const uploadItem = (candidate: File): QueuedUpload | null => {
         const kind = fileKind(candidate.name);
-        if (!kind) {
-            toast.error(`Unsupported file type. Allowed: ${[...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS].join(', ')}`);
+        if (!kind || (mediaTypes && !mediaTypes.includes(kind))) {
+            const allowedExtensions = mediaTypes?.includes('image') && !mediaTypes.includes('video')
+                ? IMAGE_EXTENSIONS
+                : mediaTypes?.includes('video') && !mediaTypes.includes('image')
+                    ? VIDEO_EXTENSIONS
+                    : [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS];
+            toast.error(`Unsupported file type. Allowed: ${allowedExtensions.join(', ')}`);
             return null;
         }
         const maxMb = kind === 'image' ? MAX_IMAGE_MB : MAX_VIDEO_MB;
@@ -153,6 +160,7 @@ function UploadTab({ remainingSlots, onSelect }: {
             const mediaItems = uploaded
                 .filter((media: MediaItem) => media?.url)
                 .map((media: MediaItem) => ({
+                    id: media.id,
                     url: media.url,
                     type: media.media_type,
                     title: media.name,
@@ -175,7 +183,11 @@ function UploadTab({ remainingSlots, onSelect }: {
                 ref={inputRef}
                 type="file"
                 multiple
-                accept={[...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS].join(',')}
+                accept={(mediaTypes?.includes('image') && !mediaTypes.includes('video')
+                    ? IMAGE_EXTENSIONS
+                    : mediaTypes?.includes('video') && !mediaTypes.includes('image')
+                        ? VIDEO_EXTENSIONS
+                        : [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS]).join(',')}
                 className="hidden"
                 onChange={(e) => {
                     if (e.target.files?.length) pickFiles(Array.from(e.target.files));
@@ -204,7 +216,7 @@ function UploadTab({ remainingSlots, onSelect }: {
                         Click to choose files or drag them here
                     </p>
                     <p className="text-xs text-gray-500">
-                        {remainingSlots} slot{remainingSlots === 1 ? '' : 's'} left · Images up to {MAX_IMAGE_MB}MB · Videos up to {MAX_VIDEO_MB}MB
+                        {remainingSlots} slot{remainingSlots === 1 ? '' : 's'} left · Images up to {MAX_IMAGE_MB}MB{(!mediaTypes || mediaTypes.includes('video')) && ` · Videos up to ${MAX_VIDEO_MB}MB`}
                     </p>
                 </button>
             ) : (
@@ -270,10 +282,11 @@ function UploadTab({ remainingSlots, onSelect }: {
 
 /* ---------------- Library tab ---------------- */
 
-function LibraryTab({ selectedUrls, remainingSlots, onSelect }: {
+function LibraryTab({ selectedUrls, remainingSlots, onSelect, mediaTypes }: {
     selectedUrls: string[];
     remainingSlots: number;
     onSelect: (media: PickedMedia[]) => void;
+    mediaTypes?: Array<'image' | 'video'>;
 }) {
     const [typeFilter, setTypeFilter] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<MediaItem | null>(null);
@@ -281,7 +294,7 @@ function LibraryTab({ selectedUrls, remainingSlots, onSelect }: {
 
     const { data: items, isLoading, refetch } = useQuery({
         queryKey: ['social-media', typeFilter],
-        queryFn: () => fetchLibrary(typeFilter),
+        queryFn: () => fetchLibrary(mediaTypes?.length === 1 ? mediaTypes[0] : typeFilter),
     });
 
     const deleteMutation = useMutation({
@@ -310,6 +323,7 @@ function LibraryTab({ selectedUrls, remainingSlots, onSelect }: {
                     return current;
                 }
                 next[item.id] = {
+                    id: item.id,
                     url: item.url,
                     type: item.media_type,
                     title: item.name,
@@ -336,9 +350,9 @@ function LibraryTab({ selectedUrls, remainingSlots, onSelect }: {
         <div className="space-y-3">
             <div className="flex items-center justify-between">
                 <div className="flex gap-1.5">
-                    {filterButton('', 'All')}
-                    {filterButton('image', 'Images')}
-                    {filterButton('video', 'Videos')}
+                    {(!mediaTypes || mediaTypes.length > 1) && filterButton('', 'All')}
+                    {(!mediaTypes || mediaTypes.includes('image')) && filterButton('image', 'Images')}
+                    {(!mediaTypes || mediaTypes.includes('video')) && filterButton('video', 'Videos')}
                 </div>
                 <RefreshButton
                     onRefresh={() => refetch()}
@@ -359,7 +373,7 @@ function LibraryTab({ selectedUrls, remainingSlots, onSelect }: {
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[45vh] overflow-y-auto pr-1">
-                    {items.map((item) => {
+                    {(items || []).filter(item => !mediaTypes || mediaTypes.includes(item.media_type)).map((item) => {
                         const alreadySelected = selectedUrls.includes(item.url);
                         const active = !!selected[item.id] || alreadySelected;
                         return (
@@ -457,10 +471,11 @@ interface MediaPickerProps {
     onOpenChange: (open: boolean) => void;
     selectedUrls?: string[];
     onSelect: (media: PickedMedia[]) => void;
+    mediaTypes?: Array<'image' | 'video'>;
 }
 
 /** Dialog to upload new media or pick from the uploaded library. */
-export function MediaPicker({ open, onOpenChange, selectedUrls = [], onSelect }: MediaPickerProps) {
+export function MediaPicker({ open, onOpenChange, selectedUrls = [], onSelect, mediaTypes }: MediaPickerProps) {
     const [tab, setTab] = useState<'upload' | 'library'>('upload');
 
     const handleSelect = (media: PickedMedia[]) => {
@@ -493,12 +508,13 @@ export function MediaPicker({ open, onOpenChange, selectedUrls = [], onSelect }:
                 </div>
 
                 {tab === 'upload'
-                    ? <UploadTab remainingSlots={Math.max(0, MAX_PICKED_MEDIA - selectedUrls.length)} onSelect={handleSelect} />
+                    ? <UploadTab remainingSlots={Math.max(0, MAX_PICKED_MEDIA - selectedUrls.length)} onSelect={handleSelect} mediaTypes={mediaTypes} />
                     : (
                         <LibraryTab
                             selectedUrls={selectedUrls}
                             remainingSlots={Math.max(0, MAX_PICKED_MEDIA - selectedUrls.length)}
                             onSelect={handleSelect}
+                            mediaTypes={mediaTypes}
                         />
                     )}
             </div>

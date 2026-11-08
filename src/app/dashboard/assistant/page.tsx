@@ -2,10 +2,11 @@
 
 import { useState, type FormEvent } from 'react';
 import { AxiosError } from 'axios';
-import { Bot, Check, Loader2, Send, Sparkles, X } from 'lucide-react';
+import { Bot, Check, ImagePlus, Loader2, Send, Sparkles, Trash2, X } from 'lucide-react';
 
 import { useAuth } from '@/lib/use-auth';
 import { DataTable } from '@/widgets/custom-table/DataTable';
+import { MediaPicker, type PickedMedia } from '@/widgets/social/MediaPicker';
 import {
   confirmAdminAction,
   prepareAdminBulkProductAction,
@@ -21,6 +22,7 @@ type Message = {
   text: string;
   actions?: PendingAdminAction[];
   tables?: AdminResultTable[];
+  attachments?: PickedMedia[];
 };
 
 function tableValue(row: Record<string, unknown>, path: string): unknown {
@@ -196,6 +198,8 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [selectedMedia, setSelectedMedia] = useState<PickedMedia[]>([]);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
 
   const prepareTableAction = async (
     entity: 'product' | 'promotion' | 'discount_code' | 'blog_post' | 'review',
@@ -237,11 +241,19 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
     setInput('');
     setError('');
     setBusy(true);
-    setMessages(current => [...current, { id: Date.now(), role: 'user', text: message }]);
+    const attachments = selectedMedia;
+    if (attachments.some(media => !media.id)) {
+      setError('One or more selected images are missing a media ID. Please select them again.');
+      setBusy(false);
+      return;
+    }
+    const userMessageId = Date.now();
+    setMessages(current => [...current, { id: userMessageId, role: 'user', text: message, attachments }]);
     try {
       const reply = await sendAdminAgentMessage(
         message,
         messages.slice(-12).map(({ role, text }) => ({ role, text })),
+        attachments.map(media => media.id).filter((id): id is string => Boolean(id)),
       );
       setMessages(current => [...current, {
         id: Date.now() + 1, role: 'assistant',
@@ -251,6 +263,7 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
         actions: reply.pending_actions || [],
         tables: reply.tables || [],
       }]);
+      setSelectedMedia([]);
     } catch (cause) {
       setError(errorText(cause));
     } finally {
@@ -298,6 +311,9 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
               : 'whitespace-pre-wrap rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-900 dark:bg-slate-900 dark:text-slate-100'}>
               {message.text}
             </div>}
+            {message.attachments && message.attachments.length > 0 && <div className="mt-2 flex flex-wrap gap-2">
+              {message.attachments.map(media => <img key={media.id ?? media.url} src={media.url} alt={media.title || 'Attached image'} className="size-20 rounded-lg border border-slate-200 object-cover dark:border-slate-700" />)}
+            </div>}
             {message.tables?.map((table, index) => <ResultTable key={`${table.title}-${index}`} table={table} onPrepareAction={prepareTableAction} />)}
             {message.actions?.map(action => (
               <ActionCard key={action.action_id} action={action} onConfirmed={onConfirmed} />
@@ -307,10 +323,21 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
         {busy && <p className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" /> Thinking…</p>}
       </div>
 
+      {selectedMedia.length > 0 && <div className="mt-3 flex gap-2 overflow-x-auto">
+        {selectedMedia.map(media => <div key={media.id ?? media.url} className="relative size-16 shrink-0">
+          <img src={media.url} alt={media.title || 'Attached image'} className="size-16 rounded-lg border border-slate-200 object-cover dark:border-slate-700" />
+          <button type="button" aria-label="Remove attached image" onClick={() => setSelectedMedia(current => current.filter(item => item.id !== media.id))}
+            className="absolute -right-1 -top-1 rounded-full bg-slate-900 p-1 text-white"><Trash2 className="size-3" /></button>
+        </div>)}
+      </div>}
       <form onSubmit={send} className="mt-4 flex gap-3">
         <label htmlFor="admin-agent-input" className="sr-only">Message Admin Agent</label>
+        <button type="button" onClick={() => setMediaPickerOpen(true)} aria-label="Attach images"
+          className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200">
+          <ImagePlus className="size-4" />
+        </button>
         <input id="admin-agent-input" value={input} onChange={event => setInput(event.target.value)}
-          maxLength={4000} placeholder="Ask about your catalog…"
+          maxLength={4000} placeholder="Ask about your store…"
           className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
         <button type="submit" disabled={busy || !input.trim()}
           className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 dark:bg-slate-700">
@@ -318,6 +345,13 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
         </button>
       </form>
       {error && <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
+      <MediaPicker
+        open={mediaPickerOpen}
+        onOpenChange={setMediaPickerOpen}
+        selectedUrls={selectedMedia.map(media => media.url)}
+        mediaTypes={['image']}
+        onSelect={media => setSelectedMedia(current => [...current, ...media.filter(item => !current.some(existing => existing.id === item.id))].slice(0, 10))}
+      />
     </div>
   );
 }
