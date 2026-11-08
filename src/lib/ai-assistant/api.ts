@@ -7,6 +7,7 @@ import unAuthenticatedAxios from "@/axios-instances/UnAuthenticatedAxios";
 
 export interface AssistantProductVariant {
   id: string;
+  slug?: string | null;
   sku: string;
   attributes: Record<string, string>;
   price: number;

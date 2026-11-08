@@ -2,9 +2,10 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { AxiosError } from 'axios';
-import { Bot, Check, ImagePlus, Loader2, Plus, Send, Sparkles, Trash2, X } from 'lucide-react';
+import { Bot, Check, ImagePlus, Loader2, MessageCircle, Plus, Send, Sparkles, Trash2, X } from 'lucide-react';
 
 import { useAuth } from '@/lib/use-auth';
+import { SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DataTable } from '@/widgets/custom-table/DataTable';
 import { MediaPicker, type PickedMedia } from '@/widgets/social/MediaPicker';
 import {
@@ -82,7 +83,9 @@ function ResultTable({ table, onPrepareAction }: {
         : []);
       const categoryImage = typeof row.image === 'string' ? [row.image] : [];
       const coverImage = typeof row.cover_image_url === 'string' ? [row.cover_image_url] : [];
-      displayRow.images = directImages.length ? directImages : defaultImages.length ? defaultImages : variantImages.length ? variantImages : categoryImage.length ? categoryImage : coverImage;
+      const rowImages = directImages.length ? directImages : defaultImages.length ? defaultImages : variantImages.length ? variantImages : categoryImage.length ? categoryImage : coverImage;
+      // Promotion rows use one clean thumbnail, like the product and category tables.
+      displayRow.images = table.title === 'Promotions' ? rowImages.slice(0, 1) : rowImages;
     }
     for (const column of table.columns) {
       const key = column.key.replace(/\.([a-z])/g, (_, letter: string) => letter.toUpperCase()).replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
@@ -101,6 +104,7 @@ function ResultTable({ table, onPrepareAction }: {
         data={rows}
         excludeColumns={['id']}
         images={hasImages ? { images: item => item.images as string[] } : {}}
+        imagePreview={table.title !== 'Promotions'}
         bulkActions={table.title === 'Products' ? [
           { label: 'Publish', onClick: selected => onPrepareAction('product', selected, 'publish') },
           { label: 'Set to draft', onClick: selected => onPrepareAction('product', selected, 'draft') },
@@ -505,41 +509,69 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className={compact
-      ? 'flex h-full min-h-0 w-full flex-col p-4'
+      ? 'flex h-full min-h-0 w-full flex-col'
       : 'mx-auto flex w-full max-w-5xl flex-1 flex-col p-4 sm:p-6 lg:p-8'}>
-      <div className={compact ? 'mb-3' : 'mb-6'}>
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-          <Sparkles className="size-3.5" /> Store management
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className={`${compact ? 'text-lg' : 'text-2xl'} min-w-0 flex-1 truncate font-bold text-slate-950 dark:text-white`}>
-            {conversationTitle || 'New conversation'}
-          </h1>
-          <div className="flex shrink-0 items-center gap-2">
-            <label htmlFor="admin-conversation-history" className="sr-only">Conversation history</label>
-            <select id="admin-conversation-history" value={conversationId || ''} disabled={busy}
-              onChange={event => { if (event.target.value) void selectConversation(event.target.value); }}
-              className="max-w-40 rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
-              <option value="">Conversation history</option>
-              {conversations.map(item => <option key={item.id} value={item.id}>{item.title} · {new Date(item.updated_at).toLocaleDateString()}</option>)}
-            </select>
+      {compact ? (
+        <SheetHeader className="shrink-0 border-b border-slate-200 px-4 py-3 text-left dark:border-slate-800">
+          <div className="flex min-w-0 items-center gap-3 pr-8">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100">
+              <Bot className="size-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <SheetTitle className="text-base">Admin Agent</SheetTitle>
+              <label htmlFor="admin-conversation-history" className="sr-only">Current conversation and history</label>
+              <select id="admin-conversation-history" value={conversationId || ''} disabled={busy}
+                onChange={event => { if (event.target.value) void selectConversation(event.target.value); }}
+                className="mt-0.5 block max-w-full truncate border-0 bg-transparent p-0 text-xs text-slate-500 outline-none focus:ring-0 dark:text-slate-400">
+                <option value="">New conversation</option>
+                {conversations.map(item => <option key={item.id} value={item.id}>{item.title} · {new Date(item.updated_at).toLocaleDateString()}</option>)}
+              </select>
+              <SheetDescription className="sr-only">Manage products, promotions, blogs, and other store content.</SheetDescription>
+            </div>
             <button type="button" disabled={busy} onClick={() => void selectConversation('new')} aria-label="Start new conversation" title="New conversation"
-              className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200">
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
               <Plus className="size-4" />
             </button>
           </div>
+        </SheetHeader>
+      ) : (
+        <div className="mb-6">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+            <Sparkles className="size-3.5" /> Store management
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h1 className="min-w-0 flex-1 truncate text-2xl font-bold text-slate-950 dark:text-white">
+              {conversationTitle || 'New conversation'}
+            </h1>
+            <div className="flex shrink-0 items-center gap-2">
+              <label htmlFor="admin-conversation-history" className="sr-only">Conversation history</label>
+              <select id="admin-conversation-history" value={conversationId || ''} disabled={busy}
+                onChange={event => { if (event.target.value) void selectConversation(event.target.value); }}
+                className="max-w-40 rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                <option value="">Conversation history</option>
+                {conversations.map(item => <option key={item.id} value={item.id}>{item.title} · {new Date(item.updated_at).toLocaleDateString()}</option>)}
+              </select>
+              <button type="button" disabled={busy} onClick={() => void selectConversation('new')} aria-label="Start new conversation" title="New conversation"
+                className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                <Plus className="size-4" />
+              </button>
+            </div>
+          </div>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Ask about your catalog, promotions, discount codes, blog posts, and reviews. Confirm changes before they are applied.</p>
         </div>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Ask about your catalog, promotions, discount codes, blog posts, and reviews. Confirm changes before they are applied.</p>
-      </div>
+      )}
 
       <div role="log" aria-label="Admin Agent conversation" className={compact
-        ? 'min-h-0 flex-1 space-y-5 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950'
+        ? 'min-h-0 min-w-0 flex-1 space-y-5 overflow-y-auto px-4 py-4'
         : 'min-h-[26rem] flex-1 space-y-5 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950 sm:p-6'}>
         {messages.length === 0 && (
-          <div className="flex min-h-72 flex-col items-center justify-center text-center">
-            <Bot className="mb-4 size-10 text-slate-700 dark:text-slate-300" />
-            <p className="font-semibold text-slate-900 dark:text-white">What would you like to manage?</p>
-            <p className="mt-1 max-w-md text-sm text-slate-500">Try “Show products with low stock” or “Find draft products”.</p>
+          <div className={`flex ${compact ? 'min-h-full' : 'min-h-72'} flex-col items-center justify-center px-5 text-center`}>
+            <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-900 dark:text-slate-500">
+              <MessageCircle className="size-8" strokeWidth={1.4} />
+            </div>
+            <p className="font-semibold text-slate-900 dark:text-white">What can I help you with?</p>
+            <p className="mt-1 max-w-xs text-sm text-slate-500">Ask about products, promotions, blog posts, or store activity.</p>
+            {!compact && <p className="mt-2 text-xs text-slate-400">Confirm changes before they are applied.</p>}
           </div>
         )}
         {messages.map(message => (
@@ -562,17 +594,19 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
         {busy && <p className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" /> Thinking…</p>}
       </div>
 
-      {selectedMedia.length > 0 && <div className="mt-3 flex gap-2 overflow-x-auto">
+      {selectedMedia.length > 0 && <div className={`${compact ? 'mx-4 mt-2' : 'mt-3'} flex gap-2 overflow-x-auto`}>
         {selectedMedia.map(media => <div key={media.id ?? media.url} className="relative size-16 shrink-0">
           <img src={media.url} alt={media.title || 'Attached image'} className="size-16 rounded-lg border border-slate-200 object-cover dark:border-slate-700" />
           <button type="button" aria-label="Remove attached image" onClick={() => setSelectedMedia(current => current.filter(item => item.id !== media.id))}
             className="absolute -right-1 -top-1 rounded-full bg-slate-900 p-1 text-white"><Trash2 className="size-3" /></button>
         </div>)}
       </div>}
-      <form onSubmit={send} className="mt-4 flex gap-3">
+      <form onSubmit={send} className={compact
+        ? 'flex shrink-0 items-end gap-2 border-t border-slate-200 p-4 dark:border-slate-800'
+        : 'mt-4 flex gap-3'}>
         <label htmlFor="admin-agent-input" className="sr-only">Message Admin Agent</label>
         <button type="button" onClick={() => setMediaPickerOpen(true)} aria-label="Attach images"
-          className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200">
+          className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200">
           <ImagePlus className="size-4" />
         </button>
         <textarea id="admin-agent-input" value={input} onChange={event => setInput(event.target.value)}
@@ -583,13 +617,13 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
             }
           }}
           rows={2} maxLength={4000} placeholder="Ask about your store…" aria-label="Message Admin Agent"
-          className="min-w-0 max-h-32 min-h-11 flex-1 resize-none overflow-y-auto rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-        <button type="submit" disabled={busy || !input.trim()}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 dark:bg-slate-700">
-          <Send className="size-4" /> Send
+          className="min-w-0 max-h-32 min-h-11 flex-1 resize-none overflow-y-auto rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+        <button type="submit" disabled={busy || !input.trim()} aria-label="Send message"
+          className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white disabled:opacity-50 dark:bg-slate-700">
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
         </button>
       </form>
-      {error && <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
+      {error && <p role="alert" className={`${compact ? 'mx-4 mb-3' : 'mt-3'} text-sm text-red-700 dark:text-red-300`}>{error}</p>}
       <MediaPicker
         open={mediaPickerOpen}
         onOpenChange={setMediaPickerOpen}

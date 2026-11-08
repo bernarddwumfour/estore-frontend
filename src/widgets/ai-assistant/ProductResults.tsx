@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   Package,
@@ -49,21 +49,19 @@ function ProductCard({
   const isInCart = useCartStore((state) => state.isInCart);
 
   const variants = product.variants ?? [];
+  const initialVariantId = product.selected_variant_id && variants.some((variant) => variant.id === product.selected_variant_id)
+    ? product.selected_variant_id
+    : variants.length === 1 ? variants[0].id : "";
 
   const [selectedVariantId, setSelectedVariantId] =
-    useState<string>("");
-
-  useEffect(() => {
-    setSelectedVariantId(
-      product.selected_variant_id && variants.some((variant) => variant.id === product.selected_variant_id)
-        ? product.selected_variant_id
-        : variants.length === 1 ? variants[0].id : ""
-    );
-  }, [product.id, product.variants, product.selected_variant_id]);
+    useState<string>(initialVariantId);
 
   const selectedVariant = variants.find(
     (variant) => variant.id === selectedVariantId
   );
+  const selectedVariantHref = href && selectedVariant?.slug
+    ? `${href.replace(/\/$/, '')}/${encodeURIComponent(selectedVariant.slug)}`
+    : href;
 
   const hasMultipleVariants = variants.length > 1;
 
@@ -125,8 +123,8 @@ function ProductCard({
 
   return (
     <article className={`group flex min-w-0 flex-col overflow-hidden rounded-xl border transition-colors ${theme.productCard}`}>
-      {href ? (
-        <Link href={href} className="block">
+      {selectedVariantHref ? (
+        <Link href={selectedVariantHref} className="block">
           <ProductImage
             image={selectedImage}
             title={product.title}
@@ -142,9 +140,9 @@ function ProductCard({
       )}
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
-        {href ? (
+        {selectedVariantHref ? (
           <Link
-            href={href}
+            href={selectedVariantHref}
             className="flex items-start justify-between gap-1"
           >
             <h4 className="min-w-0 line-clamp-2 break-words text-sm font-medium">
@@ -300,7 +298,7 @@ export function ProductResults({
       <div className="grid min-w-0 grid-cols-2 gap-2">
         {products.map((product) => (
           <ProductCard
-            key={product.id}
+            key={`${product.id}:${product.selected_variant_id ?? ""}`}
             product={product}
             href={getProductHref?.(product)}
             theme={theme}

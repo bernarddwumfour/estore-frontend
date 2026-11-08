@@ -50,6 +50,7 @@ interface DataTableProps<T> {
     icons?: Record<string, Record<string, React.ReactNode>>;
     links?: Record<string, (item: T) => string>;
     images?: Record<string, (item: T) => string | string[]>;
+    imagePreview?: boolean;
     actions?: {
         label: string | ((item: T) => string);
         icon: React.ReactNode | ((item: T) => React.ReactNode);
@@ -238,6 +239,7 @@ export function DataTable<T extends { id: string | number }>({
     icons = {},
     links = {},
     images = {},
+    imagePreview = true,
     actions = [],
     renderActions,
     bulkActions = [],
@@ -337,6 +339,11 @@ export function DataTable<T extends { id: string | number }>({
         if (images[key]) {
             const imageValue = images[key](item);
             const imageUrls = Array.isArray(imageValue) ? imageValue : (imageValue ? [imageValue] : []);
+            if (!imagePreview) {
+                return imageUrls[0]
+                    ? <img src={imageUrls[0]} alt={stringValue} className="h-10 w-10 rounded-md border border-gray-200 object-cover dark:border-gray-800" />
+                    : <span className="text-muted-foreground">—</span>;
+            }
             return <MultiImageCell images={imageUrls} alt={stringValue} />;
         }
 
