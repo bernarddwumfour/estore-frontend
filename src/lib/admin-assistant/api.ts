@@ -49,6 +49,33 @@ export interface AdminAgentReply {
   pending_actions: PendingAdminAction[];
   tables?: AdminResultTable[];
   details?: AdminEntityDetail[];
+  conversation?: { id: string; title: string };
+}
+
+export interface AdminConversationSummary {
+  id: string;
+  title: string;
+  updated_at: string;
+}
+
+export interface AdminSavedConversationMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  attachments?: PickedMedia[];
+  tables?: AdminResultTable[];
+  details?: AdminEntityDetail[];
+}
+
+export interface AdminSavedConversation extends AdminConversationSummary {
+  messages: AdminSavedConversationMessage[];
+}
+
+interface PickedMedia {
+  id?: string;
+  url: string;
+  type: 'image' | 'video';
+  title?: string;
 }
 
 export interface AdminResultTable {
@@ -63,12 +90,31 @@ export async function sendAdminAgentMessage(
   message: string,
   history: Array<{ role: 'user' | 'assistant'; text: string }> = [],
   mediaIds: string[] = [],
+  conversationId?: string | null,
 ): Promise<AdminAgentReply> {
   const response = await securityAxios.post<{ data: AdminAgentReply }>(
     "/assistant/admin/chat/",
-    { message, history, media_ids: mediaIds },
+    { message, history, media_ids: mediaIds, ...(conversationId ? { conversation_id: conversationId } : {}) },
   );
   return response.data.data;
+}
+
+export async function listAdminConversations(): Promise<AdminConversationSummary[]> {
+  const response = await securityAxios.get<{ data: { conversations: AdminConversationSummary[] } }>(
+    '/assistant/admin/conversations/',
+  );
+  return response.data.data.conversations;
+}
+
+export async function getAdminConversation(id: string): Promise<AdminSavedConversation> {
+  const response = await securityAxios.get<{ data: AdminSavedConversation }>(
+    `/assistant/admin/conversations/${id}/`,
+  );
+  return response.data.data;
+}
+
+export async function appendAdminConversationEvent(id: string, content: string): Promise<void> {
+  await securityAxios.post(`/assistant/admin/conversations/${id}/events/`, { content });
 }
 
 export async function prepareAdminBulkProductAction(

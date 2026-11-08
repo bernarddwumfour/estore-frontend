@@ -58,6 +58,16 @@ interface ChatAssistantProps {
   ) => string;
 }
 
+const GUEST_CHAT_STORAGE_KEY = "estore-guest-assistant-chat";
+
+function clearGuestChatStorage() {
+  try {
+    window.sessionStorage.removeItem(GUEST_CHAT_STORAGE_KEY);
+  } catch {
+    // Storage is optional; the in-memory chat still works.
+  }
+}
+
 type AssistantChatMessage = ChatMessageData & {
   products?: AssistantProduct[];
   promotions?: AssistantPromotion[];
@@ -81,6 +91,7 @@ export function ChatAssistant({
 
   const [conversationId, setConversationId] =
     useState<string | null>(null);
+  const [guestHistoryReady, setGuestHistoryReady] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +99,7 @@ export function ChatAssistant({
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const sendingRef = useRef(false);
+  const previousTokenRef = useRef(token);
 
   useEffect(() => {
     try {
@@ -100,6 +112,57 @@ export function ChatAssistant({
       setShowLauncherPrompt(true);
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      const stored = window.sessionStorage.getItem(GUEST_CHAT_STORAGE_KEY);
+      if (stored) {
+        const parsed: unknown = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const restored = parsed.filter((item): item is AssistantChatMessage => {
+            if (!item || typeof item !== "object") return false;
+            const candidate = item as Partial<AssistantChatMessage>;
+            return typeof candidate.id === "string" &&
+              (candidate.role === "user" || candidate.role === "assistant") &&
+              typeof candidate.content === "string";
+          });
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setMessages(restored.slice(-40));
+        }
+      }
+    } catch {
+      clearGuestChatStorage();
+    } finally {
+      setGuestHistoryReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!guestHistoryReady || token || conversationId) return;
+    try {
+      if (messages.length) {
+        const guestMessages = messages.slice(-40).map(({ id, role, content, products, promotions }) => ({
+          id, role, content, products, promotions,
+        }));
+        window.sessionStorage.setItem(GUEST_CHAT_STORAGE_KEY, JSON.stringify(guestMessages));
+      } else {
+        window.sessionStorage.removeItem(GUEST_CHAT_STORAGE_KEY);
+      }
+    } catch {
+      // Chat remains usable when browser storage is unavailable.
+    }
+  }, [messages, token, conversationId, guestHistoryReady]);
+
+  useEffect(() => {
+    if (previousTokenRef.current && !token) {
+      // Clear authenticated chat state when the account signs out.
+      setMessages([]);
+      setConversationId(null);
+      setInput("");
+      clearGuestChatStorage();
+    }
+    previousTokenRef.current = token;
+  }, [token]);
 
   const handleSheetOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
@@ -137,12 +200,13 @@ export function ChatAssistant({
     setConversationId(null);
     setInput("");
     setError(null);
+    clearGuestChatStorage();
   };
 
   const sendMessage = async (rawMessage: string, fromComposer = true) => {
     const message = rawMessage.trim();
 
-    if (!message || sendingRef.current) return;
+    if (!message || sendingRef.current || !guestHistoryReady) return;
 
     if (message.length > 4000) {
       setError(
@@ -173,7 +237,11 @@ export function ChatAssistant({
     try {
       const result = token
         ? await sendAssistantMessage(
-            { message, ...(conversationId ? { conversation_id: conversationId } : {}) },
+            {
+              message,
+              ...(conversationId ? { conversation_id: conversationId } : {}),
+              ...(!conversationId ? { history: messages.slice(-12).map(({ role, content }) => ({ role, content })) } : {}),
+            },
             controller.signal,
           )
         : await sendGuestAssistantMessage({
@@ -184,6 +252,9 @@ export function ChatAssistant({
       if (controller.signal.aborted) return;
 
       setConversationId(result.conversation_id);
+      if (token && !conversationId) {
+        clearGuestChatStorage();
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -463,7 +534,8 @@ export function ChatAssistant({
                 size="icon"
                 disabled={
                   loading ||
-                  !input.trim()
+                  !input.trim() ||
+                  !guestHistoryReady
                 }
                 aria-label="Send message"
                 className={`shrink-0 ${theme.primaryButton}`}

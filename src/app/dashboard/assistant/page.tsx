@@ -1,25 +1,29 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { AxiosError } from 'axios';
-import { Bot, Check, ImagePlus, Loader2, Send, Sparkles, Trash2, X } from 'lucide-react';
+import { Bot, Check, ImagePlus, Loader2, Plus, Send, Sparkles, Trash2, X } from 'lucide-react';
 
 import { useAuth } from '@/lib/use-auth';
 import { DataTable } from '@/widgets/custom-table/DataTable';
 import { MediaPicker, type PickedMedia } from '@/widgets/social/MediaPicker';
 import {
   confirmAdminAction,
+  appendAdminConversationEvent,
+  getAdminConversation,
+  listAdminConversations,
   prepareAdminBulkProductAction,
   prepareAdminMarketingAction,
   sendAdminAgentMessage,
   type AdminEntityDetail,
   type AdminActionPreview,
+  type AdminConversationSummary,
   type AdminResultTable,
   type PendingAdminAction,
 } from '@/lib/admin-assistant/api';
 
 type Message = {
-  id: number;
+  id: string | number;
   role: 'user' | 'assistant';
   text: string;
   actions?: PendingAdminAction[];
@@ -313,12 +317,65 @@ function ActionCard({ action, onConfirmed }: {
 
 export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
   const { user } = useAuth();
+  const currentUserId = user?.id;
+  const currentUserRole = user?.role;
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [selectedMedia, setSelectedMedia] = useState<PickedMedia[]>([]);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationTitle, setConversationTitle] = useState('');
+  const [conversations, setConversations] = useState<AdminConversationSummary[]>([]);
+
+  useEffect(() => {
+    if (!currentUserId || !['admin', 'staff'].includes(currentUserRole || '')) return;
+    let active = true;
+    listAdminConversations().then(items => {
+      if (active) setConversations(items);
+    }).catch(() => {
+      // History is an optional convenience; the chat remains available if it cannot load.
+    });
+    return () => { active = false; };
+  }, [currentUserId, currentUserRole]);
+
+  const selectConversation = async (id: string) => {
+    if (id === 'new') {
+      setConversationId(null);
+      setConversationTitle('');
+      setMessages([]);
+      setSelectedMedia([]);
+      setError('');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const saved = await getAdminConversation(id);
+      setConversationId(saved.id);
+      setConversationTitle(saved.title);
+      setSelectedMedia([]);
+      setMessages(saved.messages.map(message => {
+        const structuredIntro = [
+          ...(message.tables?.length ? [tableIntro(message.tables)] : []),
+          ...(message.details || []).map(detail => `Here are the detailed ${detail.entity === 'promotion' ? 'promotion' : 'blog post'} details for ${detail.public_id}.`),
+        ];
+        return {
+          id: message.id,
+          role: message.role,
+          text: message.role === 'assistant' && structuredIntro.length ? structuredIntro.join(' ') : message.text,
+          attachments: message.attachments,
+          tables: message.tables,
+          details: message.details,
+        };
+      }));
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const prepareTableAction = async (
     entity: 'product' | 'promotion' | 'discount_code' | 'blog_post' | 'review',
@@ -340,12 +397,16 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
           entity, ids, action,
           entity === 'review' ? reviewTypes[0] as 'product' | 'order' : undefined,
         );
+      const reviewText = `Review this ${action} ${entity.replaceAll('_', ' ')} action before confirming it.`;
       setMessages(current => [...current, {
         id: Date.now(),
         role: 'assistant',
-        text: `Review this ${action} ${entity.replaceAll('_', ' ')} action before confirming it.`,
+        text: reviewText,
         actions: [pendingAction],
       }]);
+      if (conversationId) {
+        appendAdminConversationEvent(conversationId, reviewText).catch(() => {});
+      }
     } catch (cause) {
       setError(errorText(cause));
     } finally {
@@ -373,7 +434,13 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
         message,
         messages.slice(-12).map(({ role, text }) => ({ role, text })),
         attachments.map(media => media.id).filter((id): id is string => Boolean(id)),
+        conversationId,
       );
+      if (reply.conversation) {
+        setConversationId(reply.conversation.id);
+        setConversationTitle(reply.conversation.title);
+        listAdminConversations().then(setConversations).catch(() => {});
+      }
       const structuredIntro = [
         ...(reply.tables?.length ? [tableIntro(reply.tables)] : []),
         ...(reply.details || []).map(detail => `Here are the detailed ${detail.entity === 'promotion' ? 'promotion' : 'blog post'} details for ${detail.public_id}.`),
@@ -396,10 +463,16 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
   };
 
   const onConfirmed = (actionId: string, result: unknown) => {
+    const text = `Change confirmed. Result: ${JSON.stringify(result)}`;
     setMessages(current => [...current, {
-      id: Date.now(), role: 'assistant',
-      text: `Change confirmed. Result: ${JSON.stringify(result)}`,
+      id: Date.now(), role: 'assistant', text,
     }]);
+    if (conversationId) {
+      appendAdminConversationEvent(conversationId, text).catch(() => {
+        setError('The action was confirmed, but this update could not be saved in conversation history.');
+      });
+      listAdminConversations().then(setConversations).catch(() => {});
+    }
   };
 
   if (user && !['admin', 'staff'].includes(user.role || '')) {
@@ -414,7 +487,24 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
           <Sparkles className="size-3.5" /> Store management
         </div>
-        <h1 className={compact ? 'text-lg font-bold text-slate-950 dark:text-white' : 'text-2xl font-bold text-slate-950 dark:text-white'}>Admin Agent</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className={`${compact ? 'text-lg' : 'text-2xl'} min-w-0 flex-1 truncate font-bold text-slate-950 dark:text-white`}>
+            {conversationTitle || 'New conversation'}
+          </h1>
+          <div className="flex shrink-0 items-center gap-2">
+            <label htmlFor="admin-conversation-history" className="sr-only">Conversation history</label>
+            <select id="admin-conversation-history" value={conversationId || ''} disabled={busy}
+              onChange={event => { if (event.target.value) void selectConversation(event.target.value); }}
+              className="max-w-40 rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+              <option value="">Conversation history</option>
+              {conversations.map(item => <option key={item.id} value={item.id}>{item.title} · {new Date(item.updated_at).toLocaleDateString()}</option>)}
+            </select>
+            <button type="button" disabled={busy} onClick={() => void selectConversation('new')} aria-label="Start new conversation" title="New conversation"
+              className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200">
+              <Plus className="size-4" />
+            </button>
+          </div>
+        </div>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Ask about your catalog, promotions, discount codes, blog posts, and reviews. Confirm changes before they are applied.</p>
       </div>
 

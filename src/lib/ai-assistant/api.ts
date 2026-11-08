@@ -173,6 +173,7 @@ export async function sendAssistantMessage(
       "/assistant/chat/",
       {
         message,
+        ...(payload.history ? { history: payload.history } : {}),
         ...(payload.conversation_id
           ? { conversation_id: payload.conversation_id }
           : {}),
