@@ -12,6 +12,7 @@ import {
   prepareAdminBulkProductAction,
   prepareAdminMarketingAction,
   sendAdminAgentMessage,
+  type AdminActionPreview,
   type AdminResultTable,
   type PendingAdminAction,
 } from '@/lib/admin-assistant/api';
@@ -134,6 +135,57 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
 }
 
+function CreatePreview({ preview }: { preview: AdminActionPreview }) {
+  if (preview.type === 'blog_post') {
+    return (
+      <section className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950">
+        <div className="border-b border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700">Blog post preview</div>
+        {preview.cover_image_url
+          ? <img src={preview.cover_image_url} alt={`Cover for ${preview.title}`} className="aspect-[16/8] w-full object-cover" />
+          : <div className="flex aspect-[16/8] items-center justify-center bg-slate-100 text-sm text-slate-500 dark:bg-slate-900">No cover image selected</div>}
+        <div className="p-4">
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span className="rounded-full bg-slate-100 px-2 py-1 capitalize dark:bg-slate-800">{preview.status}</span>
+            <span>By {preview.author_name}</span>
+          </div>
+          <h4 className="text-xl font-bold leading-tight">{preview.title}</h4>
+          {preview.excerpt && <p className="mt-2 text-sm font-medium text-slate-600 dark:text-slate-300">{preview.excerpt}</p>}
+          <p className="mt-3 line-clamp-5 whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-400">{preview.content}</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950">
+      <div className="border-b border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700">Promotion preview</div>
+      {preview.image_urls.length > 0
+        ? <div className="relative">
+            <img src={preview.image_urls[0]} alt={`${preview.name} promotion`} className="aspect-[16/8] w-full object-cover" />
+            {preview.image_urls.length > 1 && <div className="flex gap-2 overflow-x-auto border-t border-slate-200 p-2 dark:border-slate-700">
+              {preview.image_urls.slice(1).map((url, index) => <img key={`${url}-${index}`} src={url} alt={`${preview.name} image ${index + 2}`} className="size-14 shrink-0 rounded-md object-cover" />)}
+            </div>}
+          </div>
+        : <div className="flex aspect-[16/8] items-center justify-center bg-slate-100 text-sm text-slate-500 dark:bg-slate-900">No promotion images selected</div>}
+      <div className="p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Bundle offer</p><h4 className="mt-1 text-xl font-bold">{preview.name}</h4></div>
+          <p className="rounded-lg bg-slate-100 px-3 py-2 text-lg font-bold dark:bg-slate-800">{preview.bundle_price}</p>
+        </div>
+        {preview.description && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{preview.description}</p>}
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {preview.items.map((item, index) => <div key={`${item.sku}-${index}`} className="flex min-w-0 items-center gap-3 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+            {item.image_url
+              ? <img src={item.image_url} alt="" className="size-12 shrink-0 rounded-md object-cover" />
+              : <div className="size-12 shrink-0 rounded-md bg-slate-100 dark:bg-slate-800" />}
+            <div className="min-w-0"><p className="truncate text-sm font-medium">{item.product_title}</p><p className="text-xs text-slate-500">{item.is_free ? 'Free item' : `Qty ${item.quantity}`} · {item.sku}</p></div>
+          </div>)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ActionCard({ action, onConfirmed }: {
   action: PendingAdminAction;
   onConfirmed: (actionId: string, result: unknown) => void;
@@ -141,6 +193,10 @@ function ActionCard({ action, onConfirmed }: {
   const [busy, setBusy] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [error, setError] = useState('');
+  const preview = action.details.preview;
+  const previewFields = preview?.type === 'blog_post'
+    ? new Set(['title', 'excerpt', 'content', 'cover_image_url', 'author_name', 'status'])
+    : preview?.type === 'promotion' ? new Set(['items', 'image_count']) : new Set<string>();
 
   if (dismissed) return null;
 
@@ -164,12 +220,13 @@ function ActionCard({ action, onConfirmed }: {
         <h3 className="text-sm font-semibold">Review {action.action.replaceAll('_', ' ')}</h3>
         <span className="text-xs text-slate-500 dark:text-slate-400">Expires in 10 minutes</span>
       </div>
+      {preview && <CreatePreview preview={preview} />}
       <dl className="mt-3 space-y-1 text-sm">
         {action.details.target_id && <div><dt className="inline font-medium">Target: </dt><dd className="inline break-all">{action.details.target_id}</dd></div>}
         {action.details.target_summary && <div><dt className="inline font-medium">Account: </dt><dd className="inline">{action.details.target_summary}</dd></div>}
         {action.details.bulk_action && <div><dt className="inline font-medium">Action: </dt><dd className="inline">{action.details.bulk_action}</dd></div>}
         {action.details.ids.length > 0 && <div><dt className="inline font-medium">Items: </dt><dd className="inline">{action.details.ids.length}</dd></div>}
-        {Object.entries(action.details.data).map(([key, value]) => (
+        {Object.entries(action.details.data).filter(([key]) => !previewFields.has(key)).map(([key, value]) => (
           <div key={key} className="grid grid-cols-[8rem_minmax(0,1fr)] gap-2">
             <dt className="font-medium capitalize">{key.replaceAll('_', ' ')}</dt>
             <dd className="break-words">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd>

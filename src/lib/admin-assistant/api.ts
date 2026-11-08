@@ -9,10 +9,30 @@ export interface PendingAdminAction {
     target_summary?: string;
     ids: string[];
     bulk_action: string | null;
+    preview?: AdminActionPreview | null;
   };
   expires_in_seconds: number;
   confirmation_path: string;
 }
+
+export type AdminActionPreview =
+  | {
+      type: 'promotion';
+      name: string;
+      description: string;
+      bundle_price: string;
+      image_urls: string[];
+      items: Array<{ product_title: string; sku: string; quantity: number; is_free: boolean; image_url: string }>;
+    }
+  | {
+      type: 'blog_post';
+      title: string;
+      excerpt: string;
+      content: string;
+      cover_image_url: string;
+      author_name: string;
+      status: string;
+    };
 
 export interface AdminAgentReply {
   response: string;
