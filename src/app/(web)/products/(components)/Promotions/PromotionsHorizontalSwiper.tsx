@@ -28,13 +28,18 @@ export default function PromotionsHorizontalSwiper({
     autoplayDelay = 5000
 }: PromotionsHorizontalSwiperProps): JSX.Element {
     const [swiperInstance, setSwiperInstance] = useState<SwiperType | null>(null);
+    const [activeIndex, setActiveIndex] = useState(0);
 
     const { isMobile } = useDeviceContext();
     const slidesToShow = isMobile ? 1 : slidesPerView;
     const showControls = promotions.length > slidesToShow;
+    const shouldLoop = promotions.length > slidesToShow;
     const controlTheme = theme === "furniture"
         ? "bg-[#3f4d2c] text-white hover:bg-[#33401f] focus-visible:ring-[#f5b21a]"
         : "bg-slate-950 text-white hover:bg-slate-800 focus-visible:ring-slate-400";
+    const indicatorTheme = theme === "furniture"
+        ? "bg-[#3f4d2c]"
+        : "bg-slate-950";
 
     return (
         <div className="relative">
@@ -42,8 +47,9 @@ export default function PromotionsHorizontalSwiper({
                 modules={[Autoplay]}
                 spaceBetween={spaceBetween}
                 slidesPerView={slidesToShow}
-                loop={promotions.length > slidesToShow}
+                loop={shouldLoop}
                 onSwiper={(swiper: SwiperType) => setSwiperInstance(swiper)}
+                onSlideChange={(swiper: SwiperType) => setActiveIndex(swiper.realIndex)}
                 autoplay={{
                     delay: autoplayDelay,
                     disableOnInteraction: false,
@@ -59,13 +65,34 @@ export default function PromotionsHorizontalSwiper({
                     </SwiperSlide>
                 ))}
             </Swiper>
-            {showControls && (
-                <>
+            {(showControls || promotions.length > 1) && (
+                <div className="mt-4 flex items-center justify-between gap-4">
+                    {promotions.length > 1 ? (
+                        <div role="group" aria-label="Promotion slides" className="flex min-w-0 items-center gap-1.5">
+                            {promotions.map((promotion, index) => (
+                                <button
+                                    key={promotion.id}
+                                    type="button"
+                                    aria-label={`Go to promotion ${index + 1}`}
+                                    aria-current={activeIndex === index ? "true" : undefined}
+                                    onClick={() => {
+                                        if (!swiperInstance) return;
+                                        if (shouldLoop) swiperInstance.slideToLoop(index);
+                                        else swiperInstance.slideTo(index);
+                                    }}
+                                    className={`h-2 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${activeIndex === index ? `w-6 ${indicatorTheme}` : `w-2 ${indicatorTheme} opacity-25 hover:opacity-60`}`}
+                                />
+                            ))}
+                        </div>
+                    ) : <span />}
+
+                    {showControls && (
+                        <div className="flex shrink-0 items-center gap-2">
                     <button
                         type="button"
                         aria-label="Previous promotion"
                         onClick={() => swiperInstance?.slidePrev()}
-                        className={`absolute left-3 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full shadow-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${controlTheme}`}
+                        className={`flex size-9 items-center justify-center rounded-full shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${controlTheme}`}
                     >
                         <ChevronLeft className="size-5" />
                     </button>
@@ -73,11 +100,13 @@ export default function PromotionsHorizontalSwiper({
                         type="button"
                         aria-label="Next promotion"
                         onClick={() => swiperInstance?.slideNext()}
-                        className={`absolute right-3 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full shadow-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${controlTheme}`}
+                        className={`flex size-9 items-center justify-center rounded-full shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${controlTheme}`}
                     >
                         <ChevronRight className="size-5" />
                     </button>
-                </>
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );
