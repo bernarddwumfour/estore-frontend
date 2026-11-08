@@ -226,7 +226,7 @@ function Packages() {
         <Suspense fallback={null}>
           {/* Reuses the shared promotions carousel: images that link to each
               package/promotion, same as the original store. */}
-          <PromotionsCarousel limit={10} />
+          <PromotionsCarousel limit={10} theme="furniture" />
         </Suspense>
       </div>
     </section>

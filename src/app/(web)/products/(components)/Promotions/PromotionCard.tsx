@@ -24,7 +24,7 @@ export default function PromotionCard({ promotion }: PromotionCardProps) {
                     src={mainImage.url}
                     alt={mainImage.alt_text || promotion.name}
                     fill
-                    className="object-contain p-2 transition-transform duration-500 group-hover:scale-[1.02]"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
             ) : (
                 <div className="flex h-full items-center justify-center text-slate-300">

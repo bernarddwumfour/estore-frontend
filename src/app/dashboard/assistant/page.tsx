@@ -2,10 +2,18 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { AxiosError } from 'axios';
-import { Bot, Check, ImagePlus, Loader2, MessageCircle, Plus, Send, Sparkles, Trash2, X } from 'lucide-react';
+import { Bot, Check, ChevronDown, ImagePlus, Loader2, MessageCircle, Plus, Send, Sparkles, Trash2, X } from 'lucide-react';
 
 import { useAuth } from '@/lib/use-auth';
 import { SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { DataTable } from '@/widgets/custom-table/DataTable';
 import { MediaPicker, type PickedMedia } from '@/widgets/social/MediaPicker';
 import {
@@ -516,13 +524,30 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
             </div>
             <div className="min-w-0 flex-1">
               <SheetTitle className="text-base">Admin Agent</SheetTitle>
-              <label htmlFor="admin-conversation-history" className="sr-only">Current conversation and history</label>
-              <select id="admin-conversation-history" value={conversationId || ''} disabled={busy}
-                onChange={event => { if (event.target.value) void selectConversation(event.target.value); }}
-                className="mt-0.5 block max-w-full truncate border-0 bg-transparent p-0 text-xs text-slate-500 outline-none focus:ring-0 dark:text-slate-400">
-                <option value="">New conversation</option>
-                {conversations.map(item => <option key={item.id} value={item.id}>{item.title} · {new Date(item.updated_at).toLocaleDateString()}</option>)}
-              </select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" disabled={busy} aria-label="Conversation history"
+                    className="mt-0.5 flex max-w-full items-center gap-1 text-left text-xs text-slate-500 outline-none hover:text-slate-900 disabled:opacity-50 dark:text-slate-400 dark:hover:text-white">
+                    <span className="truncate">{conversationTitle || 'New conversation'}</span>
+                    <ChevronDown className="size-3.5 shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)]">
+                  <DropdownMenuLabel>Conversation history</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem disabled={busy} onSelect={() => void selectConversation('new')}>
+                    <Plus className="size-4" /> New conversation
+                  </DropdownMenuItem>
+                  {conversations.map(item => (
+                    <DropdownMenuItem key={item.id} disabled={busy} onSelect={() => void selectConversation(item.id)}>
+                      <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{new Date(item.updated_at).toLocaleDateString()}</span>
+                      {item.id === conversationId && <Check className="size-4 shrink-0" />}
+                    </DropdownMenuItem>
+                  ))}
+                  {conversations.length === 0 && <p className="px-2 py-2 text-xs text-muted-foreground">No saved conversations yet.</p>}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <SheetDescription className="sr-only">Manage products, promotions, blogs, and other store content.</SheetDescription>
             </div>
             <button type="button" disabled={busy} onClick={() => void selectConversation('new')} aria-label="Start new conversation" title="New conversation"
@@ -615,9 +640,12 @@ export function AdminAssistantChat({ compact = false }: { compact?: boolean }) {
           }}
           rows={2} maxLength={4000} placeholder="Ask about your store…" aria-label="Message Admin Agent"
           className="min-w-0 max-h-32 min-h-11 flex-1 resize-none overflow-y-auto rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-        <button type="submit" disabled={busy || !input.trim()} aria-label="Send message"
-          className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white disabled:opacity-50 dark:bg-slate-700">
+        <button type="submit" disabled={busy || !input.trim()} aria-label={compact ? 'Send message' : 'Send'}
+          className={compact
+            ? 'inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white disabled:opacity-50 dark:bg-slate-700'
+            : 'inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 dark:bg-slate-700'}>
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+          {!compact && (busy ? 'Sending…' : 'Send')}
         </button>
       </form>
       {error && <p role="alert" className={`${compact ? 'mx-4 mb-3' : 'mt-3'} text-sm text-red-700 dark:text-red-300`}>{error}</p>}

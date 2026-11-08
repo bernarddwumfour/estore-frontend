@@ -42,8 +42,7 @@ import {
   TicketPercent,
   Share2,
   Inbox,
-  FileText,
-  Bot
+  FileText
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -62,7 +61,6 @@ import { AdminAssistantLauncher } from '@/widgets/admin-assistant/AdminAssistant
 // Navigation structure for e-commerce
 const SIDEBAR_LINKS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-  { icon: Bot, label: 'Admin Agent', href: '/dashboard/assistant' },
   {
     icon: MonitorDot,
     label: 'POS',

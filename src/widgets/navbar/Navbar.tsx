@@ -89,6 +89,9 @@ export default function Navbar() {
                             <Link href="/products" className="hover:text-slate-950 transition-colors">
                                 Products
                             </Link>
+                            <Link href="/promotions" className="hover:text-slate-950 transition-colors">
+                                Promotions
+                            </Link>
                             <Link href="/about" className="hover:text-slate-950 transition-colors">
                                 About Us
                             </Link>
@@ -231,6 +234,13 @@ export default function Navbar() {
                             className="block py-2 hover:text-slate-950 transition-colors"
                         >
                             Products
+                        </Link>
+                        <Link
+                            onClick={closeMobileMenu}
+                            href="/promotions"
+                            className="block py-2 hover:text-slate-950 transition-colors"
+                        >
+                            Promotions
                         </Link>
                         <Link
                             onClick={closeMobileMenu}

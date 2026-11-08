@@ -41,6 +41,7 @@ describe("Navbar", () => {
   it("renders the primary navigation links", () => {
     render(<Navbar />);
     expect(screen.getAllByRole("link", { name: "Products" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Promotions" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "About Us" }).length).toBeGreaterThan(0);
   });
 

@@ -41,6 +41,7 @@ import { SearchModal } from "@/widgets/search-modal/SearchModal";
 const navLinks = [
   { label: "Home", href: "/" },
   { label: "Shop", href: "/products" },
+  { label: "Promotions", href: "/promotions" },
   { label: "About Us", href: "/about" },
   { label: "Contact Us", href: "/contact" },
   { label: "Blog", href: "/blog" },

@@ -5,6 +5,7 @@ import { JSX } from "react";
 
 interface PromotionsCarouselProps {
     limit?: number;
+    theme?: "default" | "furniture";
 }
 
 async function getActivePromotions(limit: number = 10): Promise<PromotionType[]> {
@@ -48,6 +49,7 @@ async function getActivePromotions(limit: number = 10): Promise<PromotionType[]>
 
 export default async function PromotionsCarousel({
     limit = 10,
+    theme = "default",
 }: PromotionsCarouselProps): Promise<JSX.Element> {
     const promotions: PromotionType[] = await getActivePromotions(limit);
 
@@ -57,7 +59,7 @@ export default async function PromotionsCarousel({
 
     return (
         <div className="container mx-auto w-full overflow-hidden px-4 py-8 md:px-6">
-            <PromotionsHorizontalSwiper promotions={promotions} />
+            <PromotionsHorizontalSwiper promotions={promotions} theme={theme} />
         </div>
     );
 }
