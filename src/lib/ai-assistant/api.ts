@@ -1,6 +1,8 @@
 
 import axios from "axios";
+import { endpoints } from "@/constants/endpoints/endpoints";
 import securityAxios from "@/axios-instances/SecurityAxios";
+import unAuthenticatedAxios from "@/axios-instances/UnAuthenticatedAxios";
 
 
 export interface AssistantProductVariant {
@@ -123,8 +125,8 @@ export async function sendGuestAssistantMessage(
   if (!message) throw new Error('Message cannot be empty.');
   if (message.length > 4000) throw new Error('Message cannot exceed 4000 characters.');
   try {
-    const response = await securityAxios.post<APIResponse<AssistantResponse>>(
-      '/assistant/guest/chat/',
+    const response = await unAuthenticatedAxios.post<APIResponse<AssistantResponse>>(
+      endpoints.assistant.guestChat,
       { message, history: payload.history ?? [] },
       { signal },
     );

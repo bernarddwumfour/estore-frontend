@@ -1,4 +1,7 @@
 export const endpoints = {
+  assistant: {
+    guestChat: "/assistant/guest/chat/",
+  },
   auth: {
     login: "/users/login",
     staffLogin: "/users/staff-login",
