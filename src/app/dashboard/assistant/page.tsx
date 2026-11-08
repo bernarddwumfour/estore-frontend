@@ -83,9 +83,7 @@ function ResultTable({ table, onPrepareAction }: {
         : []);
       const categoryImage = typeof row.image === 'string' ? [row.image] : [];
       const coverImage = typeof row.cover_image_url === 'string' ? [row.cover_image_url] : [];
-      const rowImages = directImages.length ? directImages : defaultImages.length ? defaultImages : variantImages.length ? variantImages : categoryImage.length ? categoryImage : coverImage;
-      // Promotion rows use one clean thumbnail, like the product and category tables.
-      displayRow.images = table.title === 'Promotions' ? rowImages.slice(0, 1) : rowImages;
+      displayRow.images = directImages.length ? directImages : defaultImages.length ? defaultImages : variantImages.length ? variantImages : categoryImage.length ? categoryImage : coverImage;
     }
     for (const column of table.columns) {
       const key = column.key.replace(/\.([a-z])/g, (_, letter: string) => letter.toUpperCase()).replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
@@ -104,7 +102,6 @@ function ResultTable({ table, onPrepareAction }: {
         data={rows}
         excludeColumns={['id']}
         images={hasImages ? { images: item => item.images as string[] } : {}}
-        imagePreview={table.title !== 'Promotions'}
         bulkActions={table.title === 'Products' ? [
           { label: 'Publish', onClick: selected => onPrepareAction('product', selected, 'publish') },
           { label: 'Set to draft', onClick: selected => onPrepareAction('product', selected, 'draft') },

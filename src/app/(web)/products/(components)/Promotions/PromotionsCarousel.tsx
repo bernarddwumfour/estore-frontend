@@ -5,8 +5,6 @@ import { JSX } from "react";
 
 interface PromotionsCarouselProps {
     limit?: number;
-    title?: string;
-    subtitle?: string;
 }
 
 async function getActivePromotions(limit: number = 10): Promise<PromotionType[]> {
@@ -50,8 +48,6 @@ async function getActivePromotions(limit: number = 10): Promise<PromotionType[]>
 
 export default async function PromotionsCarousel({
     limit = 10,
-    title = "🔥 Limited Time Offers",
-    subtitle = "Grab these deals before they're gone!"
 }: PromotionsCarouselProps): Promise<JSX.Element> {
     const promotions: PromotionType[] = await getActivePromotions(limit);
 
@@ -60,16 +56,7 @@ export default async function PromotionsCarousel({
     }
 
     return (
-        <div className="w-full relative overflow-hidden py-8 container mx-auto px-4 md;px-6">
-            {/* <div className="text-center mb-8">
-                <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-2">
-                    {title}
-                </h2>
-                {subtitle && (
-                    <p className="text-sm text-gray-500">{subtitle}</p>
-                )}
-            </div> */}
-
+        <div className="container mx-auto w-full overflow-hidden px-4 py-8 md:px-6">
             <PromotionsHorizontalSwiper promotions={promotions} />
         </div>
     );

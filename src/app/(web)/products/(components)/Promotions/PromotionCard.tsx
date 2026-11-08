@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { PromotionType } from "@/types/promotionTypes";
-import { formatCurrency } from "@/lib/currency";
+import { Gift } from "lucide-react";
 
 interface PromotionCardProps {
     promotion: PromotionType;
@@ -16,36 +16,21 @@ export default function PromotionCard({ promotion }: PromotionCardProps) {
     return (
         <Link
             href={`/promotions/${promotion.slug}`}
-            className="group relative block overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 aspect-[6/3] md:aspect-[8/3] transition-all duration-300 hover:shadow-lg"
+            aria-label={`View promotion: ${promotion.name}`}
+            className="group relative block aspect-[6/3] overflow-hidden rounded-[2rem] border border-slate-100 bg-[#f8f9fa] transition-all duration-300 hover:border-slate-200 hover:shadow-sm md:aspect-[8/3]"
         >
             {mainImage ? (
                 <Image
                     src={mainImage.url}
                     alt={mainImage.alt_text || promotion.name}
                     fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="object-contain p-2 transition-transform duration-500 group-hover:scale-[1.02]"
                 />
             ) : (
-                <div className="flex flex-col items-center justify-center h-full text-amber-400">
-                    <div className="text-4xl mb-2">🎁</div>
-                    <span className="text-sm font-medium">{promotion.name}</span>
+                <div className="flex h-full items-center justify-center text-slate-300">
+                    <Gift className="size-10" strokeWidth={1.4} />
                 </div>
             )}
-
-            {/* Savings badge */}
-            <div className="absolute top-3 right-3">
-                <span className="inline-flex items-center gap-1 rounded-full bg-destructive/90 text-white px-2.5 py-1 text-xs font-bold shadow-sm">
-                    -{promotion.savings_percentage}%
-                </span>
-            </div>
-
-            {/* Optional: Hover overlay with more info */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-start p-4">
-                <div className="text-white">
-                    <p className="text-sm font-bold">Save {formatCurrency(promotion.savings_amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                    <p className="text-xs opacity-90">View Package →</p>
-                </div>
-            </div>
         </Link>
     );
 }
