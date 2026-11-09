@@ -12,6 +12,9 @@ async function getProducts(category?: string, endpoint?: string) {
         const params = new URLSearchParams({
             limit: "10", // Kept low for optimal carousel looping performance
             category: category || "",
+            featured: "true",
+            display: "variants",
+            sort_by: "random",
         });
 
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '') || "http://localhost:3000";
@@ -23,12 +26,7 @@ async function getProducts(category?: string, endpoint?: string) {
 
         console.log("Fetching carousel items from:", url.toString());
 
-        const response = await fetch(url.toString(), {
-            next: {
-                revalidate: 300,
-                tags: ["products-carousel", category ? `products-${category}` : "all-products"],
-            },
-        });
+        const response = await fetch(url.toString(), { cache: "no-store" });
 
         if (!response.ok) {
             throw new Error(`Failed to fetch: ${response.status}`);
@@ -61,7 +59,7 @@ export default async function ProductVerticalCarousel({ category, endpoint }: Pr
     return (
         <div className="lg:col-span-3 w-full md:h-[680px] relative overflow-hidden">
             {/* Pass fetched data down into the Swiper client-wrapper */}
-            <p className="font-black text-2xl rounded-md py-12 lg:py-0 pb-6 lg:pb-2">Explore Our Best Selling Products .</p>
+            <p className="font-black text-2xl rounded-md py-12 lg:py-0 pb-6 lg:pb-2">Explore Our Featured Products</p>
             <ProductVerticalSwiper products={products} />
         </div>
     );

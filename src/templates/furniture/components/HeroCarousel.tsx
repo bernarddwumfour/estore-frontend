@@ -43,7 +43,7 @@ export default function HeroCarousel({ products }: { products: ProductType[] }) 
               className="w-[300px] shrink-0 snap-start rounded-3xl bg-white p-4 sm:w-[340px]"
             >
               <Link
-                href={`/products/${product.slug}`}
+                href={`/products/${product.slug}${product.variant_slug ? `/${product.variant_slug}` : ""}`}
                 className="relative block aspect-[4/3] overflow-hidden rounded-2xl bg-[#f4f1ea]"
               >
                 {image ? (
@@ -75,7 +75,7 @@ export default function HeroCarousel({ products }: { products: ProductType[] }) 
                   </p>
                 </div>
                 <Link
-                  href={`/products/${product.slug}`}
+                  href={`/products/${product.slug}${product.variant_slug ? `/${product.variant_slug}` : ""}`}
                   aria-label={`Shop ${product.title}`}
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#3f4d2c] text-white transition-colors hover:bg-[#33401f]"
                 >

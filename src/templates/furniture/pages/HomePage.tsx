@@ -58,10 +58,8 @@ async function getHeroProducts(): Promise<ProductType[]> {
     const url = new URL(
       `${baseUrl.replace(/\/$/, "")}/${endpoints.products.listProductsWeb.replace(/^\//, "")}`
     );
-    url.search = new URLSearchParams({ limit: "8", sort_by: "created_at", sort_order: "desc" }).toString();
-    const res = await fetch(url.toString(), {
-      next: { revalidate: 300, tags: ["products", "hero-products"] },
-    });
+    url.search = new URLSearchParams({ limit: "8", featured: "true", display: "variants", sort_by: "random" }).toString();
+    const res = await fetch(url.toString(), { cache: "no-store" });
     if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
     const data = await res.json();
     return data?.success ? data.data.products ?? [] : [];
@@ -210,7 +208,7 @@ function ProductCollection() {
         <Categories />
       </Suspense>
       <Suspense fallback={<ProductsGridSkeleton />}>
-        <ProductsGrid limit={12} showPagination={false} />
+        <ProductsGrid featured={false} limit={12} sort_by="random" showPagination={false} />
       </Suspense>
     </section>
   );

@@ -84,7 +84,7 @@ async function getProducts(filters: {
 
     console.log('Fetching products with params:', url.toString())
 
-    const response = await fetch(url.toString(), {
+    const response = await fetch(url.toString(), filters.sort_by === 'random' ? { cache: 'no-store' } : {
       next: {
         revalidate: 300,
         tags: ['products', filters.category ? `products-${filters.category}` : 'all-products']

@@ -26,9 +26,9 @@ export default function HomePage() {
       <div className="pt-6 md:pt-12">
         <PromotionsCarousel />
       </div>
-      <Products1 page={1} />
+      <Products1 section="bestseller" />
       <About />
-      <Products1 page={2} />
+      <Products1 section="new" />
       <Suspense fallback={null}>
         <Testimonials />
       </Suspense>
@@ -220,7 +220,7 @@ function About() {
   )
 }
 
-function Products1({ page }: { page: number }) {
+function Products1({ section }: { section: "bestseller" | "new" }) {
   return (
 
     <section className="relative py-24 bg-cover bg-center" >
@@ -229,18 +229,18 @@ function Products1({ page }: { page: number }) {
       <div className="mx-auto container px-4">
         <div className="max-w-xl space-y-4">
           <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
-            Best Sellers
+            {section === "bestseller" ? "Best Sellers" : "New Arrivals"}
           </h2>
           <h3 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
-            Most Loved by   {" "}
+            {section === "bestseller" ? "Most Loved by " : "Discover Our "}{" "}
             <span className="text-slate-950 relative inline-block">
-              Our Customers.
+              {section === "bestseller" ? "Our Customers." : "Latest Arrivals."}
               <span className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-slate-950/0 via-slate-950/40 to-slate-950/0 blur-xs"></span>
             </span>
           </h3>
         </div>
         <Suspense fallback={<ProductsGridSkeleton />}>
-          <ProductsGrid page={page} limit={8} showPagination={false} />
+          <ProductsGrid bestseller={section === "bestseller" ? true : undefined} new={section === "new" ? true : undefined} sort_by="random" limit={8} showPagination={false} />
         </Suspense>
       </div>
     </section>
