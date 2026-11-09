@@ -17,6 +17,13 @@ export interface PendingAdminAction {
 
 export type AdminActionPreview =
   | {
+      type: 'social_post';
+      caption: string;
+      image_urls: string[];
+      targets: Array<{ platform: string; accountId?: string }>;
+      scheduled_for: string | null;
+    }
+  | {
       type: 'promotion';
       public_id: string;
       name: string;

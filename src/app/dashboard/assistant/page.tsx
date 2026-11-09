@@ -151,6 +151,25 @@ function errorText(error: unknown): string {
 }
 
 function CreatePreview({ preview }: { preview: AdminActionPreview }) {
+  if (preview.type === 'social_post') {
+    return (
+      <section className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950">
+        <div className="border-b border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700">Social post preview</div>
+        {preview.image_urls.length > 0
+          ? <div className="grid max-h-96 grid-cols-2 gap-1 overflow-hidden bg-slate-100 dark:bg-slate-900">
+              {preview.image_urls.slice(0, 4).map((url, index) => <img key={`${url}-${index}`} src={url} alt={`Post media ${index + 1}`} className={`${preview.image_urls.length === 1 ? 'col-span-2 max-h-96' : 'aspect-square'} w-full object-cover`} />)}
+            </div>
+          : <div className="flex aspect-[16/7] items-center justify-center bg-slate-100 text-sm text-slate-500 dark:bg-slate-900">Text-only post</div>}
+        <div className="space-y-3 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {preview.targets.map((target, index) => <span key={`${target.platform}-${index}`} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize dark:bg-slate-800">{target.platform}</span>)}
+            {preview.scheduled_for && <span className="text-xs text-slate-500">Scheduled {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(preview.scheduled_for))}</span>}
+          </div>
+          <p className="whitespace-pre-wrap break-words text-sm leading-6">{preview.caption}</p>
+        </div>
+      </section>
+    );
+  }
   if (preview.type === 'blog_post') {
     return (
       <section className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950">
@@ -295,6 +314,8 @@ function ActionCard({ action, onConfirmed }: {
     ? new Set(['title', 'post_code', 'excerpt', 'content', 'cover_image_url', 'author_name', 'status'])
     : preview?.type === 'promotion'
       ? new Set(['items', 'promotion_code', 'image_count', 'name', 'description', 'bundle_price'])
+      : preview?.type === 'social_post'
+        ? new Set(['caption', 'media_items', 'targets', 'scheduled_for', 'image_urls'])
       : new Set<string>();
 
   if (dismissed) return null;
