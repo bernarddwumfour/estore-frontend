@@ -8,7 +8,7 @@ import {
     Search, X, Loader2, ArrowRight, Clock, Package,
     SlidersHorizontal
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { filterThemeClasses as cn } from "@/templates/filter-theme"
 import Link from "next/link"
 import { AdvancedFilters } from "../advanced-filters/AdvancedFilters"
 import { useDebounce } from "@/app/lib/hooks/use-debounce"
@@ -216,27 +216,38 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
     return (
         <>
             <div
-                className="fixed inset-0 z-[100] bg-white/98 backdrop-blur-md"
+                className={cn("fixed inset-0 z-[100] bg-white/98 backdrop-blur-md")}
                 role="dialog"
                 aria-modal="true"
                 aria-label="Search products"
             >
-                <div className="mx-auto max-w-4xl px-4 pt-12 md:pt-28">
+                <div className={cn("mx-auto max-w-4xl px-4 pt-12 md:pt-28")} >
                     {/* Large Title */}
-                    <div className="max-w-xl space-y-4 pb-6">
-                        <h2 className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
+                    <div className="flex items-start justify-between gap-4 pb-6">
+                      <div className="min-w-0 max-w-xl space-y-4">
+                        <h2 className={cn("text-slate-400 font-bold uppercase tracking-[0.3em] text-xs")} >
                             Search through hundreds of products
                         </h2>
-                        <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                            What are you <span className="text-slate-400">looking for?</span>
+                        <h3 className={cn("text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight")} >
+                            What are you <span className={cn("text-slate-400")} >looking for?</span>
                         </h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className={cn("flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-slate-900 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current sm:px-5")}
+                        aria-label="Close search"
+                      >
+                        <X className="h-5 w-5" aria-hidden="true" />
+                        <span className="hidden sm:inline">Close</span>
+                      </button>
                     </div>
 
-                    {/* Search Input with Filter and Close buttons */}
-                    <div className="flex items-center gap-2">
+                    {/* Search Input */}
+                    <div className={cn("flex items-center gap-2")} >
                         {/* Search Input */}
-                        <div className="flex-1 flex items-center rounded-xl border border-slate-200 bg-white transition-all focus-within:border-slate-900 focus-within:shadow-md">
-                            <Search className="ml-3 h-4 w-4 text-slate-400 flex-shrink-0" />
+                        <div className={cn("flex-1 flex items-center rounded-xl border border-slate-200 bg-white transition-all focus-within:border-slate-900 focus-within:shadow-md")} >
+                            <Search className={cn("ml-3 h-4 w-4 text-slate-400 flex-shrink-0")}  />
                             <input
                                 ref={inputRef}
                                 type="text"
@@ -247,7 +258,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                                 }}
                                 onKeyDown={handleKeyDown}
                                 placeholder="Search for products..."
-                                className="w-full border-0 bg-transparent py-2.5 pl-2 pr-3 text-sm outline-none placeholder:text-slate-400"
+                                className={cn("w-full border-0 bg-transparent py-2.5 pl-2 pr-3 text-sm outline-none placeholder:text-slate-400")}
                                 aria-label="Search products"
                                 autoComplete="off"
                             />
@@ -255,14 +266,14 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                                 <button
                                     type="button"
                                     onClick={clearSearch}
-                                    className="mr-1.5 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+                                    className={cn("mr-1.5 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer")}
                                     aria-label="Clear search"
                                 >
-                                    <X className="h-3.5 w-3.5" />
+                                    <X className={cn("h-3.5 w-3.5")}  />
                                 </button>
                             )}
                             {isLoadingData && (
-                                <Loader2 className="mr-3 h-4 w-4 animate-spin text-slate-400" />
+                                <Loader2 className={cn("mr-3 h-4 w-4 animate-spin text-slate-400")}  />
                             )}
                         </div>
 
@@ -270,27 +281,18 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                         {/* <button
                             type="button"
                             onClick={() => setFilterSidebarOpen(true)}
-                            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-medium transition-all cursor-pointer flex-shrink-0 text-sm bg-slate-100 text-slate-700 hover:bg-slate-200"
+                            className={cn("flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-medium transition-all cursor-pointer flex-shrink-0 text-sm bg-slate-100 text-slate-700 hover:bg-slate-200")}
                             aria-label="Open filters"
                         >
-                            <SlidersHorizontal className="h-4 w-4" />
-                            <span className="hidden sm:inline">Filters</span>
+                            <SlidersHorizontal className={cn("h-4 w-4")}  />
+                            <span className={cn("hidden sm:inline")} >Filters</span>
                         </button> */}
 
-                        {/* Close Button */}
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="rounded-xl p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors flex-shrink-0"
-                            aria-label="Close search"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
                     </div>
 
                     {/* Search stats */}
                     {debouncedQuery.length >= 2 && !isLoadingData && (
-                        <div className="mt-1.5 text-xs text-slate-500">
+                        <div className={cn("mt-1.5 text-xs text-slate-500")} >
                             {results.length > 0
                                 ? `${totalResults} product${totalResults > 1 ? 's' : ''} found`
                                 : 'No products found'
@@ -299,11 +301,11 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                     )}
 
                     {/* Results / Suggestions */}
-                    <div className="mt-4 max-h-[calc(100vh-280px)] overflow-y-auto" ref={resultsRef}>
+                    <div className={cn("mt-4 max-h-[calc(100vh-280px)] overflow-y-auto")}  ref={resultsRef}>
                         {debouncedQuery.length >= 2 ? (
                             // Search Results
                             results.length > 0 ? (
-                                <div className="space-y-1.5">
+                                <div className={cn("space-y-1.5")} >
                                     {results.map((result: SearchResult, index: number) => (
                                         <button
                                             type="button"
@@ -318,53 +320,53 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                                             onMouseEnter={() => setSelectedIndex(index)}
                                         >
                                             {/* Product Image */}
-                                            <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                                            <div className={cn("h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100")} >
                                                 {result.default_variant?.images?.[0]?.url ? (
                                                     <img
                                                         src={result.default_variant.images[0].url}
                                                         alt={result.title}
-                                                        className="h-full w-full object-cover"
+                                                        className={cn("h-full w-full object-cover")}
                                                     />
                                                 ) : (
-                                                    <div className="flex h-full w-full items-center justify-center bg-slate-200">
-                                                        <Package className="h-6 w-6 text-slate-400" />
+                                                    <div className={cn("flex h-full w-full items-center justify-center bg-slate-200")} >
+                                                        <Package className={cn("h-6 w-6 text-slate-400")}  />
                                                     </div>
                                                 )}
                                             </div>
 
                                             {/* Product Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between gap-2">
+                                            <div className={cn("flex-1 min-w-0")} >
+                                                <div className={cn("flex items-start justify-between gap-2")} >
                                                     <div>
-                                                        <div className="font-medium text-sm text-slate-900 truncate">
+                                                        <div className={cn("font-medium text-sm text-slate-900 truncate")} >
                                                             {result.title}
                                                         </div>
                                                         {result.category && (
-                                                            <div className="text-xs text-slate-500">
+                                                            <div className={cn("text-xs text-slate-500")} >
                                                                 {result.category.name}
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div className="text-right flex-shrink-0">
-                                                        <div className="font-semibold text-sm text-slate-900">
+                                                    <div className={cn("text-right flex-shrink-0")} >
+                                                        <div className={cn("font-semibold text-sm text-slate-900")} >
                                                             {formatCurrency(result.min_price)}
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="mt-1 flex items-center gap-3">
+                                                <div className={cn("mt-1 flex items-center gap-3")} >
                                                     {result.has_stock ? (
-                                                        <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
-                                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                        <span className={cn("inline-flex items-center gap-1 text-xs text-emerald-600")} >
+                                                            <span className={cn("h-1.5 w-1.5 rounded-full bg-emerald-500")}  />
                                                             In Stock
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center gap-1 text-xs text-red-500">
-                                                            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                                        <span className={cn("inline-flex items-center gap-1 text-xs text-red-500")} >
+                                                            <span className={cn("h-1.5 w-1.5 rounded-full bg-red-500")}  />
                                                             Out of Stock
                                                         </span>
                                                     )}
                                                     {result.average_rating > 0 && (
-                                                        <span className="text-xs text-slate-500">
+                                                        <span className={cn("text-xs text-slate-500")} >
                                                             ★ {result.average_rating.toFixed(1)}
                                                         </span>
                                                     )}
@@ -378,7 +380,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                                         <button
                                             type="button"
                                             onClick={() => handleViewAllResults(query)}
-                                            className="w-full text-center py-2 text-sm text-slate-500 hover:text-slate-900 transition-colors border-t border-slate-100 mt-2"
+                                            className={cn("w-full text-center py-2 text-sm text-slate-500 hover:text-slate-900 transition-colors border-t border-slate-100 mt-2")}
                                         >
                                             View all {totalResults} results →
                                         </button>
@@ -386,10 +388,10 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                                 </div>
                             ) : (
                                 !isLoadingData && (
-                                    <div className="text-center py-8">
-                                        <Package className="mx-auto h-10 w-10 text-slate-300" />
-                                        <p className="mt-2 text-sm text-slate-500">No products found</p>
-                                        <p className="text-xs text-slate-400">
+                                    <div className={cn("text-center py-8")} >
+                                        <Package className={cn("mx-auto h-10 w-10 text-slate-300")}  />
+                                        <p className={cn("mt-2 text-sm text-slate-500")} >No products found</p>
+                                        <p className={cn("text-xs text-slate-400")} >
                                             Try adjusting your search terms
                                         </p>
                                     </div>
@@ -397,23 +399,23 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                             )
                         ) : (
                             // Recent Searches with Product Details
-                            <div className="space-y-6">
+                            <div className={cn("space-y-6")} >
                                 {recentSearches.length > 0 ? (
                                     <div>
-                                        <div className="flex items-center justify-between mb-3">
-                                            <h3 className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
-                                                <Clock className="h-3.5 w-3.5" />
+                                        <div className={cn("flex items-center justify-between mb-3")} >
+                                            <h3 className={cn("text-xs font-medium text-slate-500 flex items-center gap-1.5")} >
+                                                <Clock className={cn("h-3.5 w-3.5")}  />
                                                 Recent Products
                                             </h3>
                                             <button
                                                 type="button"
                                                 onClick={clearRecentSearches}
-                                                className="text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                                                className={cn("text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer")}
                                             >
                                                 Clear all
                                             </button>
                                         </div>
-                                        <div className="space-y-1.5">
+                                        <div className={cn("space-y-1.5")} >
                                             {recentSearches.map((recent, index) => {
                                                 const itemIndex = results.length + index
                                                 return (
@@ -430,59 +432,59 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                                                         onMouseEnter={() => setSelectedIndex(itemIndex)}
                                                     >
                                                         {/* Product Image */}
-                                                        <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                                                        <div className={cn("h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100")} >
                                                             {recent.product.default_variant?.images?.[0]?.url ? (
                                                                 <img
                                                                     src={recent.product.default_variant.images[0].url}
                                                                     alt={recent.product.title}
-                                                                    className="h-full w-full object-cover"
+                                                                    className={cn("h-full w-full object-cover")}
                                                                 />
                                                             ) : (
-                                                                <div className="flex h-full w-full items-center justify-center bg-slate-200">
-                                                                    <Package className="h-6 w-6 text-slate-400" />
+                                                                <div className={cn("flex h-full w-full items-center justify-center bg-slate-200")} >
+                                                                    <Package className={cn("h-6 w-6 text-slate-400")}  />
                                                                 </div>
                                                             )}
                                                         </div>
 
                                                         {/* Product Info */}
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-start justify-between gap-2">
+                                                        <div className={cn("flex-1 min-w-0")} >
+                                                            <div className={cn("flex items-start justify-between gap-2")} >
                                                                 <div>
-                                                                    <div className="font-medium text-sm text-slate-900 truncate">
+                                                                    <div className={cn("font-medium text-sm text-slate-900 truncate")} >
                                                                         {recent.product.title}
                                                                     </div>
                                                                     {recent.product.category && (
-                                                                        <div className="text-xs text-slate-500">
+                                                                        <div className={cn("text-xs text-slate-500")} >
                                                                             {recent.product.category.name}
                                                                         </div>
                                                                     )}
                                                                     {recent.query && (
-                                                                        <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                                                                            <Search className="h-2.5 w-2.5" />
+                                                                        <div className={cn("text-[10px] text-slate-400 flex items-center gap-1 mt-0.5")} >
+                                                                            <Search className={cn("h-2.5 w-2.5")}  />
                                                                             Searched for "{recent.query}"
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                                <div className="text-right flex-shrink-0">
-                                                                    <div className="font-semibold text-sm text-slate-900">
+                                                                <div className={cn("text-right flex-shrink-0")} >
+                                                                    <div className={cn("font-semibold text-sm text-slate-900")} >
                                                                         {formatCurrency(recent.product.min_price)}
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="mt-1 flex items-center gap-3">
+                                                            <div className={cn("mt-1 flex items-center gap-3")} >
                                                                 {recent.product.has_stock ? (
-                                                                    <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
-                                                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                                    <span className={cn("inline-flex items-center gap-1 text-xs text-emerald-600")} >
+                                                                        <span className={cn("h-1.5 w-1.5 rounded-full bg-emerald-500")}  />
                                                                         In Stock
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="inline-flex items-center gap-1 text-xs text-red-500">
-                                                                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                                                    <span className={cn("inline-flex items-center gap-1 text-xs text-red-500")} >
+                                                                        <span className={cn("h-1.5 w-1.5 rounded-full bg-red-500")}  />
                                                                         Out of Stock
                                                                     </span>
                                                                 )}
                                                                 {recent.product.average_rating > 0 && (
-                                                                    <span className="text-xs text-slate-500">
+                                                                    <span className={cn("text-xs text-slate-500")} >
                                                                         ★ {recent.product.average_rating.toFixed(1)}
                                                                     </span>
                                                                 )}
@@ -496,14 +498,14 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                                 ) : (
                                     // No recent searches - show categories as pill/chip buttons
                                     <div>
-                                        <h3 className="text-xs font-medium text-slate-500 flex items-center gap-1.5 mb-3">
-                                            <Package className="h-3.5 w-3.5" />
+                                        <h3 className={cn("text-xs font-medium text-slate-500 flex items-center gap-1.5 mb-3")} >
+                                            <Package className={cn("h-3.5 w-3.5")}  />
                                             Browse Categories
                                         </h3>
 
-                                        <div className="flex flex-wrap items-center justify-start gap-2.5">
+                                        <div className={cn("flex flex-wrap items-center justify-start gap-2.5")} >
                                             <Link href="/products" scroll={false} onClick={onClose}>
-                                                <span className="inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 cursor-pointer border bg-slate-950 border-slate-950 text-white shadow-sm">
+                                                <span className={cn("inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 cursor-pointer border bg-slate-950 border-slate-950 text-white shadow-sm")} >
                                                     All
                                                 </span>
                                             </Link>
@@ -515,21 +517,21 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                                                     scroll={false}
                                                     onClick={onClose}
                                                 >
-                                                    <span className="inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 cursor-pointer border bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-900">
+                                                    <span className={cn("inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 cursor-pointer border bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-900")} >
                                                         {category.name}
                                                     </span>
                                                 </Link>
                                             ))}
                                         </div>
 
-                                        <div className="mt-6 pt-4 border-t border-slate-100">
+                                        <div className={cn("mt-6 pt-4 border-t border-slate-100")} >
                                             <Link
                                                 href="/products"
                                                 onClick={onClose}
-                                                className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors group"
+                                                className={cn("inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors group")}
                                             >
                                                 Browse all products
-                                                <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                                                <ArrowRight className={cn("h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform")}  />
                                             </Link>
                                         </div>
                                     </div>
@@ -539,7 +541,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                     </div>
 
                     {/* Keyboard shortcuts hint */}
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 hidden md:flex items-center gap-3 text-[14px] text-slate-400">
+                    <div className={cn("absolute bottom-4 left-1/2 -translate-x-1/2 hidden md:flex items-center gap-3 text-[14px] text-slate-400")} >
                         <span>↑↓ to navigate</span>
                         <span>•</span>
                         <span>Enter to select</span>
@@ -557,7 +559,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                 filterSidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
             )}>
                 <div
-                    className="absolute inset-0 bg-black/20"
+                    className={cn("absolute inset-0 bg-black/20")}
                     onClick={() => setFilterSidebarOpen(false)}
                 />
 
@@ -565,12 +567,12 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                     "absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 overflow-y-auto",
                     filterSidebarOpen ? "translate-x-0" : "translate-x-full"
                 )}>
-                    <div className="p-4">
+                    <div className={cn("p-4")} >
                         <AdvancedFilters
                             onClose={() => setFilterSidebarOpen(false)}
                             isModal={true}
                             showSort={true}
-                            className="h-full"
+                            className={cn("h-full")}
                         />
                     </div>
                 </div>

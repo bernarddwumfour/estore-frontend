@@ -1,18 +1,37 @@
-import Link from "next/link"
+import Image from "next/image";
+import Link from "next/link";
+import type { MouseEventHandler } from "react";
 
-const Logo = () => {
-    return (
-        <Link href="/" className="flex items-center gap-2.5 py-3 group">
-            {/* Minimalist Tech Icon Box */}
-            <div className="w-9 h-9 rounded-xl bg-slate-950 flex items-center justify-center text-white font-black text-sm tracking-tighter shadow-sm transition-transform duration-300 group-hover:scale-105">
-                iP
-            </div>
-            {/* Clean Typography Frame */}
-            {/* <span className="text-xl font-black text-slate-950 tracking-tight transition-colors duration-300 group-hover:text-slate-800">
-                iPlug
-            </span> */}
-        </Link>
-    )
+export default function Logo({
+  light = false,
+  compact = false,
+  href = "/",
+  onClick,
+}: {
+  light?: boolean;
+  compact?: boolean;
+  href?: string;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
+}) {
+  const furniture = process.env.NEXT_PUBLIC_STORE === "furniture";
+  const name = furniture ? "oak&loom" : "iPlug";
+  const src = furniture ? "/brand/oak-and-loom-logo.png" : "/brand/iplug-logo.png";
+
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      aria-label={`${name} home`}
+      className={`inline-flex shrink-0 items-center rounded-lg ${light ? "bg-[#f6f3ec] px-3 py-1" : "dark:bg-white"}`}
+    >
+      <Image
+        src={src}
+        alt={name}
+        width={2172}
+        height={724}
+        className={compact ? "h-auto w-14" : furniture ? "h-auto w-36 sm:w-40" : "h-auto w-24 sm:w-28"}
+        priority
+      />
+    </Link>
+  );
 }
-
-export default Logo

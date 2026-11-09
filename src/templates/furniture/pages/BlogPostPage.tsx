@@ -42,7 +42,7 @@ export default function BlogPostPage({ post }: BlogPostPageProps) {
 
         {/* Article Content */}
         <article
-          className="prose prose-lg max-w-none prose-headings:text-[#2b2b22] prose-a:text-[#3f4d2c]"
+          className="prose prose-lg max-w-none prose-headings:text-[#2b2b22] prose-a:text-[#654035]"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
@@ -50,7 +50,7 @@ export default function BlogPostPage({ post }: BlogPostPageProps) {
         <div className="mt-16 text-center">
           <Link
             href="/blog"
-            className="inline-flex items-center gap-2 rounded-full border border-[#e7e1d3] px-6 py-3 text-sm font-bold text-[#2b2b22] hover:border-[#3f4d2c] hover:text-[#3f4d2c] transition-colors"
+            className="inline-flex items-center gap-2 rounded-full border border-[#e7e1d3] px-6 py-3 text-sm font-bold text-[#2b2b22] hover:border-[#654035] hover:text-[#654035] transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to all posts

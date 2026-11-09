@@ -1,6 +1,7 @@
 // app/components/Product/ProductActions.tsx
 'use client'
 
+import { storefrontTheme } from '@/templates/storefront-theme'
 import { useCartStore } from '@/app/lib/store/cart-store'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react'
@@ -185,7 +186,7 @@ const ProductActions = ({
                     Buy Now
                   </Button>
                 </DialogTrigger>
-                <DialogContent className='sm:max-w-[600px]'>
+                <DialogContent data-storefront-theme={storefrontTheme} className='sm:max-w-[600px] max-h-[85dvh] overflow-y-auto'>
                   <DialogTitle>
                     You are about to Checkout with these items in cart.
                   </DialogTitle>
@@ -195,7 +196,7 @@ const ProductActions = ({
                   <>
                     <ul className="space-y-6">
                       {items.map((item) => (
-                        <li key={item.id} className="flex items-start gap-4">
+                        <li key={item.variantId || item.sku} className="flex items-start gap-4">
                           <Link href={`/products/${item.slug}`} className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
                             <Image
                               width={88}
@@ -272,7 +273,7 @@ const ProductActions = ({
                           Checkout
                         </Link>
 
-                        <DialogClose className='flex justify-center w-full'>
+                        <DialogClose asChild>
                           <button
                             className="block cursor-pointer w-full text-center text-sm text-gray-500 underline underline-offset-4 transition hover:text-gray-600"
                           >

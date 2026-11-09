@@ -37,7 +37,7 @@ export default function TestimonialsCarousel({
           clickable: true,
           bulletClass:
             "swiper-pagination-bullet !h-1.5 !w-8 !rounded-full !bg-[#d6d2c6] !opacity-100 !mx-1 transition-all",
-          bulletActiveClass: "!bg-[#3f4d2c]",
+          bulletActiveClass: "!bg-[#654035]",
         }}
         breakpoints={{ 768: { slidesPerView: 2 } }}
         className="!pb-12"
@@ -51,8 +51,8 @@ export default function TestimonialsCarousel({
             <SwiperSlide key={review.id}>
               <div className="rounded-3xl bg-[#f1eee7] p-6">
                 <div className="flex items-center gap-5">
-                  <div className="relative shrink-0 rounded-3xl rounded-bl-[3rem] bg-[#3f4d2c] p-2">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-white bg-[#e6e1d6] text-xl font-bold text-[#3f4d2c]">
+                  <div className="relative shrink-0 rounded-3xl rounded-bl-[3rem] bg-[#654035] p-2">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-white bg-[#e6e1d6] text-xl font-bold text-[#654035]">
                       {initials}
                     </div>
                   </div>

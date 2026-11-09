@@ -77,7 +77,7 @@ export default function HeroCarousel({ products }: { products: ProductType[] }) 
                 <Link
                   href={`/products/${product.slug}${product.variant_slug ? `/${product.variant_slug}` : ""}`}
                   aria-label={`Shop ${product.title}`}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#3f4d2c] text-white transition-colors hover:bg-[#33401f]"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#654035] text-white transition-colors hover:bg-[#503027]"
                 >
                   <Send className="h-4 w-4" />
                 </Link>
@@ -91,7 +91,7 @@ export default function HeroCarousel({ products }: { products: ProductType[] }) 
         <button
           onClick={() => scrollByCard(-1)}
           aria-label="Previous"
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-[#3f4d2c] text-white transition-colors hover:bg-[#33401f]"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-[#654035] text-white transition-colors hover:bg-[#503027]"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>

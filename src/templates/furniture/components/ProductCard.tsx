@@ -40,7 +40,7 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
         }`}
       >
         {hasDiscount && !isMinimal && (
-          <span className="absolute left-3 top-3 z-10 rounded-full bg-[#3f4d2c] px-3.5 py-1.5 text-xs font-bold text-white">
+          <span className="absolute left-3 top-3 z-10 rounded-full bg-[#654035] px-3.5 py-1.5 text-xs font-bold text-white">
             {discountPercentage}% off
           </span>
         )}
@@ -67,7 +67,7 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
           </span>
         </div>
 
-        <h3 className="mt-1 line-clamp-1 text-lg font-bold tracking-tight text-[#2b2b22] group-hover:text-[#3f4d2c]">
+        <h3 className="mt-1 line-clamp-1 text-lg font-bold tracking-tight text-[#2b2b22] group-hover:text-[#654035]">
           {product.title}
         </h3>
 

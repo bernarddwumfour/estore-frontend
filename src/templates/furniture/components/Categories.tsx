@@ -28,9 +28,9 @@ async function getCategories(): Promise<Category[]> {
   }
 }
 
-const active = "inline-flex rounded-full bg-[#3f4d2c] px-4 py-2 text-sm font-bold text-[#f6f3ec]";
+const active = "inline-flex rounded-full bg-[#654035] px-4 py-2 text-sm font-bold text-[#f6f3ec]";
 const idle =
-  "inline-flex rounded-full border border-[#e7e1d3] bg-white px-4 py-2 text-sm font-bold text-[#2b2b22] transition-colors hover:border-[#3f4d2c] hover:text-[#3f4d2c]";
+  "inline-flex rounded-full border border-[#e7e1d3] bg-white px-4 py-2 text-sm font-bold text-[#2b2b22] transition-colors hover:border-[#654035] hover:text-[#654035]";
 
 export default async function Categories({
   searchParams,

@@ -1,3 +1,4 @@
+import Logo from "@/widgets/logo/Logo";
 import Link from "next/link"
 import { Facebook, Twitter, Instagram, Linkedin } from "lucide-react"
 
@@ -9,14 +10,7 @@ export default function Footer() {
 
                     {/* Brand Column */}
                     <div className="md:col-span-4 space-y-5">
-                        <Link href="/" className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-slate-950 flex items-center justify-center text-white font-black text-sm tracking-tighter">
-                                iP
-                            </div>
-                            <span className="text-xl font-black text-slate-950 tracking-tight">
-                                iPlug
-                            </span>
-                        </Link>
+                        <Logo />
 
                         <p className="text-xs sm:text-sm text-slate-500 max-w-sm font-medium leading-relaxed">
                             Your premier destination for verified new and pristine mint-condition Apple devices. Secure fulfillment with institutional pricing parameters.

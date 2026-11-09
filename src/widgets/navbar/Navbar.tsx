@@ -1,6 +1,7 @@
 // components/Navbar.tsx (updated with search modal)
 "use client"
 
+import Logo from "@/widgets/logo/Logo";
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Instagram, User, Menu, X, Laptop, ShoppingBag, LayoutDashboard, LogOut, Handbag, User2, LogIn, Heart, Search, BadgePercent } from "lucide-react"
@@ -75,14 +76,7 @@ export default function Navbar() {
                 <nav className="container mx-auto px-4">
                     <div className="flex items-center justify-between h-20">
                         {/* Logo */}
-                        <Link href="/" className="flex items-center gap-2 group flex-shrink-0" onClick={closeMobileMenu}>
-                            <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center text-white transition-transform group-hover:scale-105">
-                                <Laptop className="h-4 w-4" />
-                            </div>
-                            <span className="text-xl font-bold tracking-tight text-slate-950">
-                                iPlug
-                            </span>
-                        </Link>
+                        <Logo onClick={closeMobileMenu} />
 
                         {/* Centered Desktop Navigation */}
                         <div className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-600">

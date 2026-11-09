@@ -63,7 +63,7 @@ export default function BlogPage({ posts, pagination }: BlogPageProps) {
                   </div>
 
                   <Link href={`/blog/${post.slug}`}>
-                    <h2 className="mt-2 text-lg font-bold leading-snug transition-colors group-hover:text-[#3f4d2c]">
+                    <h2 className="mt-2 text-lg font-bold leading-snug transition-colors group-hover:text-[#654035]">
                       {post.title}
                     </h2>
                   </Link>
@@ -74,7 +74,7 @@ export default function BlogPage({ posts, pagination }: BlogPageProps) {
 
                   <Link
                     href={`/blog/${post.slug}`}
-                    className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-[#3f4d2c]"
+                    className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-[#654035]"
                   >
                     Read More <ArrowRight className="h-4 w-4" />
                   </Link>
@@ -93,7 +93,7 @@ export default function BlogPage({ posts, pagination }: BlogPageProps) {
                   }
                   className={`rounded-full border border-[#e7e1d3] px-5 py-2.5 text-sm font-bold transition-colors ${
                     pagination.has_previous
-                      ? "hover:border-[#3f4d2c] hover:text-[#3f4d2c]"
+                      ? "hover:border-[#654035] hover:text-[#654035]"
                       : "text-[#a6a08f] pointer-events-none"
                   }`}
                   aria-disabled={!pagination.has_previous}
@@ -105,7 +105,7 @@ export default function BlogPage({ posts, pagination }: BlogPageProps) {
                     pageNum === pagination.current_page ? (
                       <span
                         key={pageNum}
-                        className="rounded-full bg-[#3f4d2c] px-5 py-2.5 text-sm font-bold text-[#f6f3ec]"
+                        className="rounded-full bg-[#654035] px-5 py-2.5 text-sm font-bold text-[#f6f3ec]"
                       >
                         {pageNum}
                       </span>
@@ -113,7 +113,7 @@ export default function BlogPage({ posts, pagination }: BlogPageProps) {
                       <Link
                         key={pageNum}
                         href={`/blog?page=${pageNum}`}
-                        className="rounded-full border border-[#e7e1d3] px-5 py-2.5 text-sm font-bold hover:border-[#3f4d2c] hover:text-[#3f4d2c] transition-colors"
+                        className="rounded-full border border-[#e7e1d3] px-5 py-2.5 text-sm font-bold hover:border-[#654035] hover:text-[#654035] transition-colors"
                       >
                         {pageNum}
                       </Link>
@@ -127,7 +127,7 @@ export default function BlogPage({ posts, pagination }: BlogPageProps) {
                   }
                   className={`rounded-full border border-[#e7e1d3] px-5 py-2.5 text-sm font-bold transition-colors ${
                     pagination.has_next
-                      ? "hover:border-[#3f4d2c] hover:text-[#3f4d2c]"
+                      ? "hover:border-[#654035] hover:text-[#654035]"
                       : "text-[#a6a08f] pointer-events-none"
                   }`}
                   aria-disabled={!pagination.has_next}

@@ -36,7 +36,7 @@ export default function AboutPage() {
       <PageHeader
         subtitle="About Us"
         title="Crafting Homes You'll Love"
-        description="Welcome to Furniture — your destination for modern, thoughtfully made pieces. We bring designer-quality furniture to your home without the traditional retail markups."
+        description="Welcome to oak&loom — your destination for modern, thoughtfully made pieces. We bring designer-quality furniture to your home without the traditional retail markups."
       />
 
       {/* Values */}
@@ -47,14 +47,14 @@ export default function AboutPage() {
             Why Shop With Us
           </span>
           <h2 className="mt-2 text-3xl font-black md:text-4xl">
-            The Smarter Way to <span className="text-[#3f4d2c]">Furnish</span>
+            The Smarter Way to <span className="text-[#654035]">Furnish</span>
           </h2>
         </div>
 
         <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
           {values.map(({ icon: Icon, title, body }) => (
             <div key={title} className="rounded-3xl bg-[#f1eee7] p-8">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f5b21a] text-[#22401f]">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f5b21a] text-[#402820]">
                 <Icon className="h-6 w-6" />
               </span>
               <h3 className="mt-6 text-lg font-bold">{title}</h3>
@@ -81,11 +81,11 @@ export default function AboutPage() {
               Our Story
             </span>
             <h2 className="mt-2 text-3xl font-black md:text-4xl">
-              Designed for real, <span className="text-[#3f4d2c]">lived-in homes</span>
+              Designed for real, <span className="text-[#654035]">lived-in homes</span>
             </h2>
             <div className="mt-5 space-y-4 text-sm leading-relaxed text-[#6b6b5a]">
               <p>
-                We started Furniture because we were tired of choosing between
+                We started oak&loom because we were tired of choosing between
                 beautiful design and a fair price. So we built a direct-to-home
                 catalogue that cuts out the middlemen.
               </p>
@@ -101,7 +101,7 @@ export default function AboutPage() {
             </div>
             <Link
               href="/products"
-              className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#3f4d2c] px-7 py-3 text-sm font-bold text-[#f6f3ec] transition-colors hover:bg-[#33401f]"
+              className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#654035] px-7 py-3 text-sm font-bold text-[#f6f3ec] transition-colors hover:bg-[#503027]"
             >
               Shop the Collection <ArrowRight className="h-4 w-4" />
             </Link>
@@ -111,11 +111,11 @@ export default function AboutPage() {
 
       {/* Stats */}
       <section className="container mx-auto px-4 py-16 lg:px-8">
-        <div className="grid grid-cols-2 gap-6 rounded-3xl bg-[#3f4d2c] px-6 py-12 text-center text-[#f6f3ec] md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-6 rounded-3xl bg-[#654035] px-6 py-12 text-center text-[#f6f3ec] md:grid-cols-4">
           {stats.map((s) => (
             <div key={s.label}>
               <p className="text-3xl font-black md:text-4xl">{s.value}</p>
-              <p className="mt-1 text-xs font-medium text-[#cdd6c4] sm:text-sm">
+              <p className="mt-1 text-xs font-medium text-[#e5d3cb] sm:text-sm">
                 {s.label}
               </p>
             </div>
@@ -127,7 +127,7 @@ export default function AboutPage() {
       <section className="container mx-auto px-4 pb-20 lg:px-8">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="flex items-center gap-4 rounded-3xl bg-[#f1eee7] p-6">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f5b21a] text-[#22401f]">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f5b21a] text-[#402820]">
               <Leaf className="h-6 w-6" />
             </span>
             <div>
@@ -138,7 +138,7 @@ export default function AboutPage() {
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-3xl bg-[#f1eee7] p-6">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f5b21a] text-[#22401f]">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f5b21a] text-[#402820]">
               <Headphones className="h-6 w-6" />
             </span>
             <div>

@@ -13,9 +13,16 @@ const lato = Lato({
   // No 'variable' needed — we're using the simple .className method
 });
 
+const brandIcon = process.env.NEXT_PUBLIC_STORE === "furniture"
+  ? "/brand/oak-and-loom-logo.png?v=2"
+  : "/brand/iplug-logo.png?v=2";
+
 export const metadata: Metadata = {
-  title: "TechStore",
-  description: "Premium tech gadgets and accessories for modern living.",
+  icons: { icon: brandIcon, shortcut: brandIcon, apple: brandIcon },
+  title: process.env.NEXT_PUBLIC_STORE === "furniture" ? "oak&loom" : "iPlug",
+  description: process.env.NEXT_PUBLIC_STORE === "furniture"
+    ? "Thoughtfully crafted furniture and home essentials from oak&loom."
+    : "Premium tech gadgets and accessories for modern living.",
 };
 
 export default function RootLayout({

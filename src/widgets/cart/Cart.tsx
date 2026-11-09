@@ -1,5 +1,6 @@
 'use client'
 
+import { storefrontTheme } from '@/templates/storefront-theme'
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -65,7 +66,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-40" />
-      <div ref={cartRef} className="absolute top-12 sm:-right-0 -right-35 w-screen max-w-md border border-gray-200 bg-white px-4 py-6 sm:px-6 lg:px-8 z-50"
+      <div data-storefront-theme={storefrontTheme} ref={cartRef} className="absolute top-12 sm:-right-0 -right-35 w-screen max-w-md border border-gray-200 bg-white px-4 py-6 sm:px-6 lg:px-8 z-50"
         aria-modal="true"
         role="dialog">
         {/* Close button */}

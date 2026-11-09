@@ -170,3 +170,63 @@
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 
 }
+
+/* Shared storefront surfaces opt in explicitly, including portalled dialogs. */
+[data-storefront-theme="furniture-surface"] {
+  --primary: #654035;
+  --primary-foreground: #fff;
+  --background: #fffdf8;
+  --foreground: #2b2b22;
+  --border: #e7e1d3;
+  --muted: #f4f1ea;
+  --muted-foreground: #6b6b5a;
+  --accent: #f4f1ea;
+  --accent-foreground: #654035;
+  --ring: #654035;
+  color: #2b2b22;
+  background-color: #fffdf8;
+  border-color: #e7e1d3;
+}
+[data-storefront-theme="furniture-surface"] :is(.text-gray-900, .text-gray-800, .text-slate-900) { color: #2b2b22; }
+[data-storefront-theme="furniture-surface"] :is(.text-gray-500, .text-gray-600, .text-gray-700) { color: #6b6b5a; }
+[data-storefront-theme="furniture-surface"] :is(.bg-gray-50, .bg-gray-100) { background-color: #f4f1ea; }
+[data-storefront-theme="furniture-surface"] :is(.border-gray-100, .border-gray-200, .border-gray-300) { border-color: #e7e1d3; }
+[data-storefront-theme="furniture-surface"] [data-slot="button"][data-variant="default"],
+[data-storefront-theme="furniture-surface"] a.bg-gray-700 {
+  background-color: #654035;
+  border-color: #654035;
+  color: white;
+  border-radius: 9999px;
+}
+[data-storefront-theme="furniture-surface"] [data-slot="button"][data-variant="default"]:hover,
+[data-storefront-theme="furniture-surface"] a.bg-gray-700:hover { background-color: #503027; }
+[data-storefront-theme="furniture-surface"] [data-slot="button"][data-variant="outline"] {
+  border-color: #e7e1d3;
+  color: #654035;
+  background-color: #fffdf8;
+}
+[data-storefront-theme="furniture-surface"] [data-slot="button"][data-variant="secondary"] {
+  color: #654035;
+  background-color: #eeeadd;
+}
+[data-storefront-theme="furniture-surface"][data-slot="dialog-content"],
+[data-storefront-theme="furniture-surface"][role="dialog"] { border-radius: 1.5rem; }
+[data-storefront-theme="furniture-surface"] [data-slot="dialog-title"] {
+  padding-right: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+[data-storefront-theme="furniture-surface"] .product-detail-layout h1 {
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+[data-storefront-theme="furniture-surface"] .product-detail-layout .aspect-square {
+  background-color: #f4f1ea;
+  border-color: #e7e1d3;
+  border-radius: 1.5rem;
+}
+[data-storefront-theme="furniture-surface"] .product-detail-layout .aspect-square img { object-fit: contain; }
+[data-storefront-theme="furniture-surface"] :is(.text-blue-600, .text-blue-800) { color: #654035; }
+[data-storefront-theme="furniture-surface"] .bg-blue-100 { background-color: #f0e2dc; }
+[data-storefront-theme="furniture-surface"] :is(.text-primary, .border-primary) { --primary: #654035; }

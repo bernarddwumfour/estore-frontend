@@ -12,6 +12,7 @@ import ProductsGrid from "@/app/(web)/products/ProductsGrid";
 import ProductsGridSkeleton from "@/app/(web)/products/(components)/ProductsGridSkeleton";
 import Categories from "../components/Categories";
 import { endpoints } from "@/constants/endpoints/endpoints";
+import type { BlogPostType } from "@/types/blogTypes";
 import type { ProductType } from "@/types/productTypes";
 import PromotionsCarousel from "@/app/(web)/products/(components)/Promotions/PromotionsCarousel";
 import HeroCarousel from "../components/HeroCarousel";
@@ -27,11 +28,12 @@ export default function HomePage() {
       <FeatureStrip />
       <ProductCollection />
       <Packages />
-      <PromoBanners />
       <Suspense fallback={null}>
         <Testimonials />
       </Suspense>
-      <Blogs />
+      <Suspense fallback={null}>
+        <Blogs />
+      </Suspense>
       <Instagram />
       <Faqs />
       <Newsletter />
@@ -105,13 +107,13 @@ function Hero() {
     <section className="bg-[#f6f3ec]">
       <div className="container mx-auto grid grid-cols-1 items-center gap-10 px-4 pt-24 pb-24 lg:grid-cols-2 lg:px-8 lg:pt-32 lg:pb-32">
         <div>
-          <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-[#3f4d2c] shadow-sm">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-[#654035] shadow-sm">
             <span className="h-2 w-2 rounded-full bg-[#f5b21a]" />
-            The Best Online Furniture Store
+            Welcome to oak&loom
           </span>
           <h1 className="mt-6 text-4xl font-black leading-[1.1] tracking-tight text-[#2b2b22] sm:text-5xl lg:text-6xl">
             Explore Our Modern{" "}
-            <span className="text-[#3f4d2c]">Furniture Collection</span>
+            <span className="text-[#654035]">oak&loom Collection</span>
           </h1>
           <p className="mt-5 max-w-md text-sm leading-relaxed text-[#6b6b5a]">
             Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
@@ -120,13 +122,13 @@ function Hero() {
           <div className="mt-8 flex flex-wrap items-center gap-6">
             <Link
               href="/products"
-              className="inline-flex items-center gap-2 rounded-full bg-[#3f4d2c] px-7 py-3 text-sm font-bold text-[#f6f3ec] transition-colors hover:bg-[#33401f]"
+              className="inline-flex items-center gap-2 rounded-full bg-[#654035] px-7 py-3 text-sm font-bold text-[#f6f3ec] transition-colors hover:bg-[#503027]"
             >
               Shop Now <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               href="/products"
-              className="text-sm font-bold text-[#2b2b22] underline underline-offset-4 transition-colors hover:text-[#3f4d2c]"
+              className="text-sm font-bold text-[#2b2b22] underline underline-offset-4 transition-colors hover:text-[#654035]"
             >
               View All Products
             </Link>
@@ -183,7 +185,7 @@ function FeatureStrip() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         {items.map(({ icon: Icon, title, sub }) => (
           <div key={title} className="flex items-center gap-4 px-2">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f4f1ea] text-[#3f4d2c]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f4f1ea] text-[#654035]">
               <Icon className="h-6 w-6" />
             </div>
             <div>
@@ -201,14 +203,14 @@ function ProductCollection() {
   return (
     <section className="container mx-auto px-4 py-12 lg:px-8">
       <SectionHeading tag="Our Products">
-        Our <span className="text-[#3f4d2c]">Products Collections</span>
+        Our <span className="text-[#654035]">Products Collections</span>
       </SectionHeading>
       {/* Furniture-themed category pills (no images) replace the static tabs. */}
       <Suspense fallback={<div className="mt-6 h-12" />}>
         <Categories />
       </Suspense>
       <Suspense fallback={<ProductsGridSkeleton />}>
-        <ProductsGrid featured={false} limit={12} sort_by="random" showPagination={false} />
+        <ProductsGrid limit={12} sort_by="random" showPagination={false} />
       </Suspense>
     </section>
   );
@@ -218,7 +220,7 @@ function Packages() {
   return (
     <section className="container mx-auto px-4 py-12 lg:px-8">
       <SectionHeading tag="Promotions">
-        Our <span className="text-[#3f4d2c]">Packages</span>
+        Our <span className="text-[#654035]">Packages</span>
       </SectionHeading>
       <div className="mt-8">
         <Suspense fallback={null}>
@@ -228,60 +230,6 @@ function Packages() {
         </Suspense>
       </div>
     </section>
-  );
-}
-
-function PromoBanners() {
-  return (
-    <section className="container mx-auto px-4 py-4 lg:px-8">
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <PromoBanner
-          flat="Flat 20% Discount"
-          title="Latest Gaming Chairs"
-          bg="bg-[#f1eee7]"
-          src="https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?q=80&w=900&auto=format&fit=crop"
-        />
-        <PromoBanner
-          flat="Flat 15% Discount"
-          title="Wood Chair Collection"
-          bg="bg-[#f5b21a]"
-          src="https://images.unsplash.com/photo-1503602642458-232111445657?q=80&w=900&auto=format&fit=crop"
-        />
-      </div>
-    </section>
-  );
-}
-
-function PromoBanner({
-  flat,
-  title,
-  bg,
-  src,
-}: {
-  flat: string;
-  title: string;
-  bg: string;
-  src: string;
-}) {
-  return (
-    <div className={`relative flex items-center overflow-hidden rounded-3xl ${bg} p-8`}>
-      <div className="relative z-10 max-w-[60%]">
-        <p className="text-sm font-medium text-[#2b2b22]">{flat}</p>
-        <h3 className="mt-2 text-3xl font-black leading-tight text-[#2b2b22]">{title}</h3>
-        <p className="mt-2 text-xs text-[#2b2b22]/70">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed
-        </p>
-        <Link
-          href="/products"
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#3f4d2c] px-5 py-2.5 text-xs font-bold text-white"
-        >
-          Shop Now <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
-      </div>
-      <div className="absolute bottom-0 right-0 h-full w-1/2">
-        <Image src={src} alt={title} fill className="object-contain object-bottom" />
-      </div>
-    </div>
   );
 }
 
@@ -315,31 +263,31 @@ async function Testimonials() {
   return (
     <section className="container mx-auto px-4 py-16 lg:px-8">
       <SectionHeading tag="Testimonial">
-        What <span className="text-[#3f4d2c]">Our Clients Say</span>
+        What <span className="text-[#654035]">Our Clients Say</span>
       </SectionHeading>
       <TestimonialsCarousel reviews={reviews} />
     </section>
   );
 }
 
-function Blogs() {
-  const posts = [
-    {
-      date: "15 April 2024",
-      title: "Furniture Trends 2024: What's Hot and What's Not",
-      src: "https://images.unsplash.com/photo-1556911220-bff31c812dba?q=80&w=900&auto=format&fit=crop",
-    },
-    {
-      date: "14 April 2024",
-      title: "The Ultimate Guide to Choosing the Perfect Sofa",
-      src: "https://images.unsplash.com/photo-1567016432779-094069958ea5?q=80&w=900&auto=format&fit=crop",
-    },
-    {
-      date: "12 April 2024",
-      title: "Choosing the Right Dining Table for Your Lifestyle",
-      src: "https://images.unsplash.com/photo-1617806118233-18e1de247200?q=80&w=900&auto=format&fit=crop",
-    },
-  ];
+async function getLatestPosts(): Promise<BlogPostType[]> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || "http://localhost:8000/api";
+    const response = await fetch(`${baseUrl}${endpoints.blog.listPostsWeb}?limit=3`, {
+      next: { revalidate: 300, tags: ["blog-posts"] },
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data?.success && Array.isArray(data?.data?.posts) ? data.data.posts.slice(0, 3) : [];
+  } catch (error) {
+    console.error("Error fetching homepage blog posts:", error);
+    return [];
+  }
+}
+
+async function Blogs() {
+  const posts = await getLatestPosts();
+  if (posts.length === 0) return null;
   return (
     <section className="bg-[#f6f3ec]">
       <div className="container mx-auto px-4 py-16 lg:px-8">
@@ -351,12 +299,12 @@ function Blogs() {
           </span>
           <h2 className="mt-2 text-3xl font-black leading-tight text-[#2b2b22] md:text-4xl">
             Our Latest <br />
-            <span className="text-[#3f4d2c]">News &amp; Blogs</span>
+            <span className="text-[#654035]">News &amp; Blogs</span>
           </h2>
         </div>
         <Link
           href="/blog"
-          className="rounded-full bg-[#3f4d2c] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#33401f]"
+          className="rounded-full bg-[#654035] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#503027]"
         >
           View All Blogs
         </Link>
@@ -364,21 +312,20 @@ function Blogs() {
 
       <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
         {posts.map((p) => (
-          <article key={p.title} className="group">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
-              <Image src={p.src} alt={p.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
-              <span className="absolute bottom-3 left-3 rounded-lg bg-[#f5b21a] px-3 py-1.5 text-xs font-bold text-[#2b2b22]">
-                {p.date}
-              </span>
-            </div>
-            <h3 className="mt-4 text-lg font-bold leading-snug text-[#2b2b22] group-hover:text-[#3f4d2c]">
+          <article key={p.id} className="group">
+            <Link href={`/blog/${p.slug}`} className="relative block aspect-[4/3] overflow-hidden rounded-3xl bg-[#e7e1d3]">
+              {p.cover_image_url && <Image src={p.cover_image_url} alt={p.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />}
+              {p.published_at && <span className="absolute bottom-3 left-3 rounded-lg bg-[#f5b21a] px-3 py-1.5 text-xs font-bold text-[#2b2b22]">
+                {new Date(p.published_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}
+              </span>}
+            </Link>
+            <h3 className="mt-4 text-lg font-bold leading-snug text-[#2b2b22] group-hover:text-[#654035]">
               {p.title}
             </h3>
             <p className="mt-2 text-xs leading-relaxed text-[#6b6b5a]">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-              eiusmod tempor incididunt
+              {p.excerpt}
             </p>
-            <Link href="/blog" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-[#3f4d2c]">
+            <Link href={`/blog/${p.slug}`} className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-[#654035]">
               Read More <ArrowRight className="h-4 w-4" />
             </Link>
           </article>
@@ -405,7 +352,7 @@ function Instagram() {
           Follow Us
         </span>
         <h2 className="mt-2 text-3xl font-black text-[#2b2b22] md:text-4xl">
-          Follow Us On <span className="text-[#3f4d2c]">Instagram</span>
+          Follow Us On <span className="text-[#654035]">Instagram</span>
         </h2>
       </div>
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -416,7 +363,7 @@ function Instagram() {
             className="group relative aspect-square overflow-hidden rounded-2xl"
           >
             <Image src={src} alt="Instagram post" fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
-            <span className="absolute inset-0 flex items-center justify-center bg-[#3f4d2c]/0 text-white opacity-0 transition-all duration-300 group-hover:bg-[#3f4d2c]/40 group-hover:opacity-100">
+            <span className="absolute inset-0 flex items-center justify-center bg-[#654035]/0 text-white opacity-0 transition-all duration-300 group-hover:bg-[#654035]/40 group-hover:opacity-100">
               <InstagramIcon className="h-7 w-7" />
             </span>
           </Link>
@@ -430,7 +377,7 @@ function Newsletter() {
   return (
     <section className="bg-[#f6f3ec]">
       <div className="container mx-auto px-4 py-12 lg:px-8">
-      <div className="rounded-3xl bg-[#3f4d2c] px-6 py-14 text-center text-[#f6f3ec]">
+      <div className="rounded-3xl bg-[#654035] px-6 py-14 text-center text-[#f6f3ec]">
         <span className="inline-flex items-center gap-2 text-xs font-semibold text-[#d6d6c5]">
           <span className="h-px w-6 bg-[#f5b21a]" />
           Our Newsletter
@@ -449,7 +396,7 @@ function Newsletter() {
           />
           <button
             type="button"
-            className="h-12 shrink-0 rounded-full bg-[#f5b21a] px-7 text-sm font-bold text-[#3f4d2c] transition-colors hover:bg-[#e6a40f]"
+            className="h-12 shrink-0 rounded-full bg-[#f5b21a] px-7 text-sm font-bold text-[#654035] transition-colors hover:bg-[#e6a40f]"
           >
             Subscribe
           </button>

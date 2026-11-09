@@ -277,13 +277,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Logo */}
         <div className={cn("p-6 transition-all duration-500", isCollapsed ? "px-0 flex justify-center" : "px-6")}>
-          <Link href="/dashboard" onClick={closeMobileSidebar} className="flex items-center gap-2">
-            <span className={cn("font-black text-2xl tracking-tighter transition-all duration-300 text-black dark:text-white", isCollapsed ? "scale-75" : "")}>
-              <div className="flex gap-3 items-center">
-                <Logo />{!isCollapsed && <span>iPlug</span>}
-              </div>
-            </span>
-          </Link>
+          <Logo href="/dashboard" onClick={closeMobileSidebar} compact={isCollapsed} />
         </div>
 
         {/* Navigation */}

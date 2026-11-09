@@ -1,3 +1,4 @@
+import { storefrontTheme } from "@/templates/storefront-theme"
 import * as React from "react"
 
 import {
@@ -18,7 +19,7 @@ export type selectField = {
 }
 
 
-export function CustomSelect({ selectField, setSelectField, items, placeholder, onValueChange }: { selectField?: selectField | string | undefined, setSelectField?: React.Dispatch<React.SetStateAction<selectField | string | undefined>>, items: selectField[], placeholder?: string, onValueChange?: (value: selectField) => void; }) {
+export function CustomSelect({ selectField, setSelectField, items, placeholder, onValueChange, theme }: { theme?: typeof storefrontTheme, selectField?: selectField | string | undefined, setSelectField?: React.Dispatch<React.SetStateAction<selectField | string | undefined>>, items: selectField[], placeholder?: string, onValueChange?: (value: selectField) => void; }) {
 
     return (
         <Select value={(selectField as selectField)?.value} onValueChange={(value: string) => {
@@ -31,10 +32,10 @@ export function CustomSelect({ selectField, setSelectField, items, placeholder, 
                 }
             }
         }}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger data-storefront-theme={theme} className="w-full">
                 <SelectValue placeholder={placeholder || "Select an option"} />
             </SelectTrigger>
-            <SelectContent className="z-[1000]">
+            <SelectContent data-storefront-theme={theme} className="z-[1000]">
                 {items.map((item) => (
                     <SelectItem key={item.id} value={item.value}>
                         <div className="flex flex-col">

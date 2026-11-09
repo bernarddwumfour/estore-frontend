@@ -1,5 +1,6 @@
 'use client';
 
+import { storefrontTheme } from '@/templates/storefront-theme'
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -28,7 +29,7 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 py-32">
+      <div data-storefront-theme={storefrontTheme} className="min-h-screen bg-gray-50 py-32">
         <div className="container mx-auto px-4">
           <div className="max-w-md mx-auto text-center">
             <div className="mb-8">
@@ -48,7 +49,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div data-storefront-theme={storefrontTheme} className="min-h-screen bg-gray-50">
       <PageHeader
         subtitle={`Your Cart (${getTotalItems()})`}
         title="Checkout These Items To Make A Purchase."

@@ -1,4 +1,5 @@
 "use client"
+import { storefrontTheme } from '@/templates/storefront-theme'
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CreateReviewForm from '../(components)/ProductReviewForm'
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ const ReviewComponent = ({ slug, title }: { slug: string, title?: string }) => {
                             Write a Review
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]" onClick={(e) => e.stopPropagation()}>
+                    <DialogContent data-storefront-theme={storefrontTheme} className="sm:max-w-[425px]" onClick={(e) => e.stopPropagation()}>
                         <DialogHeader>
                             <DialogTitle>Login Required</DialogTitle>
                             <DialogDescription>
@@ -77,7 +78,7 @@ const ReviewComponent = ({ slug, title }: { slug: string, title?: string }) => {
                             Write a Review
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px] max-h-[70vh] sm:max-h-[80vh] overflow-y-auto">
+                    <DialogContent data-storefront-theme={storefrontTheme} className="sm:max-w-[600px] max-h-[70vh] sm:max-h-[80vh] overflow-y-auto">
 
                         <CreateReviewForm
                             productSlug={slug}

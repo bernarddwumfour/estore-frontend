@@ -35,10 +35,10 @@ export default function PromotionsHorizontalSwiper({
     const showControls = promotions.length > slidesToShow;
     const shouldLoop = promotions.length > slidesToShow;
     const controlTheme = theme === "furniture"
-        ? "bg-[#3f4d2c] text-white hover:bg-[#33401f] focus-visible:ring-[#f5b21a]"
+        ? "bg-[#654035] text-white hover:bg-[#503027] focus-visible:ring-[#f5b21a]"
         : "bg-slate-950 text-white hover:bg-slate-800 focus-visible:ring-slate-400";
     const indicatorTheme = theme === "furniture"
-        ? "bg-[#3f4d2c]"
+        ? "bg-[#654035]"
         : "bg-slate-950";
 
     return (

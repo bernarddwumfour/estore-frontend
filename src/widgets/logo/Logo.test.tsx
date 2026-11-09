@@ -9,8 +9,8 @@ describe("Logo", () => {
     expect(link).toHaveAttribute("href", "/");
   });
 
-  it("renders the brand mark text", () => {
+  it("renders the brand logo image", () => {
     render(<Logo />);
-    expect(screen.getByText("iP")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "iPlug" })).toBeInTheDocument();
   });
 });

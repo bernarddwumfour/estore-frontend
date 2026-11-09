@@ -1,9 +1,10 @@
 // Furniture store navbar — matches the furniture mockup (green announcement
-// bar + white nav with the "Furniture." logo). Presentation is furniture
+// bar + white nav with the oak&loom logo). Presentation is furniture
 // specific; cart, auth, wishlist and search behaviour come from the SAME
 // shared pieces the default store uses (cart-store, useAuth, Cart, SearchModal).
 "use client";
 
+import BrandLogo from "./BrandLogo";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
@@ -55,24 +56,6 @@ const socials = [
   { Icon: Youtube, href: "https://youtube.com", label: "YouTube" },
 ];
 
-function Logo({ light = false }: { light?: boolean }) {
-  return (
-    <Link href="/" className="flex items-center gap-2.5">
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#3f4d2c] text-base font-black text-white">
-        F
-      </span>
-      <span
-        className={cn(
-          "text-2xl font-black tracking-tight",
-          light ? "text-white" : "text-[#2b2b22]"
-        )}
-      >
-        Furniture<span className="text-[#f5b21a]">.</span>
-      </span>
-    </Link>
-  );
-}
-
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartopen, setcartopen] = useState(false);
@@ -103,12 +86,12 @@ export default function Navbar() {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   const iconBtn =
-    "p-2 text-[#2b2b22] transition-colors hover:text-[#3f4d2c]";
+    "p-2 text-[#2b2b22] transition-colors hover:text-[#654035]";
 
   return (
     <>
       {/* Announcement bar */}
-      <div className="bg-[#22401f] text-[#f6f3ec]">
+      <div className="bg-[#402820] text-[#f6f3ec]">
         <div className="container mx-auto flex h-11 items-center justify-between gap-4 px-4 text-xs lg:px-8">
           <p className="hidden items-center gap-2 font-medium sm:flex">
             <Phone className="h-3.5 w-3.5" />
@@ -132,7 +115,7 @@ export default function Navbar() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label={label}
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f5b21a] text-[#22401f] transition-transform hover:scale-110"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f5b21a] text-[#402820] transition-transform hover:scale-110"
               >
                 <Icon className="h-3 w-3" />
               </a>
@@ -145,7 +128,7 @@ export default function Navbar() {
       <header className="sticky top-0 z-50 w-full border-b border-[#e7e1d3] bg-white">
         <nav className="container mx-auto px-4 lg:px-8">
           <div className="flex h-18 items-center justify-between gap-4">
-            <Logo />
+            <BrandLogo />
 
             {/* Desktop links */}
             <div className="hidden items-center gap-8 text-sm font-semibold text-[#2b2b22] lg:flex">
@@ -153,7 +136,7 @@ export default function Navbar() {
                 <Link
                   key={link.label}
                   href={link.href}
-                  className="transition-colors hover:text-[#3f4d2c]"
+                  className="transition-colors hover:text-[#654035]"
                 >
                   {link.label}
                 </Link>
@@ -183,7 +166,7 @@ export default function Navbar() {
                 >
                   <ShoppingBag className="h-5 w-5" />
                   {totalItems > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#3f4d2c] text-[9px] font-bold text-white">
+                    <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#654035] text-[9px] font-bold text-white">
                       {totalItems}
                     </span>
                   )}
@@ -258,7 +241,7 @@ export default function Navbar() {
                 <Link href="/login" onClick={closeMobileMenu}>
                   <Button
                     size="sm"
-                    className="ml-1 hidden gap-2 rounded-full bg-[#3f4d2c] text-white hover:bg-[#33401f] sm:inline-flex"
+                    className="ml-1 hidden gap-2 rounded-full bg-[#654035] text-white hover:bg-[#503027] sm:inline-flex"
                   >
                     <LogIn className="h-4 w-4" />
                     Login
@@ -295,7 +278,7 @@ export default function Navbar() {
                 key={link.label}
                 onClick={closeMobileMenu}
                 href={link.href}
-                className="block py-2 transition-colors hover:text-[#3f4d2c]"
+                className="block py-2 transition-colors hover:text-[#654035]"
               >
                 {link.label}
               </Link>
@@ -304,7 +287,7 @@ export default function Navbar() {
               <Link
                 onClick={closeMobileMenu}
                 href="/login"
-                className="block py-2 text-[#3f4d2c]"
+                className="block py-2 text-[#654035]"
               >
                 Login
               </Link>

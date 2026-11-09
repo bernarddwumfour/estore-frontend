@@ -1,4 +1,5 @@
-// Furniture store footer — matches the furniture mockup (deep-green body with
+import BrandLogo from "./BrandLogo";
+// Furniture store footer — matches the furniture mockup (deep reddish-brown body with
 // four link columns + a gold copyright bar). Static presentation only.
 import Link from "next/link";
 import {
@@ -49,19 +50,12 @@ const socials = [
 
 export default function Footer() {
   return (
-    <footer className="bg-[#22401f] text-[#f6f3ec]">
+    <footer className="bg-[#402820] text-[#f6f3ec]">
       <div className="container mx-auto grid grid-cols-1 gap-10 px-4 py-16 sm:grid-cols-2 lg:grid-cols-5 lg:px-8">
         {/* Brand */}
         <div className="lg:col-span-2">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5b21a] text-lg font-black text-[#22401f]">
-              F
-            </span>
-            <span className="text-2xl font-black tracking-tight">
-              Furniture<span className="text-[#f5b21a]">.</span>
-            </span>
-          </Link>
-          <p className="mt-5 max-w-xs text-sm leading-relaxed text-[#cdd6c4]">
+          <BrandLogo light />
+          <p className="mt-5 max-w-xs text-sm leading-relaxed text-[#e5d3cb]">
             Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
             eiusmod tempor incididunt ut labore et dolore magna aliqua.
           </p>
@@ -73,7 +67,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label={label}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-[#f5b21a] hover:text-[#22401f]"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-[#f5b21a] hover:text-[#402820]"
               >
                 <Icon className="h-4 w-4" />
               </a>
@@ -85,7 +79,7 @@ export default function Footer() {
         {columns.map((col) => (
           <div key={col.title}>
             <h4 className="text-lg font-bold text-white">{col.title}</h4>
-            <ul className="mt-5 space-y-3 text-sm text-[#cdd6c4]">
+            <ul className="mt-5 space-y-3 text-sm text-[#e5d3cb]">
               {col.links.map((link) => (
                 <li key={link.label}>
                   <Link
@@ -103,7 +97,7 @@ export default function Footer() {
         {/* Contact */}
         <div>
           <h4 className="text-lg font-bold text-white">Contact Info</h4>
-          <ul className="mt-5 space-y-4 text-sm text-[#cdd6c4]">
+          <ul className="mt-5 space-y-4 text-sm text-[#e5d3cb]">
             <li>
               <a href="tel:+0123456789" className="hover:text-[#f5b21a]">
                 +0123-456-789
@@ -125,10 +119,10 @@ export default function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="bg-[#f5b21a] text-[#22401f]">
+      <div className="bg-[#f5b21a] text-[#402820]">
         <div className="container mx-auto flex flex-col items-center justify-between gap-3 px-4 py-5 text-sm font-medium sm:flex-row lg:px-8">
           <p>
-            Copyright &copy; {new Date().getFullYear()} Furniture. All Rights
+            Copyright &copy; {new Date().getFullYear()} oak&loom. All Rights
             Reserved.
           </p>
           <div className="flex items-center gap-3">

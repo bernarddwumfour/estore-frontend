@@ -29,7 +29,9 @@ export default function ProductMedia({
 }) {
   const [index, setIndex] = useState(0);
   const addItem = useCartStore((s) => s.addItem);
-  const totalItems = useCartStore((s) => s.getTotalItems());
+  const variantQuantity = useCartStore((s) =>
+    s.getItemQuantity(defaultVariant?.id || defaultVariant?.sku || "")
+  );
   const [added, setAdded] = useState(false);
 
   const available = defaultVariant?.is_in_stock === true;
@@ -65,11 +67,11 @@ export default function ProductMedia({
   };
 
   const btn =
-    "flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#3f4d2c] transition-colors hover:bg-[#3f4d2c] hover:text-white";
+    "flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#654035] transition-colors hover:bg-[#654035] hover:text-white";
   // Reuse AddToWishList's behaviour but override its built-in absolute
   // bottom-left placement so it sits in our top-right stack.
   const wishBtn =
-    "!static !bottom-auto !left-auto !top-auto !justify-center !bg-white !px-0 !py-0 !scale-100 h-9 w-9 !rounded-full !text-[#2b2b22] hover:!bg-[#3f4d2c] hover:!text-white";
+    "!static !bottom-auto !left-auto !top-auto !justify-center !bg-white !px-0 !py-0 !scale-100 h-10 w-10 !rounded-full !text-[#2b2b22] hover:!bg-[#654035] hover:!text-white";
 
   return (
     <>
@@ -91,12 +93,12 @@ export default function ProductMedia({
       </Link>
 
       {!minimal && (
-        <div className="absolute right-3 top-3 z-10 flex flex-col gap-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+        <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
           <AddToWishList
             variantId={defaultVariant?.id ?? ""}
             productTitle={product.title}
             className={wishBtn}
-            iconSize="h-4 w-4"
+            iconSize="h-5 w-5"
           />
           <button
             type="button"
@@ -105,7 +107,7 @@ export default function ProductMedia({
             onClick={switchImage}
             disabled={images.length < 2}
           >
-            <Images className="h-4 w-4" />
+            <Images className="h-5 w-5" />
           </button>
           <button
             type="button"
@@ -114,10 +116,10 @@ export default function ProductMedia({
             onClick={quickAdd}
             disabled={!available}
           >
-            {added ? <Check className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />}
-            {totalItems > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#3f4d2c] px-1 text-[9px] font-bold text-white">
-                {totalItems}
+            {added ? <Check className="h-5 w-5" /> : <ShoppingBag className="h-5 w-5" />}
+            {variantQuantity > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#654035] px-1 text-[9px] font-bold text-white">
+                {variantQuantity}
               </span>
             )}
           </button>

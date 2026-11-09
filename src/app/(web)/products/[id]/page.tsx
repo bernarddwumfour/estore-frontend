@@ -1,9 +1,10 @@
 // app/(web)/products/[slug]/page.tsx
+import { storefrontTheme } from '@/templates/storefront-theme'
 import { endpoints } from '@/constants/endpoints/endpoints'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Star } from 'lucide-react'
-import Product from '../Product'
+import { ProductCard as Product } from '@/templates/product-card'
 import ProductDetailInteractive, { CartActions, ExpandableFeatures, ProductOptions } from './ProductDetailInteractive'
 import { Button } from '@/components/ui/button'
 import ReviewComponent from './ReviewComponent'
@@ -61,10 +62,7 @@ async function getProductDetail(slug: string): Promise<ProductDetailData | null>
     const url = new URL(`${baseUrl}${apiPath}`)
 
     const response = await fetch(url.toString(), {
-      next: {
-        revalidate: 300,
-        tags: [`product-${slug}`]
-      }
+      cache: 'no-store',
     })
 
     if (!response.ok) {
@@ -95,7 +93,7 @@ export async function ProductDetailPageContent({
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-gray-50 py-32">
+      <div data-storefront-theme={storefrontTheme} className="min-h-screen bg-gray-50 py-32">
         <div className="container mx-auto px-4 text-center">
           <p className="text-red-600 mb-4">Product not found</p>
         </div>
@@ -109,7 +107,7 @@ export async function ProductDetailPageContent({
 
   if (!defaultVariant) {
     return (
-      <div className="min-h-screen bg-gray-50 py-32">
+      <div data-storefront-theme={storefrontTheme} className="min-h-screen bg-gray-50 py-32">
         <div className="container mx-auto px-4 text-center">
           <p className="text-red-600 mb-4">Product variant not found</p>
         </div>
@@ -117,11 +115,31 @@ export async function ProductDetailPageContent({
     )
   }
 
+  const relatedProducts = [
+    ...product.variants.filter(v => v.id !== defaultVariant.id).map(variant => ({
+      ...product,
+      id: `${product.id}:${variant.id}`,
+      title: [product.title, Object.values(variant.attributes).filter(Boolean).join(' · ')].filter(Boolean).join(' — '),
+      variant_slug: variant.slug,
+      default_variant: variant,
+      variants: [variant],
+      min_price: variant.price,
+      max_price: variant.price,
+    })),
+    ...product.related_products,
+  ]
+  // Fisher–Yates shuffle keeps selection and display order random.
+  for (let i = relatedProducts.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[relatedProducts[i], relatedProducts[j]] = [relatedProducts[j], relatedProducts[i]]
+  }
+  const recommendations = relatedProducts.slice(0, 8)
+
   return (
-    <div className="min-h-screen bg-gray-50 py-32">
+    <div data-storefront-theme={storefrontTheme} className="min-h-screen bg-gray-50 py-32">
       <div className="container mx-auto px-4">
         {/* Main Product Section - SEO Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-12 mb-20">
+        <div className="product-detail-layout grid grid-cols-1 lg:grid-cols-7 gap-12 mb-20">
           {/* Left: Images (Interactive) */}
           <div className="lg:col-span-3">
             <ProductDetailInteractive
@@ -254,11 +272,11 @@ export async function ProductDetailPageContent({
         />
 
         {/* Related Products */}
-        {product.related_products && product.related_products.length > 0 && (
-          <div className="mt-20">
+        {recommendations.length > 0 && (
+          <div className="mt-20 border-t border-border pt-12">
             <h2 className="text-3xl font-bold mb-10 text-center">You Might Also Like</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {product.related_products.map((relatedProduct) => (
+              {recommendations.map((relatedProduct) => (
                 <Product product={relatedProduct} key={relatedProduct.id} />
               ))}
             </div>

@@ -28,7 +28,7 @@ const details = [
 ];
 
 const inputClass =
-  "w-full rounded-xl border border-[#e7e1d3] bg-white px-4 py-3 text-sm text-[#2b2b22] outline-none transition-colors focus:border-[#3f4d2c]";
+  "w-full rounded-xl border border-[#e7e1d3] bg-white px-4 py-3 text-sm text-[#2b2b22] outline-none transition-colors focus:border-[#654035]";
 
 export default function ContactPage() {
   return (
@@ -73,7 +73,7 @@ export default function ContactPage() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded-full bg-[#3f4d2c] py-3.5 text-sm font-bold text-[#f6f3ec] transition-colors hover:bg-[#33401f]"
+                className="w-full rounded-full bg-[#654035] py-3.5 text-sm font-bold text-[#f6f3ec] transition-colors hover:bg-[#503027]"
               >
                 Send Message
               </button>
@@ -86,7 +86,7 @@ export default function ContactPage() {
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {details.map(({ icon: Icon, title, lines }) => (
                 <div key={title} className="rounded-3xl border border-[#e7e1d3] p-5">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f5b21a] text-[#22401f]">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f5b21a] text-[#402820]">
                     <Icon className="h-5 w-5" />
                   </span>
                   <h3 className="mt-4 text-base font-bold">{title}</h3>

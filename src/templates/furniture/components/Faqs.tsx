@@ -37,7 +37,7 @@ export default function Faqs() {
           Faqs
         </span>
         <h2 className="mt-2 text-3xl font-black text-[#2b2b22] md:text-4xl">
-          Question? <span className="text-[#3f4d2c]">Look here.</span>
+          Question? <span className="text-[#654035]">Look here.</span>
         </h2>
       </div>
 
@@ -51,7 +51,7 @@ export default function Faqs() {
           <AccordionPrimitive.Item
             key={f.q}
             value={`item-${i}`}
-            className="overflow-hidden rounded-2xl border border-[#e7e1d3] bg-[#f1eee7] data-[state=open]:border-[#3f4d2c] data-[state=open]:bg-[#3f4d2c]"
+            className="overflow-hidden rounded-2xl border border-[#e7e1d3] bg-[#f1eee7] data-[state=open]:border-[#654035] data-[state=open]:bg-[#654035]"
           >
             <AccordionPrimitive.Header className="flex">
               <AccordionPrimitive.Trigger className="group flex flex-1 items-center justify-between gap-4 px-6 py-5 text-left text-base font-bold text-[#2b2b22] outline-none transition-colors data-[state=open]:text-white">

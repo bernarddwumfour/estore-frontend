@@ -1,5 +1,6 @@
 'use client'
 
+import { storefrontTheme } from '@/templates/storefront-theme'
 import { useState } from 'react'
 import { Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -175,7 +176,7 @@ const AddToWishList = ({ variantId, productTitle, className, iconSize,variant = 
 
 
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent className="sm:max-w-[425px]" onClick={(e) => e.stopPropagation()}>
+        <DialogContent data-storefront-theme={storefrontTheme} className="sm:max-w-[560px] max-h-[85dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <DialogHeader>
             <DialogTitle>Login Required</DialogTitle>
             <DialogDescription>
