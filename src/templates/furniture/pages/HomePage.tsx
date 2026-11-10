@@ -16,6 +16,7 @@ import type { BlogPostType } from "@/types/blogTypes";
 import type { ProductType } from "@/types/productTypes";
 import PromotionsCarousel from "@/app/(web)/products/(components)/Promotions/PromotionsCarousel";
 import HeroCarousel from "../components/HeroCarousel";
+import EmptyState from "../components/EmptyState";
 import Faqs from "../components/Faqs";
 import TestimonialsCarousel, {
   type TestimonialReview,
@@ -75,9 +76,7 @@ async function HeroShowcase() {
   const products = await getHeroProducts();
   if (products.length === 0) {
     return (
-      <div className="flex h-[360px] items-center justify-center rounded-3xl bg-white text-sm text-[#a6a08f]">
-        No featured items available
-      </div>
+      <EmptyState title="Featured pieces are coming soon" description="Check back soon to discover our favorite furniture." compact />
     );
   }
   return <HeroCarousel products={products} />;

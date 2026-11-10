@@ -2,6 +2,8 @@ import { PromotionType } from "@/types/promotionTypes";
 import { endpoints } from "@/constants/endpoints/endpoints";
 import PromotionsHorizontalSwiper from "./PromotionsHorizontalSwiper";
 import { JSX } from "react";
+import { Tag } from "lucide-react";
+import FurnitureEmptyState from "@/templates/furniture/components/EmptyState";
 
 interface PromotionsCarouselProps {
     limit?: number;
@@ -54,6 +56,7 @@ export default async function PromotionsCarousel({
     const promotions: PromotionType[] = await getActivePromotions(limit);
 
     if (promotions.length === 0) {
+        if (theme === "furniture") return <FurnitureEmptyState icon={Tag} title="No offers right now" description="Check back soon for our latest furniture offers." compact />;
         return <></>
     }
 

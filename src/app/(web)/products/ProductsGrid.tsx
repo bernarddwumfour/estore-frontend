@@ -3,6 +3,7 @@ import Link from "next/link"
 import { ProductType } from "@/types/productTypes"
 import { T } from "@/templates/registry"
 import { endpoints } from "@/constants/endpoints/endpoints"
+import FurnitureEmptyState from "@/templates/furniture/components/EmptyState"
 
 // Builds a /products URL for a given target page, preserving the current
 // filters. Plain <Link> href — ProductsGrid is a Server Component, so it
@@ -138,7 +139,7 @@ export default async function ProductsGrid({
   limit = 20
 }: ProductsGridProps) {
   let products: ProductType[] = []
-  let pagination: any = null
+  let pagination: { total: number; total_pages: number; has_next: boolean; has_previous: boolean; current_page: number } | null = null
   let error: string | null = null
 
   try {
@@ -161,8 +162,8 @@ export default async function ProductsGrid({
     })
     products = result.products
     pagination = result.pagination
-  } catch (err: any) {
-    error = err.message || "Failed to load products"
+  } catch (err: unknown) {
+    error = err instanceof Error ? err.message : "Failed to load products"
   }
 
   // Handle error state
@@ -176,6 +177,18 @@ export default async function ProductsGrid({
 
   // Handle empty state
   if (products.length === 0) {
+    if (process.env.NEXT_PUBLIC_STORE === "furniture") {
+      const filtered = Boolean(category || search || brand || min_price !== undefined || max_price !== undefined || in_stock)
+      return (
+        <div className="mt-8">
+          <FurnitureEmptyState
+            title={filtered ? "No products found" : "Our collection is coming soon"}
+            description={filtered ? "Try a different category or adjust your filters to find what you need." : "We’re preparing our collection. Please check back soon."}
+            action={filtered ? { href: "/products", label: "View all products" } : undefined}
+          />
+        </div>
+      )
+    }
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground text-lg">
@@ -211,7 +224,7 @@ export default async function ProductsGrid({
       {search && (
         <div className="px-4 mb-6">
           <h2 className="text-2xl font-semibold">
-            Results for "{search}"
+            Results for &quot;{search}&quot;
           </h2>
           <p className="text-sm text-slate-500 mt-1">
             {pagination?.total || 0} products found

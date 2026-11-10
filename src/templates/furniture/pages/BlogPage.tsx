@@ -3,6 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import PageHeader from "../components/PageHeader";
+import EmptyState from "../components/EmptyState";
+import { BookOpen } from "lucide-react";
 import type { BlogPageProps } from "@/templates/contract";
 
 export default function BlogPage({ posts, pagination }: BlogPageProps) {
@@ -15,9 +17,7 @@ export default function BlogPage({ posts, pagination }: BlogPageProps) {
 
       <section className="container mx-auto px-4 py-16 lg:px-8">
         {posts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-[#a6a08f] text-lg">No blog posts found.</p>
-          </div>
+          <EmptyState icon={BookOpen} title="Stories are coming soon" description="Check back for ideas and inspiration for your home." />
         ) : (
           <>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
