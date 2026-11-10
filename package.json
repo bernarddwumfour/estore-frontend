@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:iplug": "node scripts/dev-store.mjs iplug",
+    "dev:oak": "node scripts/dev-store.mjs oak",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -34,3 +34,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Local store selection
+
+Run `npm run dev:iplug` for the iPlug storefront or `npm run dev:oak` for
+Oak & Loom. These commands load `.env.iplug` or `.env.oakandloom` respectively;
+both currently point to the local API on port 8000. Start the matching backend
+profile using `manage_store.py` in the backend project. These environment
+files are local and ignored by Git.
