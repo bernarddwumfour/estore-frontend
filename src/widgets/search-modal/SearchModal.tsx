@@ -60,7 +60,8 @@ const searchProducts = async (query: string) => {
     const response = await unAuthenticatedAxios.get(`${endpoints.products.searchProducts}?${params.toString()}`)
     return {
         products: response.data.data.products || [],
-        total: response.data.data.total || 0
+        total: response.data.data.total || 0,
+        resultType: response.data.data.result_type as "matching" | "related" | "none" | undefined
     }
 }
 
@@ -126,6 +127,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
 
     const results = searchData?.products || []
     const totalResults = searchData?.total || 0
+    const isRelated = searchData?.resultType === "related"
 
     // React Query for categories (for the browse section)
     const { data: categories = [] } = useQuery({
@@ -209,7 +211,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
         inputRef.current?.focus()
     }
 
-    const isLoadingData = isLoading || isFetching
+    const isLoadingData = isLoading || isFetching || query !== debouncedQuery
 
     if (!isOpen) return null
 
@@ -294,7 +296,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                     {debouncedQuery.length >= 2 && !isLoadingData && (
                         <div className={cn("mt-1.5 text-xs text-slate-500")} >
                             {results.length > 0
-                                ? `${totalResults} product${totalResults > 1 ? 's' : ''} found`
+                                ? `${totalResults} ${isRelated ? 'related ' : ''}product${totalResults > 1 ? 's' : ''} found`
                                 : 'No products found'
                             }
                         </div>
@@ -304,8 +306,16 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                     <div className={cn("mt-4 max-h-[calc(100vh-280px)] overflow-y-auto")}  ref={resultsRef}>
                         {debouncedQuery.length >= 2 ? (
                             // Search Results
-                            results.length > 0 ? (
+                            results.length > 0 && !isLoadingData ? (
                                 <div className={cn("space-y-1.5")} >
+                                    <div className="mb-3" role="status">
+                                        <h4 className={cn("text-sm font-semibold text-slate-900")}>
+                                            {isRelated ? "Related results" : "Matching search results"}
+                                        </h4>
+                                        {isRelated && <p className={cn("mt-1 text-xs text-slate-500")}>
+                                            No matching products found. Here are some related products you might like.
+                                        </p>}
+                                    </div>
                                     {results.map((result: SearchResult, index: number) => (
                                         <button
                                             type="button"
