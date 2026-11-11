@@ -8,7 +8,9 @@ import { PromotionType } from "@/types/promotionTypes";
 import { ProductType } from "@/types/productTypes";
 import AddToCartButton from "./AddToCartButton";
 import Product from "../../products/Product";
+import BeautyProductCard from "@/templates/beauty/components/ProductCard";
 import { formatCurrency } from "@/lib/currency";
+import { storefrontTheme } from "@/templates/storefront-theme";
 // Define the type for the page props
 interface PageProps {
     params: Promise<{ slug: string }>;
@@ -70,6 +72,7 @@ async function getPackage(slug: string) {
 export default async function PackageDetailPage({ params }: PageProps) {
     const { slug } = await params;
     const promotion = await getPackage(slug);
+    const PromotionProduct = process.env.NEXT_PUBLIC_STORE === "beauty" ? BeautyProductCard : Product;
 
     if (!promotion) {
         notFound();
@@ -82,7 +85,7 @@ export default async function PackageDetailPage({ params }: PageProps) {
     const bundleSku = `bundle_${promotion.id}`;
 
     return (
-        <section className="relative py-28 bg-cover bg-center">
+        <section data-storefront-theme={storefrontTheme} className={`relative py-28 bg-cover bg-center ${storefrontTheme === "beauty-surface" ? "beauty-promotion-detail" : ""}`}>
             <div className="mx-auto container px-4 md:px-6">
 
 
@@ -193,7 +196,7 @@ export default async function PackageDetailPage({ params }: PageProps) {
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {promotion.items.map((item: any, idx: number) => (
-                            <Product
+                            <PromotionProduct
                                 key={idx}
                                 product={convertToProductType(item, promotion)}
                                 isMinimal={true}
@@ -212,7 +215,7 @@ export default async function PackageDetailPage({ params }: PageProps) {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                             {promotion.free_items.map((item: any, idx: number) => (
                                 <div key={idx} className="relative">
-                                    <Product
+                                    <PromotionProduct
                                         product={convertToProductType(item, promotion)}
                                         isMinimal={true}
                                     />

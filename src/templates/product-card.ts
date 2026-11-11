@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { ProductCardProps } from "./contract";
 import DefaultProductCard from "./default/components/ProductCard";
 import FurnitureProductCard from "./furniture/components/ProductCard";
+import BeautyProductCard from "./beauty/components/ProductCard";
 
 /**
  * Client-safe accessor for the active store's product card.
@@ -13,6 +14,7 @@ import FurnitureProductCard from "./furniture/components/ProductCard";
 const cards: Record<string, ComponentType<ProductCardProps>> = {
   default: DefaultProductCard,
   furniture: FurnitureProductCard,
+  beauty: BeautyProductCard,
 };
 
 const activeStore = process.env.NEXT_PUBLIC_STORE ?? "default";

@@ -41,3 +41,31 @@ Oak & Loom. These commands load `.env.iplug` or `.env.oakandloom` respectively;
 both currently point to the local API on port 8000. Start the matching backend
 profile using `manage_store.py` in the backend project. These environment
 files are local and ignored by Git.
+
+
+## Third template: beauty / velux
+
+Run `npm run dev:beauty -- --port 3002` for the third template. Like the
+other stores, it loads a local, ignored environment profile (`.env.beauty`):
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
+NEXT_PUBLIC_STORE=beauty
+NEXT_DEV_DIST_DIR=.next-beauty
+```
+
+The API URL matches the current Oak & Loom backend. Only the template changes;
+the catalog, authentication, wishlist, cart, and database remain shared.
+The separate build directory allows both store previews to run together.
+Restart the dev server after changing an environment profile. When the dedicated
+beauty backend is ready, change the API URL in `.env.beauty`.
+
+The template lives in `src/templates/beauty`. Its homepage, navigation, footer,
+and product cards override the baseline; remaining pages currently inherit the
+default template. Navigation search, bag, accounts, and product actions reuse
+shared storefront behavior. Catalog failures and empty catalogs show a labeled
+collection preview, with no fabricated prices, stock, reviews, or discounts.
+
+Campaign artwork is illustrative and lives in `public/beauty`; replace it with
+approved product photography when preparing a live store. See
+`src/templates/beauty/ASSETS.md` for generation prompts and provenance.

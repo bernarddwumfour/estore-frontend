@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dev:beauty": "node scripts/dev-store.mjs beauty"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

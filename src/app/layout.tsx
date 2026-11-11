@@ -13,14 +13,16 @@ const lato = Lato({
   // No 'variable' needed — we're using the simple .className method
 });
 
-const brandIcon = process.env.NEXT_PUBLIC_STORE === "furniture"
-  ? "/brand/oak-and-loom-logo.png?v=2"
-  : "/brand/iplug-logo.png?v=2";
+const isBeauty = process.env.NEXT_PUBLIC_STORE === "beauty";
+
+const brandIcon = isBeauty ? "/beauty/favicon.svg" : process.env.NEXT_PUBLIC_STORE === "furniture"
+  ? "/brand/oakandloom-mark.png"
+  : "/brand/iplug-mark.png";
 
 export const metadata: Metadata = {
   icons: { icon: brandIcon, shortcut: brandIcon, apple: brandIcon },
-  title: process.env.NEXT_PUBLIC_STORE === "furniture" ? "oak&loom" : "iPlug",
-  description: process.env.NEXT_PUBLIC_STORE === "furniture"
+  title: isBeauty ? "velux — Everyday beauty" : process.env.NEXT_PUBLIC_STORE === "furniture" ? "oak&loom" : "iPlug",
+  description: isBeauty ? "Discover a more considered skincare ritual with velux. A little care. A moment for you." : process.env.NEXT_PUBLIC_STORE === "furniture"
     ? "Thoughtfully crafted furniture and home essentials from oak&loom."
     : "Premium tech gadgets and accessories for modern living.",
 };
@@ -31,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head />
       <body className={lato.className}>
         <ThemeProvider

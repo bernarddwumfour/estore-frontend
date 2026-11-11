@@ -230,3 +230,54 @@
 [data-storefront-theme="furniture-surface"] :is(.text-blue-600, .text-blue-800) { color: #654035; }
 [data-storefront-theme="furniture-surface"] .bg-blue-100 { background-color: #f0e2dc; }
 [data-storefront-theme="furniture-surface"] :is(.text-primary, .border-primary) { --primary: #654035; }
+
+/* Beauty template: shared shopping dialogs use the same warm neutral palette. */
+[data-storefront-theme="beauty-surface"] {
+  --background: #faf9f6;
+  --foreground: #252520;
+  --primary: #252520;
+  --primary-foreground: #fff;
+  --accent: #f8dfc8;
+  --accent-foreground: #252520;
+  --border: #ded8ce;
+  --ring: #bc9567;
+  --card: #fff;
+  --card-foreground: #252520;
+  --popover: #faf9f6;
+  --popover-foreground: #252520;
+  color: #252520;
+  background-color: #faf9f6;
+}
+
+/* Beauty catalog detail and the shared filter UI retain their existing behavior. */
+.beauty-detail { background: #faf9f6; color: #20201e; padding-bottom: 7rem; }
+.beauty-detail > .container { max-width: 1280px; padding-inline: 0; width: 88%; }
+.beauty-detail .product-detail-layout { gap: clamp(2rem, 5vw, 5rem); margin-top: 2.5rem; }
+.beauty-detail .product-detail-layout h1,
+.beauty-detail > .container > .border-t h2 { font: 400 clamp(2.8rem, 4.5vw, 5rem)/1.04 "Bodoni MT", Didot, "Times New Roman", serif; letter-spacing: -.035em; color: #20201e; }
+.beauty-detail .product-detail-layout h3 { font-family: "Bodoni MT", Didot, "Times New Roman", serif; font-weight: 400; font-size: 1.4rem; }
+.beauty-detail .product-detail-layout .aspect-square { border-radius: 0; background: #f1ede7; border-color: #e7e1d9; }
+.beauty-detail .product-detail-layout .aspect-square img { object-fit: contain; }
+.beauty-detail .product-detail-layout button,
+.beauty-detail .product-detail-layout [data-slot="button"] { border-radius: 0; }
+.beauty-detail .product-detail-layout [data-slot="button"][data-variant="default"] { background: #20201e; color: #fff; border-color: #20201e; }
+.beauty-detail .product-detail-layout [data-slot="button"][data-variant="default"]:hover { background: #4e4034; }
+.beauty-detail .product-detail-layout :is(.text-blue-600, .text-green-600) { color: #806447; }
+.beauty-detail .product-detail-layout .bg-blue-100 { background: #f7e6d5; }
+.beauty-detail .product-detail-layout .border-gray-900 { border-color: #8d6f50; }
+.beauty-detail .product-detail-layout .ring-gray-900 { --tw-ring-color: #8d6f50; }
+[data-filter-theme="beauty-surface"] { color: #20201e; }
+[data-filter-theme="beauty-surface"] h3 { font-family: "Bodoni MT", Didot, "Times New Roman", serif; font-weight: 400; }
+[data-filter-theme="beauty-surface"] :is(button, input) { border-radius: 0; }
+[data-filter-theme="beauty-surface"] input:focus-visible { outline-color: #b68d63; }
+@media(max-width:700px) { .beauty-detail > .container { width: 90%; } .beauty-detail .product-detail-layout { margin-top: 1rem; } }
+
+.beauty-promotion-detail { background: #faf9f6; color: #20201e; }
+.beauty-promotion-detail > .container { max-width: 1280px; }
+.beauty-promotion-detail h1, .beauty-promotion-detail h2 { font-family: "Bodoni MT", Didot, "Times New Roman", serif; font-weight: 400; color: #20201e; }
+.beauty-promotion-detail h1 { font-size: clamp(2.8rem, 4.5vw, 4.5rem); line-height: 1.05; }
+.beauty-promotion-detail h2 { font-size: clamp(1.6rem, 2.5vw, 2.5rem); }
+.beauty-promotion-detail .rounded-2xl, .beauty-promotion-detail .rounded-xl { border-radius: 0; }
+.beauty-promotion-detail .bg-slate-50 { background: #f1ede7; }
+.beauty-promotion-detail .text-emerald-600 { color: #806447; }
+.beauty-promotion-detail .bg-emerald-50 { background: #f8dfc8; }

@@ -89,11 +89,12 @@ export async function ProductDetailPageContent({
   id: string;
   variantSlug?: string;
 }) {
+  const pageClassName = `min-h-screen bg-gray-50 pb-32 ${storefrontTheme === "furniture-surface" || storefrontTheme === "beauty-surface" ? "pt-6 md:pt-8" : "pt-24 md:pt-28"}`
   const product = await getProductDetail(id)
 
   if (!product) {
     return (
-      <div data-storefront-theme={storefrontTheme} className="min-h-screen bg-gray-50 py-32">
+      <div data-storefront-theme={storefrontTheme} className={`${pageClassName} ${storefrontTheme === "beauty-surface" ? "beauty-detail" : ""}`}>
         <div className="container mx-auto px-4 text-center">
           <p className="text-red-600 mb-4">Product not found</p>
         </div>
@@ -107,7 +108,7 @@ export async function ProductDetailPageContent({
 
   if (!defaultVariant) {
     return (
-      <div data-storefront-theme={storefrontTheme} className="min-h-screen bg-gray-50 py-32">
+      <div data-storefront-theme={storefrontTheme} className={`${pageClassName} ${storefrontTheme === "beauty-surface" ? "beauty-detail" : ""}`}>
         <div className="container mx-auto px-4 text-center">
           <p className="text-red-600 mb-4">Product variant not found</p>
         </div>
@@ -136,7 +137,7 @@ export async function ProductDetailPageContent({
   const recommendations = relatedProducts.slice(0, 8)
 
   return (
-    <div data-storefront-theme={storefrontTheme} className="min-h-screen bg-gray-50 py-32">
+    <div data-storefront-theme={storefrontTheme} className={`${pageClassName} ${storefrontTheme === "beauty-surface" ? "beauty-detail" : ""}`}>
       <div className="container mx-auto px-4">
         {/* Main Product Section - SEO Content */}
         <div className="product-detail-layout grid grid-cols-1 lg:grid-cols-7 gap-12 mb-20">

@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Isolate the beauty preview from a concurrently running existing store.
+  distDir: process.env.NEXT_DEV_DIST_DIR || ".next",
   images: {
     remotePatterns: [
       {

@@ -13,6 +13,9 @@ export default function Logo({
   href?: string;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
 }) {
+  if (process.env.NEXT_PUBLIC_STORE === "beauty") {
+    return <Link href={href} onClick={onClick} aria-label="Velux home" style={{ fontFamily: '"Times New Roman", serif', fontSize: compact ? 28 : 44, letterSpacing: "-3px", color: light ? "#d7b484" : "#6e5030", lineHeight: 1 }}>velux</Link>;
+  }
   const furniture = process.env.NEXT_PUBLIC_STORE === "furniture";
   const name = furniture ? "oak&loom" : "iPlug";
   const src = furniture ? "/brand/oak-and-loom-logo.png" : "/brand/iplug-logo.png";
