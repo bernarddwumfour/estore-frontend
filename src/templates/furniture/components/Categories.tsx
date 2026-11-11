@@ -33,6 +33,18 @@ const active = "inline-flex items-center gap-2 rounded-full bg-[#654035] px-3 py
 const idle =
   "inline-flex items-center gap-2 rounded-full border border-[#e7e1d3] bg-white px-3 py-2 text-sm font-bold text-[#2b2b22] transition-colors hover:border-[#654035] hover:text-[#654035]";
 
+export function CategoriesSkeleton() {
+  return <div className="mt-6 flex flex-wrap justify-center gap-3" role="status" aria-label="Loading categories">
+    <span className="sr-only">Loading categories</span>
+    <div className="flex flex-wrap justify-center gap-3" aria-hidden="true">
+      {[146, 112, 132, 104, 124, 114].map((width, index) => <span key={index} className="inline-flex h-12 items-center gap-2 rounded-full border border-[#e7e1d3] bg-[#f6f3ec] px-3 animate-pulse motion-reduce:animate-none" style={{ width }}>
+        <span className="h-8 w-8 shrink-0 rounded-full bg-[#e7e1d3]" />
+        <span className="h-3 flex-1 rounded bg-[#e7e1d3]" />
+      </span>)}
+    </div>
+  </div>;
+}
+
 export default async function Categories({
   searchParams,
 }: {

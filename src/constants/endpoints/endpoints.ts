@@ -17,6 +17,7 @@ export const endpoints = {
     refreshToken: "/users/refresh-token",
     getProfile: "/users/profile",
     updateProfile: "/users/profile/update",
+    changePassword: "/users/profile/change-password",
 
     // Guest checkout endpoints
     guestCheckout: "/users/guest-checkout",

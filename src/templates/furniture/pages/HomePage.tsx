@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import ProductsGrid from "@/app/(web)/products/ProductsGrid";
 import ProductsGridSkeleton from "@/app/(web)/products/(components)/ProductsGridSkeleton";
-import Categories from "../components/Categories";
+import Categories, { CategoriesSkeleton } from "../components/Categories";
 import { endpoints } from "@/constants/endpoints/endpoints";
 import type { BlogPostType } from "@/types/blogTypes";
 import type { ProductType } from "@/types/productTypes";
@@ -205,7 +205,7 @@ function ProductCollection() {
         Our <span className="text-[#654035]">Products Collections</span>
       </SectionHeading>
       {/* Furniture-themed category pills (no images) replace the static tabs. */}
-      <Suspense fallback={<div className="mt-6 h-12" />}>
+      <Suspense fallback={<CategoriesSkeleton />}>
         <Categories />
       </Suspense>
       <Suspense fallback={<ProductsGridSkeleton />}>

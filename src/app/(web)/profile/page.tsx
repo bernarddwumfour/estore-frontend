@@ -19,7 +19,6 @@ import {
   Package,
   LogOut,
   Edit3,
-  Home,
   ShoppingCart,
   Building
 } from "lucide-react";
@@ -67,6 +66,8 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [needsSignIn, setNeedsSignIn] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState({
     first_name: "",
@@ -89,6 +90,8 @@ export default function ProfilePage() {
   const fetchProfile = async () => {
     try {
       setIsLoading(true);
+      setProfileError("");
+      setNeedsSignIn(false);
       const response = await securityAxios.get(endpoints.auth.getProfile);
 
       if (response.data.success) {
@@ -111,14 +114,15 @@ export default function ProfilePage() {
           instructions: defaultAddress?.instructions || ""
         });
       } else {
-        toast.error(response.data.error || "Failed to load profile");
+        setProfileError(response.data.error || "Please try again.");
       }
     } catch (error: any) {
       console.error("Error fetching profile:", error);
       if (error?.response?.status === 401) {
-        toast.error("Please login to view your profile");
+        setNeedsSignIn(true);
+        setProfileError("Your session has ended. Please sign in to view your profile.");
       } else {
-        toast.error(error?.response?.data?.message || "Failed to load profile");
+        setProfileError(error?.response?.data?.message || "Please try again in a moment.");
       }
     } finally {
       setIsLoading(false);
@@ -246,17 +250,12 @@ export default function ProfilePage() {
         <div className="container mx-auto px-4 max-w-2xl">
           <div className="text-center">
             <User className="h-24 w-24 text-gray-300 mx-auto mb-8" />
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Profile Not Found</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">{needsSignIn ? "Sign in to your account" : "Unable to load your profile"}</h1>
             <p className="text-xl text-gray-600 mb-10">
-              Unable to load your profile. Please try again.
+              {profileError || "Please try again in a moment."}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg">
-                <Link href="/" onClick={() => window.location.reload()}>
-                  <Home className="mr-2 h-5 w-5" />
-                  Try Again
-                </Link>
-              </Button>
+              {needsSignIn ? <Button asChild size="lg"><Link href="/login">Sign In</Link></Button> : <Button size="lg" onClick={fetchProfile}>Try Again</Button>}
               <Button asChild variant="outline" size="lg">
                 <Link href="/">
                   <ShoppingCart className="mr-2 h-5 w-5" />

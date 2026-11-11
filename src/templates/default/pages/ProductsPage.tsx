@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import Categories from '@/widgets/categories/Categories';
+import Categories, { CategoriesSkeleton } from '@/widgets/categories/Categories';
 import ProductsGridSkeleton from '@/app/(web)/products/(components)/ProductsGridSkeleton';
 import ProductsGridWrapper from '@/app/(web)/products/(components)/ProductsGridWrapper';
 import { AdvancedFilters } from '@/widgets/advanced-filters/AdvancedFilters';
@@ -16,7 +16,7 @@ export default function ProductsPage({ searchParams }: ProductsPageProps) {
       <div className="mx-auto container py-12">
 
         {/* Pass the resolved object down to your component */}
-        <Categories type='badge' searchParams={searchParams} />
+        <Suspense fallback={<CategoriesSkeleton type="badge" />}><Categories type='badge' searchParams={searchParams} /></Suspense>
 
         <Suspense fallback={<ProductsGridSkeleton />}>
           {/* Products with Filters Sidebar */}

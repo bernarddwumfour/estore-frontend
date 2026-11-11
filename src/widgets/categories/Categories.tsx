@@ -3,7 +3,6 @@ import { endpoints } from '@/constants/endpoints/endpoints'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import Spinner from '../loaders/Spinner'
 
 interface Category {
   id: string
@@ -57,16 +56,20 @@ async function getCategories() {
   }
 }
 
-// Loading component matching clean design style
-function CategoriesLoading() {
-  return (
-    <section className="relative py-4">
-      <div className="container mx-auto flex items-center justify-center gap-2">
-        <span className="text-xs font-medium text-slate-400 tracking-wider uppercase">Loading Filters</span>
-        <Spinner size='sm' />
-      </div>
-    </section>
-  )
+export function CategoriesSkeleton({ type = "withImage" }: { type?: CategoriesDisplayType }) {
+  return <section className="relative w-full" aria-label="Loading categories" aria-busy="true">
+    <span className="sr-only">Loading categories</span>
+    <div className="container mx-auto px-4 lg:px-8" aria-hidden="true">
+      {type === "withImage" ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 lg:gap-6">
+        {Array.from({ length: 5 }, (_, index) => <div key={index} className="flex aspect-[6/5] flex-col justify-end rounded-[2rem] border border-slate-100 bg-[#f8f9fa] p-5">
+          <div className="mb-auto h-3/4 rounded-2xl bg-slate-200/70 animate-pulse motion-reduce:animate-none" />
+          <div className="mt-3 h-4 w-2/3 rounded bg-slate-200/70 animate-pulse motion-reduce:animate-none" />
+        </div>)}
+      </div> : <div className="flex max-w-3xl flex-wrap items-center gap-2.5 py-4">
+        {[80, 110, 96, 125, 88, 104].map((width, index) => <span key={index} className="h-9 rounded-full border border-slate-200 bg-slate-100 animate-pulse motion-reduce:animate-none" style={{ width }} />)}
+      </div>}
+    </div>
+  </section>
 }
 
 export default async function Categories({

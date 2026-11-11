@@ -44,4 +44,16 @@ describe("CustomSelect", () => {
     await userEvent.click(await screen.findByRole("option", { name: "Active" }));
     expect(setSelectField).toHaveBeenCalledWith({ id: 1, label: "Active", value: "active" });
   });
+
+  it("supports an All option with an empty filter value", async () => {
+    const onValueChange = vi.fn();
+    const categories = [
+      { id: "all", label: "All Categories", value: "" },
+      { id: "tyres", label: "Tyres", value: "tyres" },
+    ];
+    render(<CustomSelect items={categories} selectField={categories[1]} onValueChange={onValueChange} />);
+    await userEvent.click(screen.getByRole("combobox"));
+    await userEvent.click(await screen.findByRole("option", { name: "All Categories" }));
+    expect(onValueChange).toHaveBeenCalledWith(categories[0]);
+  });
 });

@@ -1,5 +1,15 @@
 # Campaign imagery
 
+## tyre-hero.png
+
+Generated for the TyrePapa hero. It keeps the original hero's dark
+studio lighting, warm highlights, floating products, and open centre for the
+HTML headline. The two tyre subjects replace the former skincare products.
+This is illustrative campaign imagery, not a photograph of a catalogued tyre.
+
+The earlier cosmetics images below remain in the project while the rest of the
+imagery is being updated.
+
 Generated with the built-in image generation tool for this template. These are
 illustrative campaign visuals, not actual inventory photography. Original PNGs
 are retained in `public/beauty`.

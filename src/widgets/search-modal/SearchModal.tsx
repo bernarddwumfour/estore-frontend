@@ -41,6 +41,8 @@ interface SearchModalProps {
     isOpen: boolean
     onClose: () => void
     initialQuery?: string
+    variant?: "fullscreen" | "header-panel"
+    panelClassName?: string
 }
 
 // Types for stored recent searches
@@ -70,7 +72,7 @@ const fetchCategories = async () => {
     return response.data.data.categories || []
 }
 
-export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalProps) {
+export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "fullscreen", panelClassName }: SearchModalProps) {
     const router = useRouter()
     const [query, setQuery] = useState(initialQuery)
     const [selectedIndex, setSelectedIndex] = useState(-1)
@@ -212,18 +214,20 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
     }
 
     const isLoadingData = isLoading || isFetching || query !== debouncedQuery
+    const isHeaderPanel = variant === "header-panel"
 
     if (!isOpen) return null
 
     return (
         <>
             <div
-                className={cn("fixed inset-0 z-[100] bg-white/98 backdrop-blur-md")}
+                className={cn(isHeaderPanel ? "fixed inset-0 z-[100] bg-black/35" : "fixed inset-0 z-[100] bg-white/98 backdrop-blur-md")}
                 role="dialog"
                 aria-modal="true"
                 aria-label="Search products"
+                onClick={isHeaderPanel ? (event) => { if (event.target === event.currentTarget) onClose() } : undefined}
             >
-                <div className={cn("mx-auto max-w-4xl px-4 pt-12 md:pt-28")} >
+                <div className={isHeaderPanel ? panelClassName : cn("mx-auto max-w-4xl px-4 pt-12 md:pt-28")} >
                     {/* Large Title */}
                     <div className="flex items-start justify-between gap-4 pb-6">
                       <div className="min-w-0 max-w-xl space-y-4">
@@ -303,7 +307,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                     )}
 
                     {/* Results / Suggestions */}
-                    <div className={cn("mt-4 max-h-[calc(100vh-280px)] overflow-y-auto")}  ref={resultsRef}>
+                    <div className={cn(isHeaderPanel ? "mt-4 max-h-[45vh] overflow-y-auto" : "mt-4 max-h-[calc(100vh-280px)] overflow-y-auto")}  ref={resultsRef}>
                         {debouncedQuery.length >= 2 ? (
                             // Search Results
                             results.length > 0 && !isLoadingData ? (
@@ -551,7 +555,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                     </div>
 
                     {/* Keyboard shortcuts hint */}
-                    <div className={cn("absolute bottom-4 left-1/2 -translate-x-1/2 hidden md:flex items-center gap-3 text-[14px] text-slate-400")} >
+                    {!isHeaderPanel && <div className={cn("absolute bottom-4 left-1/2 -translate-x-1/2 hidden md:flex items-center gap-3 text-[14px] text-slate-400")} >
                         <span>↑↓ to navigate</span>
                         <span>•</span>
                         <span>Enter to select</span>
@@ -559,7 +563,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                         <span>Esc to close</span>
                         <span>•</span>
                         <span>⌘K to open</span>
-                    </div>
+                    </div>}
                 </div>
             </div>
 

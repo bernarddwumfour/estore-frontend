@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import ProductsGridSkeleton from "@/app/(web)/products/(components)/ProductsGridSkeleton";
 import ProductsGridWrapper from "@/app/(web)/products/(components)/ProductsGridWrapper";
 import { AdvancedFilters } from "@/widgets/advanced-filters/AdvancedFilters";
-import Categories from "../components/Categories";
+import Categories, { CategoriesSkeleton } from "../components/Categories";
 import PageHeader from "../components/PageHeader";
 import type { ProductsPageProps } from "../../contract";
 
@@ -20,7 +20,7 @@ export default function ProductsPage({ searchParams }: ProductsPageProps) {
 
       {/* Furniture-themed category pills (active state from the URL). */}
       <section className="container mx-auto px-4 pt-8 lg:px-8">
-        <Suspense fallback={<div className="h-12" />}>
+        <Suspense fallback={<CategoriesSkeleton />}>
           <Categories searchParams={searchParams} />
         </Suspense>
       </section>

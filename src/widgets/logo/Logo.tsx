@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { MouseEventHandler } from "react";
+import BrandLogo from "@/templates/beauty/components/BrandLogo";
 
 export default function Logo({
   light = false,
@@ -14,7 +15,7 @@ export default function Logo({
   onClick?: MouseEventHandler<HTMLAnchorElement>;
 }) {
   if (process.env.NEXT_PUBLIC_STORE === "beauty") {
-    return <Link href={href} onClick={onClick} aria-label="Velux home" style={{ fontFamily: '"Times New Roman", serif', fontSize: compact ? 28 : 44, letterSpacing: "-3px", color: light ? "#d7b484" : "#6e5030", lineHeight: 1 }}>velux</Link>;
+    return <BrandLogo href={href} onClick={onClick} tone={light ? "gold" : "ink"} compact={compact} />;
   }
   const furniture = process.env.NEXT_PUBLIC_STORE === "furniture";
   const name = furniture ? "oak&loom" : "iPlug";

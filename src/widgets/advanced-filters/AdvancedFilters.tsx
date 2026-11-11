@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useQuery } from '@tanstack/react-query'
 import {
     SlidersHorizontal, X, ChevronDown, ChevronUp, RotateCcw,
-    Filter, Check, Loader2
+    Filter
 } from "lucide-react"
 import { storefrontTheme } from "@/templates/storefront-theme"
 import { filterThemeClasses as cn } from "@/templates/filter-theme"
@@ -180,13 +180,13 @@ export function AdvancedFilters({
     const [isModalOpen, setIsModalOpen] = useState(false)
 
     // Fetch categories and brands independently
-    const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
+    const { data: categories = [], isLoading: isLoadingCategories, isError: categoriesError } = useQuery({
         queryKey: ['advanced-filters-categories'],
         queryFn: fetchCategories,
         staleTime: 5 * 60 * 1000,
     })
 
-    const { data: brands = [], isLoading: isLoadingBrands } = useQuery({
+    const { data: brands = [] } = useQuery({
         queryKey: ['advanced-filters-brands'],
         queryFn: fetchBrands,
         staleTime: 5 * 60 * 1000,
@@ -345,8 +345,6 @@ export function AdvancedFilters({
         return activeFilters
     }
 
-    const isLoading = isLoadingCategories || isLoadingBrands
-
     // Prepare select items
     const sortItems: selectField[] = [
         { id: "created_at", label: "Newest", value: "created_at" },
@@ -389,14 +387,6 @@ export function AdvancedFilters({
         return brandItems.find(item => item.value === tempFilters.brand) || brandItems[0]
     }
 
-    if (isLoading) {
-        return (
-            <div className={cn("flex items-center justify-center py-12")} >
-                <Loader2 className={cn("h-8 w-8 animate-spin text-slate-400")}  />
-            </div>
-        )
-    }
-
     // Filter content
     const filterContent = (
         <>
@@ -413,16 +403,16 @@ export function AdvancedFilters({
             )}
 
             {/* Category */}
-            {categories.length > 0 && (
-                <FilterSection id="category" title="Category" isOpen={expandedSections.category ?? true} onToggle={toggleSection}>
+            <FilterSection id="category" title="Category" isOpen={expandedSections.category ?? true} onToggle={toggleSection}>
+                {categories.length > 0 ? (
                     <CustomSelect theme={storefrontTheme}
                         items={categoryItems}
                         selectField={getCurrentCategory()}
                         onValueChange={(item) => updateTempFilter("category", item.value || undefined)}
                         placeholder="Select category"
                     />
-                </FilterSection>
-            )}
+                ) : <p className={cn("text-xs text-slate-500")} >{isLoadingCategories ? "Loading categories..." : categoriesError ? "Categories are unavailable right now." : "No categories available yet."}</p>}
+            </FilterSection>
 
             {/* Brand */}
             {brands.length > 0 && (

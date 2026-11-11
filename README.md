@@ -43,7 +43,7 @@ profile using `manage_store.py` in the backend project. These environment
 files are local and ignored by Git.
 
 
-## Third template: beauty / velux
+## Third template: TyrePapa
 
 Run `npm run dev:beauty -- --port 3002` for the third template. Like the
 other stores, it loads a local, ignored environment profile (`.env.beauty`):
@@ -58,7 +58,7 @@ The API URL matches the current Oak & Loom backend. Only the template changes;
 the catalog, authentication, wishlist, cart, and database remain shared.
 The separate build directory allows both store previews to run together.
 Restart the dev server after changing an environment profile. When the dedicated
-beauty backend is ready, change the API URL in `.env.beauty`.
+TyrePapa backend is ready, change the API URL in `.env.beauty`.
 
 The template lives in `src/templates/beauty`. Its homepage, navigation, footer,
 and product cards override the baseline; remaining pages currently inherit the

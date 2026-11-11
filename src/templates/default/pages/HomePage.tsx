@@ -4,7 +4,7 @@ import { ArrowUpRight, PlugZap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import ProductsGrid from "@/app/(web)/products/ProductsGrid";
-import Categories from "@/widgets/categories/Categories";
+import Categories, { CategoriesSkeleton } from "@/widgets/categories/Categories";
 import { Suspense } from "react";
 import ProductsGridSkeleton from "@/app/(web)/products/(components)/ProductsGridSkeleton";
 import {
@@ -267,7 +267,7 @@ function ProductCategories() {
             </span>
           </h3>
         </div>
-        <Categories />
+        <Suspense fallback={<CategoriesSkeleton />}><Categories /></Suspense>
       </div>
     </section>
   )

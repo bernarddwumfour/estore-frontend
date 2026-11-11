@@ -2,16 +2,17 @@ import { ReactNode } from "react";
 import { WishlistInitializer } from "./WishlistInitializer";
 import NextTopLoader from "nextjs-toploader";
 import { T } from "@/templates/registry";
+import { storefrontTheme } from "@/templates/storefront-theme";
 import { AssistantLauncher } from "@/widgets/ai-assistant/AssistantLauncher";
 
 
 const layout = ({ children }: { children: ReactNode }) => {
   return (
-    <div>
+    <div data-storefront-theme={storefrontTheme}>
       <T.Navbar />
 
       <NextTopLoader
-        color={process.env.NEXT_PUBLIC_STORE === "furniture" ? "#654035" : "#080808"}
+        color={process.env.NEXT_PUBLIC_STORE === "furniture" ? "#654035" : process.env.NEXT_PUBLIC_STORE === "beauty" ? "#b68d63" : "#080808"}
         initialPosition={0.08}
         crawlSpeed={200}
         height={4}

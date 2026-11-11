@@ -15,7 +15,7 @@ const ReviewComponent = ({ slug, title }: { slug: string, title?: string }) => {
             {!user?.id ?
                 <Dialog>
                     <DialogTrigger asChild>
-                        <Button>
+                        <Button className={storefrontTheme === "beauty-surface" ? "rounded-none bg-[#20201e] text-white hover:bg-[#4e4034]" : storefrontTheme === "furniture-surface" ? "rounded-full bg-[#654035] text-white hover:bg-[#503027]" : undefined}>
                             <PenLine className="h-4 w-4 mr-2" />
                             Write a Review
                         </Button>
@@ -73,7 +73,7 @@ const ReviewComponent = ({ slug, title }: { slug: string, title?: string }) => {
 
                 <Dialog>
                     <DialogTrigger asChild>
-                        <Button>
+                        <Button className={storefrontTheme === "beauty-surface" ? "rounded-none bg-[#20201e] text-white hover:bg-[#4e4034]" : storefrontTheme === "furniture-surface" ? "rounded-full bg-[#654035] text-white hover:bg-[#503027]" : undefined}>
                             <PenLine className="h-4 w-4 mr-2" />
                             Write a Review
                         </Button>
