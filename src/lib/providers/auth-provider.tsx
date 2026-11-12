@@ -53,6 +53,36 @@ type AuthData = {
   tokens: Tokens;
 };
 
+function getLoginFailureMessage(error: unknown): string {
+  const response = (error as {
+    response?: {
+      status?: number;
+      data?: { error?: unknown; message?: unknown; detail?: unknown };
+      headers?: Record<string, unknown>;
+    };
+  })?.response;
+  const data = response?.data;
+
+  // The current backend can surface django-ratelimit's Ratelimited exception
+  // as 403 until its exception middleware is active. Treat that login response
+  // as a throttle too; the API middleware now normalizes it to 429.
+  if (response?.status === 429 || response?.status === 403) {
+    const retryAfterHeader = response.headers?.["retry-after"];
+    const retryAfterSeconds = Number(retryAfterHeader);
+    if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+      const wait = retryAfterSeconds < 60
+        ? `${Math.ceil(retryAfterSeconds)} seconds`
+        : `${Math.ceil(retryAfterSeconds / 60)} minutes`;
+      return `Too many sign-in attempts. Please try again in ${wait}.`;
+    }
+
+    return "Too many sign-in attempts. Please wait a while before trying again.";
+  }
+
+  const message = data?.error || data?.message || data?.detail;
+  return typeof message === "string" && message.trim() ? message : "Login failed";
+}
+
 type AuthContextType = {
   user: User | null;
   tokens: Tokens | null;
@@ -219,11 +249,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error("Login error:", error);
 
-      // CHANGED: Extract error from Django API response structure
-      const errorMessage = error?.response?.data?.error ||
-                          error?.response?.data?.message ||
-                          "Login failed";
-      toast.error(errorMessage);
+      toast.error(getLoginFailureMessage(error));
     }
   };
 
@@ -267,10 +293,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error("Staff login error:", error);
 
-      const errorMessage = error?.response?.data?.error ||
-                          error?.response?.data?.message ||
-                          "Login failed";
-      toast.error(errorMessage);
+      toast.error(getLoginFailureMessage(error));
     }
   };
 

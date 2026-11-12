@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { endpoints } from "@/constants/endpoints/endpoints";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 type Category = { id: string; name: string; slug: string; image?: string | null };
 

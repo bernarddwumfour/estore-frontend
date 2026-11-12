@@ -10,7 +10,7 @@ import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
 
 // Landing-page-first template. Other routes inherit the shared baseline.
-export const beauty: Partial<Template> = {
+export const tyrepapa: Partial<Template> = {
   assistantTheme: {
     launcher: "bg-[#20201e] text-[#f8dfc8] hover:bg-[#4e4034]",
     panel: "border-[#e7e1d9] bg-[#faf9f6] text-[#252520]",

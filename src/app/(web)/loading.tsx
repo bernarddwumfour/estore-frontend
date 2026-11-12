@@ -1,9 +1,9 @@
 import BrandLogo from "@/templates/furniture/components/BrandLogo";
 import Logo from "@/widgets/logo/Logo";
-import TyrePapaLogo from "@/templates/beauty/components/BrandLogo";
+import TyrePapaLogo from "@/templates/tyrepapa/components/BrandLogo";
 
 export default function WebLoading() {
-  if (process.env.NEXT_PUBLIC_STORE === "beauty") {
+  if (process.env.NEXT_PUBLIC_STORE === "tyrepapa") {
     return <div className="flex min-h-[70vh] items-center justify-center bg-[#faf9f6] px-6 text-[#252520]" role="status" aria-live="polite" aria-label="Loading TyrePapa">
       <div className="text-center"><div className="flex justify-center"><TyrePapaLogo tone="ink" compact /></div><p className="mt-4 text-[10px] uppercase tracking-[.2em] text-[#8a6946]">Ready for the road ahead.</p></div>
     </div>;

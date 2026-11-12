@@ -43,29 +43,41 @@ profile using `manage_store.py` in the backend project. These environment
 files are local and ignored by Git.
 
 
-## Third template: TyrePapa
+## TyrePapa storefront
 
-Run `npm run dev:beauty -- --port 3002` for the third template. Like the
-other stores, it loads a local, ignored environment profile (`.env.beauty`):
+Run `npm run dev:tyrepapa -- --port 3002` for TyrePapa. It loads the local,
+ignored `.env.tyrepapa` profile:
 
 ```dotenv
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
-NEXT_PUBLIC_STORE=beauty
-NEXT_DEV_DIST_DIR=.next-beauty
+NEXT_PUBLIC_STORE=tyrepapa
+NEXT_DEV_DIST_DIR=.next-tyrepapa
 ```
 
-The API URL matches the current Oak & Loom backend. Only the template changes;
-the catalog, authentication, wishlist, cart, and database remain shared.
-The separate build directory allows both store previews to run together.
-Restart the dev server after changing an environment profile. When the dedicated
-TyrePapa backend is ready, change the API URL in `.env.beauty`.
+The frontend profile currently points to `http://localhost:8000/api`. The
+backend selector has profiles for iPlug and Oak & Loom only; TyrePapa does not
+yet have a separate backend environment/database profile. The frontend will
+use whichever API is running on port 8000, so it does not isolate catalog or
+customer data by itself. The separate Next.js build directory lets TyrePapa
+run alongside the other storefronts. Restart the dev server after changing an
+environment profile.
 
-The template lives in `src/templates/beauty`. Its homepage, navigation, footer,
+For deployment, commit and push `src/templates/tyrepapa`, `public/tyrepapa`,
+and the storefront registry changes before building. The local `.env.tyrepapa`
+file is ignored by Git and is not sent with the deployment. Set
+`NEXT_PUBLIC_STORE=tyrepapa` and `NEXT_PUBLIC_API_BASE_URL` to the public API
+URL in the deployment project's build environment, then trigger a new build.
+A runtime-only change to `NEXT_PUBLIC_STORE` cannot switch an already built
+frontend. Do not use `localhost:8000` for the deployed API URL; that address
+refers to each visitor's own machine. `NEXT_DEV_DIST_DIR` is only for local
+preview isolation and can be left unset in deployment.
+
+The template lives in `src/templates/tyrepapa`. Its homepage, navigation, footer,
 and product cards override the baseline; remaining pages currently inherit the
 default template. Navigation search, bag, accounts, and product actions reuse
 shared storefront behavior. Catalog failures and empty catalogs show a labeled
 collection preview, with no fabricated prices, stock, reviews, or discounts.
 
-Campaign artwork is illustrative and lives in `public/beauty`; replace it with
-approved product photography when preparing a live store. See
-`src/templates/beauty/ASSETS.md` for generation prompts and provenance.
+Campaign artwork lives in `public/tyrepapa`; replace illustrative imagery with
+approved product photography before preparing a live store. See
+`src/templates/tyrepapa/ASSETS.md` for asset notes.

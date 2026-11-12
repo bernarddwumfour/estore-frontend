@@ -6,7 +6,7 @@ import { endpoints } from "@/constants/endpoints/endpoints";
 import type { ProductType } from "@/types/productTypes";
 import ProductShelf from "../components/ProductShelf";
 import CategoriesSkeleton from "../components/CategoriesSkeleton";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 type StoreCategory = { id: string; name: string; slug: string; image?: string | null; product_count?: number };
 
@@ -30,11 +30,6 @@ async function Categories() {
 }
 
 const shop = (search: string) => `/products?q=${encodeURIComponent(search)}`;
-
-function CampaignProducts() {
-  // Display the left panel of the diptych without cropping the packaging.
-  return <svg viewBox="0 0 1 2" aria-hidden="true" className={styles.campaignProducts}><svg width="1" height="2" overflow="hidden"><image href="/beauty/editorial.webp" width="2" height="2" /></svg></svg>;
-}
 
 async function Collection() {
   let products: ProductType[] = [];
@@ -66,7 +61,7 @@ async function Collection() {
 export default function HomePage() {
   return <div className={styles.page} id="top">
     <section className={styles.hero} aria-labelledby="tyre-title">
-      <Image src="/beauty/tyre-hero.png" alt="" fill priority sizes="100vw" className={styles.heroImage} />
+      <Image src="/tyrepapa/tyre-hero.png" alt="" fill priority sizes="100vw" className={styles.heroImage} />
       <div className={styles.heroContent}><span className={styles.eyebrow}>CAR TYRES FOR THE ROAD AHEAD.</span><h1 id="tyre-title">Tyres for every car.<br /><em>Ready for every road.</em></h1><p>Explore tyre sizes and styles to find the right fit for your drive.</p><Link href="/products" className={styles.heroButton}>Shop car tyres <ArrowUpRight size={16} /></Link></div>
       <Link href={shop("all-season")} className={`${styles.heroNote} ${styles.serumNote}`}><span className={styles.noteNumber}>01</span><span>All-season tyres<small>For changing conditions</small></span><ArrowUpRight size={18} /></Link>
       <Link href={shop("performance")} className={`${styles.heroNote} ${styles.washNote}`}><span className={styles.noteNumber}>02</span><span>Performance tyres<small>For a more responsive drive</small></span><ArrowUpRight size={18} /></Link>
@@ -80,8 +75,8 @@ export default function HomePage() {
     <Suspense fallback={<section className={styles.collection} aria-busy="true"><span className={styles.eyebrow}>SHOP THE RANGE</span><h2>Tyres for the road ahead.</h2><div className={styles.loadingShelf}>{[1, 2, 3, 4].map(i => <div key={i} />)}</div></section>}><Collection /></Suspense>
 
     <section id="our-story" className={styles.story} aria-labelledby="story-title">
-      <div className={styles.storyLeft}><div className={styles.trioImage}><CampaignProducts /></div><div className={styles.storyCopy}><span className={styles.eyebrow}>MADE FOR THE MILES AHEAD</span><h2 id="story-title">Wherever the road<br /><em>takes you.</em></h2><p>Every drive starts with a choice. From the daily commute to the long way home, explore tyres suited to your car and the journeys you make.</p><Link href="/products" className={styles.darkButton}>Explore the range <ArrowUpRight size={15} /></Link></div></div>
-      <div className={styles.portrait}><Image src="/beauty/editorial.webp" alt="" fill sizes="(max-width: 700px) 100vw, 50vw" /><span className={`${styles.skinCircle} ${styles.circleOne}`} /><span className={`${styles.skinCircle} ${styles.circleTwo}`} /><span className={`${styles.skinCircle} ${styles.circleThree}`} /><div className={styles.portraitCaption}><span>READY FOR WHAT&apos;S NEXT.</span><p>Keep moving.</p></div></div>
+      <div className={styles.storyLeft}><div className={styles.trioImage}><Image src="/tyrepapa/tyre-still-life.png" alt="Car tyre and wheel against warm stone" fill sizes="(max-width: 700px) 84vw, 36vw" /></div><div className={styles.storyCopy}><span className={styles.eyebrow}>MADE FOR THE MILES AHEAD</span><h2 id="story-title">Wherever the road<br /><em>takes you.</em></h2><p>Every drive starts with a choice. From the daily commute to the long way home, explore tyres suited to your car and the journeys you make.</p><Link href="/products" className={styles.darkButton}>Explore the range <ArrowUpRight size={15} /></Link></div></div>
+      <div className={styles.portrait}><Image src="/tyrepapa/tyre-wheel-road.png" alt="Tyre on a car beside an open road" fill sizes="(max-width: 700px) 100vw, 50vw" /><div className={styles.portraitCaption}><span>READY FOR WHAT&apos;S NEXT.</span><p>Keep moving.</p></div></div>
     </section>
 
 

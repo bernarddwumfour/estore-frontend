@@ -35,8 +35,8 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    ".next-beauty/types/**/*.ts",
-    ".next-beauty/dev/types/**/*.ts"
+    ".next-tyrepapa/types/**/*.ts",
+    ".next-tyrepapa/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

@@ -8,7 +8,7 @@ import { PromotionType } from "@/types/promotionTypes";
 import { ProductType } from "@/types/productTypes";
 import AddToCartButton from "./AddToCartButton";
 import Product from "../../products/Product";
-import BeautyProductCard from "@/templates/beauty/components/ProductCard";
+import TyrePapaProductCard from "@/templates/tyrepapa/components/ProductCard";
 import { formatCurrency } from "@/lib/currency";
 import { storefrontTheme } from "@/templates/storefront-theme";
 // Define the type for the page props
@@ -72,7 +72,7 @@ async function getPackage(slug: string) {
 export default async function PackageDetailPage({ params }: PageProps) {
     const { slug } = await params;
     const promotion = await getPackage(slug);
-    const PromotionProduct = process.env.NEXT_PUBLIC_STORE === "beauty" ? BeautyProductCard : Product;
+    const PromotionProduct = process.env.NEXT_PUBLIC_STORE === "tyrepapa" ? TyrePapaProductCard : Product;
 
     if (!promotion) {
         notFound();
@@ -85,7 +85,7 @@ export default async function PackageDetailPage({ params }: PageProps) {
     const bundleSku = `bundle_${promotion.id}`;
 
     return (
-        <section data-storefront-theme={storefrontTheme} className={`relative py-28 bg-cover bg-center ${storefrontTheme === "beauty-surface" ? "beauty-promotion-detail" : ""}`}>
+        <section data-storefront-theme={storefrontTheme} className={`relative py-28 bg-cover bg-center ${storefrontTheme === "tyrepapa-surface" ? "tyrepapa-promotion-detail" : ""}`}>
             <div className="mx-auto container px-4 md:px-6">
 
 

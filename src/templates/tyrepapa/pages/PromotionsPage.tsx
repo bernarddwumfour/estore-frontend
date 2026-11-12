@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import type { PromotionType } from "@/types/promotionTypes";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 export default function PromotionsPage({ promotions }: { promotions: PromotionType[] }) {
   return <div className={styles.editorialPage}>

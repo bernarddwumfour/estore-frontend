@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import BrandLogo from "./BrandLogo";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 export default function Footer() {
   return <footer className={styles.footer}>

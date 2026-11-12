@@ -2,7 +2,7 @@ import type { ComponentType } from "react";
 import type { PageHeaderProps } from "./contract";
 import DefaultPageHeader from "./default/components/PageHeader";
 import FurniturePageHeader from "./furniture/components/PageHeader";
-import BeautyPageHeader from "./beauty/components/PageHeader";
+import TyrePapaPageHeader from "./tyrepapa/components/PageHeader";
 
 /**
  * Client-safe accessor for the active store's page header.
@@ -17,7 +17,7 @@ import BeautyPageHeader from "./beauty/components/PageHeader";
 const headers: Record<string, ComponentType<PageHeaderProps>> = {
   default: DefaultPageHeader,
   furniture: FurniturePageHeader,
-  beauty: BeautyPageHeader,
+  tyrepapa: TyrePapaPageHeader,
 };
 
 const activeStore = process.env.NEXT_PUBLIC_STORE ?? "default";

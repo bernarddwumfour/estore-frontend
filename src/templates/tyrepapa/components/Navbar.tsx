@@ -10,7 +10,7 @@ import { useCartStore } from "@/app/lib/store/cart-store";
 import { useAuth } from "@/lib/use-auth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import BrandLogo from "./BrandLogo";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 const links = [
   { label: "Home", href: "/" },
@@ -43,6 +43,7 @@ export default function Navbar() {
         </div>
         <div className={styles.navActions}>
           <button aria-label="Search products" onClick={() => setSearchOpen(true)}><Search size={17} strokeWidth={1.4} /></button>
+          <Link href="/wishlist" aria-label="Wishlist" aria-current={pathname === "/wishlist" ? "page" : undefined}><Heart size={17} strokeWidth={1.4} /></Link>
           {user?.id ? <DropdownMenu>
             <DropdownMenuTrigger asChild><button aria-label="Your account"><UserRound size={17} strokeWidth={1.4} /></button></DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={10} className={`${styles.accountMenu} z-[102] rounded-none`}>
@@ -56,10 +57,10 @@ export default function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu> : <Link href="/login" aria-label="Log in to your account"><UserRound size={17} strokeWidth={1.4} /></Link>}
           <button aria-label={`Open cart, ${count} items`} onClick={() => setcartopen(true)}><ShoppingBag size={17} strokeWidth={1.4} />{count > 0 && <span className={styles.cartCount}>{count}</span>}</button>
-          <button className={styles.menuToggle} aria-expanded={menuOpen} aria-controls="beauty-mobile-nav" aria-label={menuOpen ? "Close menu" : "Open menu"} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={20} /> : <Menu size={20} />}</button>
+          <button className={styles.menuToggle} aria-expanded={menuOpen} aria-controls="tyrepapa-mobile-nav" aria-label={menuOpen ? "Close menu" : "Open menu"} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={20} /> : <Menu size={20} />}</button>
         </div>
       </nav>
-      {menuOpen && <nav id="beauty-mobile-nav" aria-label="Mobile navigation" className={styles.mobileLinks}>{links.map(link => <Link key={link.label} href={link.href} onClick={() => setMenuOpen(false)}>{link.label}</Link>)}</nav>}
+      {menuOpen && <nav id="tyrepapa-mobile-nav" aria-label="Mobile navigation" className={styles.mobileLinks}>{links.map(link => <Link key={link.label} href={link.href} onClick={() => setMenuOpen(false)}>{link.label}</Link>)}</nav>}
       <div className={styles.cartPanel}><Cart cartopen={cartopen} setcartopen={setcartopen} /></div>
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} variant="header-panel" panelClassName={styles.searchPanel} />
     </header>

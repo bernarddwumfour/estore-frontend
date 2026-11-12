@@ -11,7 +11,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev:beauty": "node scripts/dev-store.mjs beauty"
+    "dev:tyrepapa": "node scripts/dev-store.mjs tyrepapa"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

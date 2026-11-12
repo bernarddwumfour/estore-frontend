@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { MouseEventHandler } from "react";
-import BrandLogo from "@/templates/beauty/components/BrandLogo";
+import BrandLogo from "@/templates/tyrepapa/components/BrandLogo";
 
 export default function Logo({
   light = false,
@@ -14,7 +14,7 @@ export default function Logo({
   href?: string;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
 }) {
-  if (process.env.NEXT_PUBLIC_STORE === "beauty") {
+  if (process.env.NEXT_PUBLIC_STORE === "tyrepapa") {
     return <BrandLogo href={href} onClick={onClick} tone={light ? "gold" : "ink"} compact={compact} />;
   }
   const furniture = process.env.NEXT_PUBLIC_STORE === "furniture";

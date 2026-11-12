@@ -23,7 +23,7 @@ const furnitureColors: Record<string, string> = {
   'ring-slate-400': 'ring-[#654035]',
 };
 
-const beautyColors: Record<string, string> = {
+const tyrepapaColors: Record<string, string> = {
   'bg-slate-950': 'bg-[#20201e]',
   'bg-slate-900': 'bg-[#20201e]',
   'bg-slate-800': 'bg-[#38332d]',
@@ -48,7 +48,7 @@ const beautyColors: Record<string, string> = {
 export function filterThemeClasses(...inputs: Parameters<typeof mergeClasses>) {
   const classes = mergeClasses(...inputs);
   const colors = process.env.NEXT_PUBLIC_STORE === 'furniture' ? furnitureColors
-    : process.env.NEXT_PUBLIC_STORE === 'beauty' ? beautyColors : null;
+    : process.env.NEXT_PUBLIC_STORE === 'tyrepapa' ? tyrepapaColors : null;
   if (!colors) return classes;
   return classes.replace(/(?:bg|text|border|ring)-(?:slate|emerald)-\d+/g,
     color => colors[color] ?? color);

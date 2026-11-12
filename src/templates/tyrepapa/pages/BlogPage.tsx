@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { BlogPageProps } from "../../contract";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 export default function BlogPage({ posts, pagination }: BlogPageProps) {
   return <div className={styles.editorialPage}>

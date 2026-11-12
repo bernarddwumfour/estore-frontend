@@ -10,11 +10,11 @@ import { toast } from 'sonner';
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { storefrontTheme } from '@/templates/storefront-theme';
 
-const beautyReviews = storefrontTheme === 'beauty-surface';
+const tyrepapaReviews = storefrontTheme === 'tyrepapa-surface';
 const furnitureReviews = storefrontTheme === 'furniture-surface';
-const reviewAccent = beautyReviews ? 'text-[#b68d63] fill-[#b68d63]' : furnitureReviews ? 'text-[#f5b21a] fill-[#f5b21a]' : 'text-amber-400 fill-amber-400';
-const reviewPanel = beautyReviews ? 'rounded-none border-[#e7e1d9] bg-white shadow-none' : furnitureReviews ? 'rounded-3xl border-[#e7e1d3] bg-white' : '';
-const reviewHeading = beautyReviews ? 'font-serif font-normal text-[#252520]' : furnitureReviews ? 'font-extrabold text-[#2b2b22]' : '';
+const reviewAccent = tyrepapaReviews ? 'text-[#b68d63] fill-[#b68d63]' : furnitureReviews ? 'text-[#f5b21a] fill-[#f5b21a]' : 'text-amber-400 fill-amber-400';
+const reviewPanel = tyrepapaReviews ? 'rounded-none border-[#e7e1d9] bg-white shadow-none' : furnitureReviews ? 'rounded-3xl border-[#e7e1d3] bg-white' : '';
+const reviewHeading = tyrepapaReviews ? 'font-serif font-normal text-[#252520]' : furnitureReviews ? 'font-extrabold text-[#2b2b22]' : '';
 
 interface Review {
     id: string;
@@ -62,7 +62,7 @@ function ReviewCard({ review, onHelpfulClick }: { review: Review; onHelpfulClick
         <div className={`border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors ${reviewPanel}`}>
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${beautyReviews ? "bg-[#b68d63]" : furnitureReviews ? "bg-[#654035]" : "bg-gradient-to-br from-blue-500 to-blue-600"}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${tyrepapaReviews ? "bg-[#b68d63]" : furnitureReviews ? "bg-[#654035]" : "bg-gradient-to-br from-blue-500 to-blue-600"}`}>
                         <span className="text-white font-medium text-sm">{review.user.initials}</span>
                     </div>
                     <div>
@@ -237,7 +237,7 @@ export default function ProductReviews({ slug, title, averageRating, totalReview
 
     if (isLoading && !initialFetchDone) {
         return (
-            <div data-review-theme={storefrontTheme ?? "default"} className={`mt-20 ${beautyReviews ? "text-[#252520]" : furnitureReviews ? "text-[#2b2b22]" : ""}`}>
+            <div data-review-theme={storefrontTheme ?? "default"} className={`mt-20 ${tyrepapaReviews ? "text-[#252520]" : furnitureReviews ? "text-[#2b2b22]" : ""}`}>
                 <div className="flex flex-col md:flex-row gap-6 items-center justify-between mb-10">
                     <div>
                         <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
@@ -253,10 +253,10 @@ export default function ProductReviews({ slug, title, averageRating, totalReview
     }
 
     return (
-        <div data-review-theme={storefrontTheme ?? "default"} className={`mt-20 ${beautyReviews ? "text-[#252520]" : furnitureReviews ? "text-[#2b2b22]" : ""}`}>
+        <div data-review-theme={storefrontTheme ?? "default"} className={`mt-20 ${tyrepapaReviews ? "text-[#252520]" : furnitureReviews ? "text-[#2b2b22]" : ""}`}>
             <div className="flex flex-col md:flex-row gap-6 items-center justify-between mb-10">
                 <div>
-                    <h2 className={`text-2xl md:text-3xl font-bold text-gray-900 mb-2 ${reviewHeading} ${beautyReviews ? "md:text-[3rem]" : ""}`}>Customer Reviews</h2>
+                    <h2 className={`text-2xl md:text-3xl font-bold text-gray-900 mb-2 ${reviewHeading} ${tyrepapaReviews ? "md:text-[3rem]" : ""}`}>Customer Reviews</h2>
                     <div className="flex flex-col items-center md:items-start space-y-1">
                         <div className="flex items-center">
                             <div className="flex items-center mr-2">
@@ -294,7 +294,7 @@ export default function ProductReviews({ slug, title, averageRating, totalReview
                                 <div className="flex-1">
                                     <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                                         <div
-                                            className={`h-2 rounded-full transition-all duration-300 ${beautyReviews ? "bg-[#b68d63]" : furnitureReviews ? "bg-[#f5b21a]" : "bg-amber-400"}`}
+                                            className={`h-2 rounded-full transition-all duration-300 ${tyrepapaReviews ? "bg-[#b68d63]" : furnitureReviews ? "bg-[#f5b21a]" : "bg-amber-400"}`}
                                             style={{ width: `${getPercentage(rating)}%` }}
                                         />
                                     </div>
@@ -314,15 +314,15 @@ export default function ProductReviews({ slug, title, averageRating, totalReview
                     <h3 className={`font-semibold text-gray-900 mb-4 ${reviewHeading}`}>Review Highlights</h3>
                     <ul className="space-y-3">
                         <li className="flex items-start">
-                            <CheckCircle className={`h-5 w-5 mr-3 flex-shrink-0 mt-0.5 ${beautyReviews ? "text-[#b68d63]" : furnitureReviews ? "text-[#654035]" : "text-emerald-500"}`} />
+                            <CheckCircle className={`h-5 w-5 mr-3 flex-shrink-0 mt-0.5 ${tyrepapaReviews ? "text-[#b68d63]" : furnitureReviews ? "text-[#654035]" : "text-emerald-500"}`} />
                             <span className="text-sm text-gray-700">Real customer reviews from verified purchases</span>
                         </li>
                         <li className="flex items-start">
-                            <CheckCircle className={`h-5 w-5 mr-3 flex-shrink-0 mt-0.5 ${beautyReviews ? "text-[#b68d63]" : furnitureReviews ? "text-[#654035]" : "text-emerald-500"}`} />
+                            <CheckCircle className={`h-5 w-5 mr-3 flex-shrink-0 mt-0.5 ${tyrepapaReviews ? "text-[#b68d63]" : furnitureReviews ? "text-[#654035]" : "text-emerald-500"}`} />
                             <span className="text-sm text-gray-700">Authentic feedback from people who bought this product</span>
                         </li>
                         <li className="flex items-start">
-                            <CheckCircle className={`h-5 w-5 mr-3 flex-shrink-0 mt-0.5 ${beautyReviews ? "text-[#b68d63]" : furnitureReviews ? "text-[#654035]" : "text-emerald-500"}`} />
+                            <CheckCircle className={`h-5 w-5 mr-3 flex-shrink-0 mt-0.5 ${tyrepapaReviews ? "text-[#b68d63]" : furnitureReviews ? "text-[#654035]" : "text-emerald-500"}`} />
                             <span className="text-sm text-gray-700">Most helpful reviews appear first</span>
                         </li>
                     </ul>
@@ -354,7 +354,7 @@ export default function ProductReviews({ slug, title, averageRating, totalReview
                     )}
                 </>
             ) : initialFetchDone && (
-                <div className={`text-center py-12 bg-gray-50 rounded-xl ${beautyReviews ? "rounded-none bg-[#f1ede7]" : furnitureReviews ? "rounded-3xl bg-[#f4f1ea]" : ""}`}>
+                <div className={`text-center py-12 bg-gray-50 rounded-xl ${tyrepapaReviews ? "rounded-none bg-[#f1ede7]" : furnitureReviews ? "rounded-3xl bg-[#f4f1ea]" : ""}`}>
                     <p className="text-gray-500 mb-3">No reviews yet</p>
                     <p className="text-sm text-gray-400">Be the first to review this product</p>
                 </div>

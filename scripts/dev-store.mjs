@@ -2,10 +2,10 @@ import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { parseEnv } from "node:util";
 
-const profiles = { iplug: ".env.iplug", oak: ".env.oakandloom", beauty: ".env.beauty" };
+const profiles = { iplug: ".env.iplug", oak: ".env.oakandloom", tyrepapa: ".env.tyrepapa" };
 const profile = process.argv[2];
 if (!Object.hasOwn(profiles, profile)) {
-  console.error("Usage: node scripts/dev-store.mjs <iplug|oak|beauty> [Next.js arguments]");
+  console.error("Usage: node scripts/dev-store.mjs <iplug|oak|tyrepapa> [Next.js arguments]");
   process.exit(1);
 }
 

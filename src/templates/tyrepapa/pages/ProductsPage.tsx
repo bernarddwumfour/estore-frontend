@@ -5,10 +5,10 @@ import { AdvancedFilters } from "@/widgets/advanced-filters/AdvancedFilters";
 import Categories from "../components/Categories";
 import CategoriesSkeleton from "../components/CategoriesSkeleton";
 import type { ProductsPageProps } from "../../contract";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 export default function ProductsPage({ searchParams }: ProductsPageProps) {
-  return <div className={styles.shopPage} data-storefront-theme="beauty-surface">
+  return <div className={styles.shopPage} data-storefront-theme="tyrepapa-surface">
     <Suspense fallback={<CategoriesSkeleton page="products" />}>
       <Categories currentCategory={typeof searchParams.category === "string" ? searchParams.category : undefined} />
     </Suspense>

@@ -7,14 +7,25 @@ import { AlertMessage } from "@/widgets/alert-message/AlertMessage";
 import { ProductType } from "@/types/productTypes";
 import { PageHeader } from "@/templates/page-header";
 import { ProductCard } from "@/templates/product-card";
+import { useAuth } from "@/lib/use-auth";
+import Link from "next/link";
 
+type WishlistResponse = { data: { items: ProductType[] } };
 
-export const fetchWishlist = async () => {
+export const fetchWishlist = async (): Promise<WishlistResponse> => {
+    if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+        throw new Error("The store API is not configured for this deployment.");
+    }
     const response = await securityAxios.get(endpoints.products.listWishList);
-    return response.data;
+    const payload = response.data as WishlistResponse | null;
+    if (!Array.isArray(payload?.data?.items)) {
+        throw new Error("The wishlist service returned an invalid response.");
+    }
+    return payload;
 };
 
-const page = () => {
+const WishlistPage = () => {
+    const { user, tokens } = useAuth();
     const {
         data,
         isLoading,
@@ -23,7 +34,9 @@ const page = () => {
     } = useQuery({
         queryKey: [endpoints.products.listWishList],
         queryFn: fetchWishlist,
+        enabled: Boolean(user?.id && tokens?.access_token),
     });
+    const items = data?.data?.items ?? [];
 
 
     return (
@@ -31,11 +44,12 @@ const page = () => {
             {/* Header (swaps per active template) */}
             <PageHeader subtitle="My WishList" title="Saved Items To Buy Later" />
             <div className="container mx-auto px-4 py-16">
-                {isLoading && <Spinner size="md" />}
-                {isError && <AlertMessage variant="error" message={`${error?.message || "Failed to load orders"}`} />}
+                {!user?.id && <div className="text-center py-12"><p className="text-muted-foreground text-lg">Sign in to see your saved tyres.</p><Link href="/login" className="mt-5 inline-block underline underline-offset-4">Log in</Link></div>}
+                {user?.id && isLoading && <Spinner size="md" />}
+                {user?.id && isError && <AlertMessage variant="error" message={error?.message || "Failed to load wishlist"} />}
 
-                {!isError && !isLoading && (<>
-                    {data.data.items.length == 0 ?
+                {user?.id && !isError && !isLoading && (<>
+                    {items.length === 0 ?
                         <div className="text-center py-12">
                             <p className="text-muted-foreground text-lg">
                                 No products in wishlist at the moment
@@ -44,7 +58,7 @@ const page = () => {
                         </div> :
                         <>
                             <ul className="grid gap-2 md:gap-4 gap-y-12 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 md:px-4 py-12">
-                                {data.data.items.map((product: ProductType) => (
+                                {items.map((product) => (
                                     <ProductCard product={product} key={product.id} />
                                 ))}
                             </ul>
@@ -59,4 +73,4 @@ const page = () => {
     );
 }
 
-export default page
+export default WishlistPage

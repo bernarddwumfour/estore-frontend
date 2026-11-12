@@ -1,6 +1,6 @@
 import ProductCard from "./ProductCard";
 import type { ProductType } from "@/types/productTypes";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 export default function ProductShelf({ products }: { products: ProductType[] }) {
   return <>

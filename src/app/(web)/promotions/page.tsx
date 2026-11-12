@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Package, Clock, Gift } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
-import BeautyPromotionsPage from "@/templates/beauty/pages/PromotionsPage";
+import TyrePapaPromotionsPage from "@/templates/tyrepapa/pages/PromotionsPage";
 import type { PromotionType } from "@/types/promotionTypes";
 
 interface PackageCardProps {
@@ -40,8 +40,8 @@ async function getPackages() {
 
 export default async function PackagesPage() {
     const packages = await getPackages();
-    if (process.env.NEXT_PUBLIC_STORE === "beauty") {
-        return <BeautyPromotionsPage promotions={packages as PromotionType[]} />;
+    if (process.env.NEXT_PUBLIC_STORE === "tyrepapa") {
+        return <TyrePapaPromotionsPage promotions={packages as PromotionType[]} />;
     }
 
     return (

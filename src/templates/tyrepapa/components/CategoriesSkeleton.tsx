@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 export default function CategoriesSkeleton({ page }: { page: "home" | "products" }) {
   if (page === "home") {

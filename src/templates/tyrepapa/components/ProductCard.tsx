@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, ShoppingBag } from "lucide-react";
 import { useCartStore } from "@/app/lib/store/cart-store";
+import AddToWishList from "@/app/(web)/products/(components)/AddToWishList";
 import { formatCurrency } from "@/lib/currency";
 import type { ProductCardProps } from "../../contract";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 export default function ProductCard({ product, isMinimal = false }: ProductCardProps) {
   const variant = product.default_variant ?? product.variants[0];
@@ -41,10 +42,13 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
   }
 
   return <li className={styles.productCard}>
-    <Link href={href} className={`${styles.productImage} ${isMinimal ? styles.minimalImage : ""}`}>
-      {product.is_new && <span className={styles.productBadge}>NEW ARRIVAL</span>}
-      {image ? <Image src={image.url} alt={image.alt_text || product.title} fill sizes="(max-width: 600px) 85vw, (max-width: 1000px) 45vw, 25vw" className={styles.containImage} /> : <ShoppingBag size={45} strokeWidth={0.7} aria-label="Product image coming soon" />}
-    </Link>
+    <div className={styles.productMedia}>
+      <Link href={href} className={`${styles.productImage} ${isMinimal ? styles.minimalImage : ""}`}>
+        {product.is_new && <span className={styles.productBadge}>NEW ARRIVAL</span>}
+        {image ? <Image src={image.url} alt={image.alt_text || product.title} fill sizes="(max-width: 600px) 85vw, (max-width: 1000px) 45vw, 25vw" className={styles.containImage} /> : <ShoppingBag size={45} strokeWidth={0.7} aria-label="Product image coming soon" />}
+      </Link>
+      {variant?.id && <AddToWishList variantId={variant.id} productTitle={product.title} className={styles.wishlistButton} />}
+    </div>
     <div className={styles.productInfo}>
       <span className={styles.productCategory}>{product.category?.name ?? "Tyre range"}</span>
       <Link href={href}><h3>{product.title}</h3></Link>

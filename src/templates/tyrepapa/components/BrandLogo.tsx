@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { MouseEventHandler } from "react";
-import styles from "../beauty.module.css";
+import styles from "../tyrepapa.module.css";
 
 type BrandLogoProps = {
   href?: string;

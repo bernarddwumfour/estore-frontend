@@ -1,6 +1,6 @@
 // use-fetch-wishlist.ts — fetches and hydrates wishlist from API
 "use client"
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   useWishlistHydrated,
@@ -20,10 +20,17 @@ export const useFetchWishlist = (enabled = true) => {
   const query = useQuery({
     queryKey: [endpoints.products.listWishList],
     queryFn: async () => {
+      if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+        throw new Error('The store API is not configured for this deployment.')
+      }
       const response = await securityAxios.get(endpoints.products.listWishList)
-      return response.data
+      const payload = response.data
+      if (!Array.isArray(payload?.data?.items)) {
+        throw new Error('The wishlist service returned an invalid response.')
+      }
+      return payload
     },
-    enabled: enabled && hasHydrated && tokenReady,
+    enabled: enabled && hasHydrated && tokenReady && Boolean(user?.id),
     staleTime: 1000 * 60 * 5,
   })
 
@@ -45,9 +52,12 @@ export const useFetchWishlist = (enabled = true) => {
       return
     }
 
-    if (query.data && hasHydrated) {
-      console.log("QUERY", query)
-      const variantIds = query.data.data.items.map((item: any) => item.variant.id)
+    if (Array.isArray(query.data?.data?.items) && hasHydrated) {
+      const variantIds = query.data.data.items.flatMap((item: { variants?: Array<{ id?: string }>; variant?: { id?: string } }) =>
+        (item.variants?.length ? item.variants : item.variant ? [item.variant] : [])
+          .map(variant => variant.id)
+          .filter((id): id is string => typeof id === 'string')
+      )
       setWishlist(variantIds)
     }
   }, [query.data, hasHydrated, setWishlist, user])
