@@ -103,12 +103,29 @@ export function ProductOptions({
     return null;
   }
 
+  const compatibilityKeys = new Set(['compatible_vehicles', 'vehicle_types']);
+  const configurationEntries = Object.entries(selectedVariant.attributes || {}).filter(
+    ([key]) => !compatibilityKeys.has(key)
+  );
+  const compatibility = [
+    ...(Array.isArray(selectedVariant.attributes?.compatible_vehicles)
+      ? selectedVariant.attributes.compatible_vehicles
+      : selectedVariant.attributes?.compatible_vehicles
+        ? [selectedVariant.attributes.compatible_vehicles]
+        : []),
+    ...(Array.isArray(selectedVariant.attributes?.vehicle_types)
+      ? selectedVariant.attributes.vehicle_types
+      : selectedVariant.attributes?.vehicle_types
+        ? [selectedVariant.attributes.vehicle_types]
+        : []),
+  ].filter(Boolean);
+
   return (
     <section className="mb-5 border-y border-gray-100 py-4">
       <div>
         <h3 className="mb-2 text-sm font-semibold text-gray-900">Current configuration</h3>
         <div className="flex flex-wrap gap-2">
-          {Object.entries(selectedVariant.attributes || {}).map(([key, value]) => (
+          {configurationEntries.map(([key, value]) => (
             <span
               key={key}
               className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700"
@@ -120,6 +137,22 @@ export function ProductOptions({
         </div>
       </div>
 
+      {compatibility.length > 0 && (
+        <div className="pt-4">
+          <h3 className="mb-2 text-sm font-semibold text-gray-900">Compatible with</h3>
+          <div className="flex flex-wrap gap-2">
+            {compatibility.map((item, index) => (
+              <span
+                key={`${String(item)}-${index}`}
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700"
+              >
+                {String(item)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {product.variants.length > 1 && (
         <div className="pt-4">
           <h3 className="mb-2 text-sm font-semibold text-gray-900">Available configurations</h3>
@@ -127,7 +160,10 @@ export function ProductOptions({
             {product.variants.map((variant: any) => {
               const image = variant.images?.[0];
               const selected = variant.id === selectedVariant.id;
-              const label = Object.values(variant.attributes || {}).join(" · ");
+              const label = Object.entries(variant.attributes || {})
+                .filter(([key]) => !compatibilityKeys.has(key))
+                .map(([, value]) => Array.isArray(value) ? value.join(', ') : String(value))
+                .join(" · ");
 
               return (
                 <button
