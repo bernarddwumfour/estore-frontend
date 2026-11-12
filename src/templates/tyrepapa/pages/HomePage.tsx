@@ -1,11 +1,12 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CircleDot, LayoutGrid, Sparkles } from "lucide-react";
 import { endpoints } from "@/constants/endpoints/endpoints";
 import type { ProductType } from "@/types/productTypes";
 import ProductShelf from "../components/ProductShelf";
 import CategoriesSkeleton from "../components/CategoriesSkeleton";
+import EmptyState from "../components/EmptyState";
 import styles from "../tyrepapa.module.css";
 
 type StoreCategory = { id: string; name: string; slug: string; image?: string | null; product_count?: number };
@@ -25,7 +26,7 @@ async function Categories() {
   }
   return <section className={styles.categories} aria-label="Explore categories">
     <div className={styles.categoriesHeading}><div className={styles.categoriesHeadingCopy}><span className={styles.eyebrow}>EXPLORE THE RANGE</span><h2>Find your <em>fit.</em></h2></div><Link href="/products">Shop all tyres <ArrowUpRight size={16} /></Link></div>
-    {categories.length ? <div className={styles.categoryGrid}>{categories.map((category, i) => <Link className={styles.categoryTile} key={category.id} href={`/products?category=${encodeURIComponent(category.slug)}`}><span className={styles.categoryNumber}>{String(i + 1).padStart(2, "0")} / CATEGORY</span>{category.image && <div className={styles.categoryTileImage}><Image src={category.image} alt="" fill sizes="(max-width: 700px) 16vw, (max-width: 900px) 18vw, 9vw" className={styles.categoryTilePhoto} /></div>}<h3>{category.name}</h3><span className={styles.categoryTileBottom}>{typeof category.product_count === "number" ? `${category.product_count} tyres` : "Explore category"}<ArrowRight size={18} strokeWidth={1} /></span></Link>)}</div> : <div className={styles.categoryEmpty}>Tyre categories are coming soon. <Link href="/products">Shop all tyres ↗</Link></div>}
+    {categories.length ? <div className={styles.categoryGrid}>{categories.map((category, i) => <Link className={styles.categoryTile} key={category.id} href={`/products?category=${encodeURIComponent(category.slug)}`}><span className={styles.categoryNumber}>{String(i + 1).padStart(2, "0")} / CATEGORY</span>{category.image && <div className={styles.categoryTileImage}><Image src={category.image} alt="" fill sizes="(max-width: 700px) 16vw, (max-width: 900px) 18vw, 9vw" className={styles.categoryTilePhoto} /></div>}<h3>{category.name}</h3><span className={styles.categoryTileBottom}>{typeof category.product_count === "number" ? `${category.product_count} tyres` : "Explore category"}<ArrowRight size={18} strokeWidth={1} /></span></Link>)}</div> : <EmptyState compact icon={LayoutGrid} title="Categories are coming soon" description="We’re preparing easier ways to explore the tyre range. You can still browse every tyre today." action={{ href: "/products", label: "Browse all tyres" }} />}
   </section>;
 }
 
@@ -53,8 +54,7 @@ async function Collection() {
     } catch { unavailable = true; }
   }
   return <section id="collection" className={styles.collection} aria-label="Shop tyres">
-    {products.length ? <ProductShelf products={products} /> : <div className={styles.bestsellerEmpty}><span className={styles.eyebrow}>SHOP THE RANGE</span><h2>Tyres for the road ahead.</h2><p>{unavailable ? "The range is unavailable right now. Please check back soon." : "No tyres are available yet. Check back soon or explore the full range."}</p></div>}
-    <div className={styles.centerAction}><Link className={styles.darkButton} href="/products">Shop all tyres <ArrowUpRight size={15} /></Link></div>
+    {products.length ? <><ProductShelf products={products} /><div className={styles.centerAction}><Link className={styles.darkButton} href="/products">Shop all tyres <ArrowUpRight size={15} /></Link></div></> : <EmptyState compact icon={CircleDot} title={unavailable ? "The tyre range is temporarily unavailable" : "Tyres for the road ahead are coming soon"} description={unavailable ? "We couldn’t load the range right now. Please try again shortly." : "We’re getting the range ready. Check back soon for tyres to suit your drive."} action={{ href: "/products", label: "Explore all tyres" }} />}
   </section>;
 }
 

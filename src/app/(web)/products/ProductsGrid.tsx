@@ -4,6 +4,8 @@ import { ProductType } from "@/types/productTypes"
 import { T } from "@/templates/registry"
 import { endpoints } from "@/constants/endpoints/endpoints"
 import FurnitureEmptyState from "@/templates/furniture/components/EmptyState"
+import TyrePapaEmptyState from "@/templates/tyrepapa/components/EmptyState"
+import { CircleAlert, CircleDot, SearchX } from "lucide-react"
 
 // Builds a /products URL for a given target page, preserving the current
 // filters. Plain <Link> href — ProductsGrid is a Server Component, so it
@@ -168,6 +170,9 @@ export default async function ProductsGrid({
 
   // Handle error state
   if (error) {
+    if (process.env.NEXT_PUBLIC_STORE === "tyrepapa") {
+      return <div className="mt-8"><TyrePapaEmptyState icon={CircleAlert} title="We couldn’t load the tyre range" description="The catalog is temporarily unavailable. Please try again shortly." action={{ href: "/products", label: "Try again" }} /></div>
+    }
     return (
       <div className="text-center py-12">
         <p className="text-destructive mb-4">Error: {error}</p>
@@ -177,6 +182,15 @@ export default async function ProductsGrid({
 
   // Handle empty state
   if (products.length === 0) {
+    if (process.env.NEXT_PUBLIC_STORE === "tyrepapa") {
+      const filtered = Boolean(category || search || brand || min_price !== undefined || max_price !== undefined || in_stock || featured || bestseller || isNew || page > 1)
+      return <div className="mt-8"><TyrePapaEmptyState
+        icon={filtered ? SearchX : CircleDot}
+        title={filtered ? "No tyres match your search" : "The tyre range is coming soon"}
+        description={filtered ? "Try another category or adjust your filters to find a set for your drive." : "We’re preparing the range. Check back soon for tyres to suit every journey."}
+        action={filtered ? { href: "/products", label: "View all tyres" } : undefined}
+      /></div>
+    }
     if (process.env.NEXT_PUBLIC_STORE === "furniture") {
       const filtered = Boolean(category || search || brand || min_price !== undefined || max_price !== undefined || in_stock)
       return (

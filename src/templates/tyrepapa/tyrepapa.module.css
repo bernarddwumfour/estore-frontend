@@ -3,6 +3,13 @@
 .page h1, .page h2, .page h3, .logo, .footerContact { font-family: "Bodoni MT", Didot, "Times New Roman", serif; font-weight: 400; }
 .page h2 { font-size: clamp(36px, 4vw, 60px); line-height: 1.06; letter-spacing: -1.8px; }
 .page em { font-weight: 400; }
+.emptyState { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; padding: 50px 24px; border: 1px solid #e7e1d9; background: #f4efe8; text-align: center; }
+.emptyStateCompact { min-height: 250px; padding-block: 36px; }
+.emptyStateIcon { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; background: #20201e; color: #d7b484; }
+.emptyState .emptyStateTitle { max-width: 560px; margin-top: 22px; font: 400 clamp(27px, 2.8vw, 38px)/1.1 "Bodoni MT", Didot, "Times New Roman", serif; letter-spacing: -.025em; color: #20201e; }
+.emptyStateDescription { max-width: 430px; margin-top: 12px; color: #756d63; font-size: 13px; line-height: 1.75; }
+.emptyStateAction { display: inline-flex; align-items: center; gap: 12px; margin-top: 24px; padding-bottom: 7px; border-bottom: 1px solid #b69570; color: #46382b; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+.emptyStateAction:hover { color: #a16f40; }
 .header { background: #171817; color: #d9d6cf; padding: 0 6%; position: relative; z-index: 40; }
 .brandRow { min-height: 91px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ffffff12; }
 .logo { font-size: 49px; line-height: 1; letter-spacing: -3px; color: #d7b484; display: inline-flex; align-items: center; gap: 12px; white-space: nowrap; }
@@ -228,10 +235,9 @@
 .editorialImage img { object-fit: cover; transition: transform .3s ease; }
 .editorialCardBody { padding: 25px; }
 .editorialCardBody .eyebrow { color: #8d7963; font-size: 9px; }
-.editorialCard h2, .editorialEmpty h2 { font: 400 clamp(27px, 2.5vw, 38px)/1.08 "Bodoni MT", Didot, "Times New Roman", serif; margin: 18px 0 14px; }
-.editorialCard p, .editorialEmpty p { color: #7d7469; font-size: 12px; line-height: 1.8; }
+.editorialCard h2 { font: 400 clamp(27px, 2.5vw, 38px)/1.08 "Bodoni MT", Didot, "Times New Roman", serif; margin: 18px 0 14px; }
+.editorialCard p { color: #7d7469; font-size: 12px; line-height: 1.8; }
 .editorialLink { display: inline-flex; align-items: center; gap: 9px; border-bottom: 1px solid #b69570; margin-top: 26px; padding-bottom: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
-.editorialEmpty { text-align: center; padding: 90px 20px; }
 .editorialPagination { display: flex; justify-content: center; align-items: center; gap: 30px; padding-top: 50px; font-size: 11px; }
 .editorialPagination a[aria-disabled="true"] { opacity: .4; pointer-events: none; }
 .promoPrice { display: flex; align-items: baseline; gap: 12px; margin-top: 20px; }
@@ -280,15 +286,10 @@
 .categorySkeletonName { display: block; width: 55%; height: 24px; margin: auto 0 18px; }
 .categorySkeletonCount { display: block; width: 44%; height: 10px; }
 .categoryTileBottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 10px; color: #746b61; }
-.categoryEmpty { padding: 45px 0; color: #81796f; font-size: 13px; }
-.categoryEmpty a { color: #20201e; text-decoration: underline; }
 .bestsellerGrid { max-width: 1440px; margin-inline: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
 @media(max-width:900px) { .categoryGrid, .bestsellerGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media(max-width:700px) { .categories { padding: 42px 5%; } .categoriesHeading { align-items: flex-start; flex-direction: column; } .categoryTile { min-height: 145px; padding: 18px; } .categoryTileImage { top: 15px; right: 15px; } .categoryTile h3 { font-size: 25px; } .bestsellerGrid { gap: 10px; } }
 
-.bestsellerEmpty { max-width: 1440px; margin-inline: auto; padding: 30px 0 50px; }
-.bestsellerEmpty h2 { font-size: clamp(32px, 3.4vw, 48px); margin: 12px 0; }
-.bestsellerEmpty p { color: #827b71; font-size: 12px; }
 
 /* A shorter editorial story follows the product grid. */
 .storyLeft { padding: 32px 10% 34px; }
