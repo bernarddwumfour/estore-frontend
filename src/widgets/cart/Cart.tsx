@@ -1,6 +1,7 @@
 'use client'
 
 import { storefrontTheme } from '@/templates/storefront-theme'
+import { storefrontProductName } from '@/templates/product-name'
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -105,7 +106,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                         width={88}
                         height={88}
                         src={`${item.imageUrl}`}
-                        alt={item.title}
+                        alt={storefrontProductName(item.title, item.attributes)}
                         className="object-cover h-full w-full"
                       />
                     </Link>
@@ -113,7 +114,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
                         <h3 className="text-sm font-medium text-gray-900">
-                          {item.title}
+                          {storefrontProductName(item.title, item.attributes)}
                         </h3>
                         {item.isBundle && (
                           <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">

@@ -1,6 +1,7 @@
 'use client';
 
 import { storefrontTheme } from '@/templates/storefront-theme'
+import { storefrontProductName } from '@/templates/product-name'
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -69,7 +70,7 @@ export default function CartPage() {
                           width={96}
                           height={96}
                           src={item.imageUrl}
-                          alt={item.title}
+                          alt={storefrontProductName(item.title, item.attributes)}
                           className="object-cover h-full w-full"
                         />
                       </div>
@@ -78,7 +79,7 @@ export default function CartPage() {
                           <div>
                             <div className="flex items-center gap-2">
                               <h3 className="font-medium text-gray-900 text-base">
-                                {item.title}
+                                {storefrontProductName(item.title, item.attributes)}
                               </h3>
                               {item.isBundle && (
                                 <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">

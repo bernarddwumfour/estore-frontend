@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PageHeader } from '@/templates/page-header';
+import { storefrontProductName } from '@/templates/product-name';
 import { formatCurrency } from '@/lib/currency';
 import { storeRecentOrder } from '@/lib/orders/recent-order';
 
@@ -68,6 +69,7 @@ interface CartItem {
   id: string;
   sku: string;
   title: string;
+  attributes?: Record<string, unknown>;
   price: number;
   quantity: number;
   imageUrl: string;
@@ -1108,11 +1110,11 @@ export default function CheckoutPage() {
                     {items.map((item) => (
                       <div key={item.sku} className="flex gap-3">
                         <div className="relative w-16 h-16 flex-shrink-0 overflow-hidden rounded-md border">
-                          <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
+                          <Image src={item.imageUrl} alt={storefrontProductName(item.title, item.attributes)} fill className="object-cover" />
                         </div>
                         <div className="flex-1">
                           <p className="font-medium text-sm flex items-center gap-1">
-                            {item.title}
+                            {storefrontProductName(item.title, item.attributes)}
                             {item.isBundle && (
                               <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">
                                 Bundle

@@ -8,11 +8,8 @@ import { useCartStore } from "@/app/lib/store/cart-store";
 import AddToWishList from "@/app/(web)/products/(components)/AddToWishList";
 import { formatCurrency } from "@/lib/currency";
 import type { ProductCardProps } from "../../contract";
+import { tyreProductName } from "../product-name";
 import styles from "../tyrepapa.module.css";
-
-function attributeText(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
 
 function carNames(value: unknown): string[] {
   if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map(item => item.trim());
@@ -22,9 +19,7 @@ function carNames(value: unknown): string[] {
 export default function ProductCard({ product, isMinimal = false }: ProductCardProps) {
   const variant = product.default_variant ?? product.variants[0];
   const attributes = variant?.attributes;
-  const size = attributeText(attributes?.size);
-  const name = [attributeText(attributes?.brand), attributeText(attributes?.model)].filter(Boolean).join(" ");
-  const displayTitle = [size, name].filter(Boolean).join(" — ") || product.title;
+  const displayTitle = tyreProductName(product.title, attributes);
   const compatibleCars = Array.from(new Set([
     ...carNames(attributes?.compatible_vehicles),
     ...carNames(attributes?.vehicle_types),
