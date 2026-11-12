@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BadgePercent, Heart, LayoutDashboard, LogOut, Menu, Package, Search, ShoppingBag, UserRound, X } from "lucide-react";
+import { BadgePercent, Facebook, Heart, Instagram, LayoutDashboard, LogOut, Menu, Music2, Package, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import Cart from "@/widgets/cart/Cart";
 import { SearchModal } from "@/widgets/search-modal/SearchModal";
 import { useCartStore } from "@/app/lib/store/cart-store";
@@ -25,19 +25,34 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartopen, setcartopen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
   const count = useCartStore(s => s.hasHydrated ? s.getTotalItems() : 0);
   const { user, logout } = useAuth();
 
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 18);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className={styles.header}>
+    <header className={`${styles.header} ${isScrolled ? styles.headerScrolled : ""}`}>
       <div className={styles.brandRow}>
-        <span className={styles.brandNote}>THE RIGHT TYRES FOR THE ROAD AHEAD.</span>
+        <div className={styles.utilityContacts} aria-label="Contact information">
+          <Link href="/contact">Contact us</Link>
+          <a href="mailto:support@tyrepapa.com">support@tyrepapa.com</a>
+        </div>
         <BrandLogo />
-        <span className={styles.brandNote}>EVERY JOURNEY STARTS HERE.</span>
+        <div className={styles.utilitySocial} aria-label="Social media links">
+          <a href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook"><Facebook size={14} /></a>
+          <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={14} /></a>
+          <a href="https://tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok"><Music2 size={14} /></a>
+        </div>
       </div>
-      <nav aria-label="Main navigation" className={styles.nav}>
-        <Link href="/products" className={styles.navCaption}>TYRES, MADE SIMPLE.</Link>
+      <nav aria-label="Main navigation" className={`${styles.nav} ${isScrolled ? styles.navScrolled : ""}`}>
+        {isScrolled ? <BrandLogo compact className={styles.stickyLogo} /> : <Link href="/products" className={styles.navCaption}>TYRES, MADE SIMPLE.</Link>}
         <div className={styles.desktopLinks}>
           {links.map(link => <Link key={link.label} href={link.href} aria-current={pathname === link.href ? "page" : undefined}>{link.label}</Link>)}
         </div>
