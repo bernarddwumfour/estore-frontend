@@ -6,12 +6,13 @@ type BrandLogoProps = {
   href?: string;
   tone?: "gold" | "ink";
   compact?: boolean;
+  sidebar?: boolean;
   className?: string;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
 };
 
-export default function BrandLogo({ href = "/", tone = "gold", compact = false, className = "", onClick }: BrandLogoProps) {
-  const classes = [styles.logo, tone === "ink" && styles.logoInk, compact && styles.logoCompact, className].filter(Boolean).join(" ");
+export default function BrandLogo({ href = "/", tone = "gold", compact = false, sidebar = false, className = "", onClick }: BrandLogoProps) {
+  const classes = [styles.logo, tone === "ink" && styles.logoInk, compact && styles.logoCompact, sidebar && styles.logoSidebar, className].filter(Boolean).join(" ");
 
   return <Link href={href} onClick={onClick} aria-label="TyrePapa home" className={classes}>
     <svg className={styles.logoWheel} viewBox="0 0 64 64" aria-hidden="true" focusable="false">

@@ -36,6 +36,42 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 # Local store selection
 
+## On-demand cache invalidation
+
+Published blog post changes call `POST /api/revalidate/blog` after the backend
+transaction commits. The endpoint refreshes the blog list, the Oak & Loom home
+preview, and the affected post URLs, including an old URL after a slug change.
+The existing five-minute cache lifetime remains a fallback if the callback
+fails. Draft-only changes do not trigger a callback.
+
+Product category saves and deletes also refresh the categories on the home
+and products pages through `POST /api/revalidate/categories`.
+Published product, variant, and variant image changes refresh cached listings
+and the TyrePapa home collection through `POST /api/revalidate/products`.
+Publishing, archiving, deleting, or moving a product also refreshes cached
+category counts when it changes membership. Product detail pages fetch fresh
+data on every request. Routine stock adjustments do not call this endpoint
+unless a published variant crosses between in stock and out of stock.
+
+Set the same long, random `REVALIDATE_SECRET` on the backend and frontend for
+each store. Set the backend's `STOREFRONT_BASE_URL` to that store's public
+frontend origin, such as `https://store.example`. The backend derives the
+fixed `/api/revalidate/blog`, `/api/revalidate/categories`, and
+`/api/revalidate/products` callback URLs
+from that origin. For local development on port 3000, use
+`STOREFRONT_BASE_URL=http://localhost:3000`.
+These variables are server-only; never use a `NEXT_PUBLIC_` prefix for the
+secret. Restart or redeploy both services after setting them.
+
+The callback requires an `Authorization: Bearer <secret>` header and a JSON
+body such as `{"slugs":["old-slug","new-slug"]}`. It accepts no arbitrary
+cache tags or paths.
+
+Category admin mutations return a `storefront_revalidation` status. The admin
+shows “Live on store” when every configured storefront accepts the callback;
+this is an acceptance message, not a check that a shopper has loaded the
+refreshed page yet.
+
 Run `npm run dev:iplug` for the iPlug storefront or `npm run dev:oak` for
 Oak & Loom. These commands load `.env.iplug` or `.env.oakandloom` respectively;
 both currently point to the local API on port 8000. Start the matching backend

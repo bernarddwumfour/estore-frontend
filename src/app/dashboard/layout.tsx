@@ -277,7 +277,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Logo */}
         <div className={cn("p-6 transition-all duration-500", isCollapsed ? "px-0 flex justify-center" : "px-6")}>
-          <Logo href="/dashboard" onClick={closeMobileSidebar} compact={isCollapsed} />
+          <Logo href="/dashboard" onClick={closeMobileSidebar} compact={isCollapsed} sidebar />
         </div>
 
         {/* Navigation */}

@@ -19,6 +19,9 @@
 .logo { font-size: 49px; line-height: 1; letter-spacing: -3px; color: #d7b484; display: inline-flex; align-items: center; gap: 12px; white-space: nowrap; }
 .logoInk { color: #6e5030; }
 .logo.logoCompact { font-size: 30px; gap: 9px; letter-spacing: -2px; }
+.logo.logoSidebar { font-size: 27px; gap: 7px; letter-spacing: -1.5px; }
+.logo.logoSidebar.logoCompact { font-size: 25px; gap: 0; }
+.logoSidebar.logoCompact .logoWordmark { display: none; }
 .logoWordmark { font-family: "Bodoni MT", Didot, "Times New Roman", serif; font-weight: 400; }
 .logoWheel { width: .86em; height: .86em; flex: none; transform-origin: center; animation: tyrePapaSpin 7s linear infinite; }
 @keyframes tyrePapaSpin { to { transform: rotate(360deg); } }
@@ -55,10 +58,13 @@
 .heroContent p { color: #c0bcb4; font-size: 12px; letter-spacing: .5px; }
 .heroButton { display: inline-flex; align-items: center; gap: 28px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.4px; border-bottom: 1px solid #baa17e; padding: 13px 0; margin-top: 22px; }
 .heroButton:hover { color: #e4bc8b; }
-.heroNote { position: absolute; display: flex; align-items: center; gap: 20px; padding: 17px 22px; background: #ffffff09; border: 1px solid #ffffff18; backdrop-filter: blur(8px); font-size: 11px; }
+.heroNote { position: absolute; display: flex; align-items: stretch; gap: 0; padding: 0; background: #ffffff09; border: 1px solid #ffffff18; backdrop-filter: blur(8px); font-size: 11px; }
 .heroNote:hover { background: #ffffff15; }
 .heroNote small { display: block; font-size: 9px; color: #b7b5ad; margin-top: 6px; }
-.noteNumber { font: italic 28px "Times New Roman", serif; color: #c0a17b; }
+.heroNoteText { display: flex; flex-direction: column; justify-content: center; padding: 16px 20px; }
+.heroNoteArrow { flex: 0 0 auto; align-self: center; margin-right: 20px; }
+.noteImage { position: relative; display: block; flex: 0 0 86px; width: 86px; min-height: 76px; overflow: hidden; background: #f1ede7; }
+.noteImage img { object-fit: cover; }
 .serumNote { top: 55px; right: 25%; }
 .washNote { bottom: 55px; left: 22%; }
 .heroBottom { position: absolute; bottom: 23px; left: 6%; right: 6%; display: flex; justify-content: space-between; color: #b9b4aa; font-size: 8px; letter-spacing: 1.5px; }
@@ -166,7 +172,7 @@
 }
 @media (max-width: 700px) {
   .brandRow { min-height: 75px; justify-content: center; }.brandNote { display: none; }.utilityContacts, .utilitySocial { position: absolute; width: auto; gap: 4px; font-size: 0; }.utilityContacts { left: 0; }.utilitySocial { right: 0; }.utilityContacts a:first-child { font-size: 8px; letter-spacing: .8px; }.utilitySocial a { min-width: 20px; }.logo { font-size: 44px; }.header { padding: 0 5%; }.desktopLinks { display: none; }.nav { min-height: 55px; justify-content: space-between; }.nav.navScrolled { padding-inline: 5%; }.headerScrolled .searchPanel { top: 55px; }.navCaption { display: block; font-size: 8px; }.navActions .menuToggle { display: flex; }.mobileLinks { display: flex; flex-direction: column; padding: 10px 0 22px; border-top: 1px solid #ffffff18; }.mobileLinks a { padding: 12px 8px; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
-  .hero { height: 660px; min-height: 0; }.heroImage { object-fit: contain; object-position: center 78%; opacity: .65; }.hero::after { background: #12131133; }.heroContent { padding: 145px 15px 130px; }.heroContent > .eyebrow { font-size: 8px; letter-spacing: 1.2px; }.hero h1 { font-size: clamp(34px, 7.7vw, 51px); margin-top: 28px; letter-spacing: .2px; }.heroContent p { font-size: 11px; }.heroNote { padding: 12px 16px; gap: 14px; }.serumNote { top: 35px; right: 6%; }.washNote { bottom: 75px; left: 6%; }.heroBottom { font-size: 7px; letter-spacing: .6px; }.heroButton { margin-top: 24px; font-size: 9px; }
+  .hero { height: 660px; min-height: 0; }.heroImage { object-fit: contain; object-position: center 78%; opacity: .65; }.hero::after { background: #12131133; }.heroContent { padding: 145px 15px 130px; }.hero h1 { font-size: clamp(34px, 7.7vw, 51px); margin-top: 28px; letter-spacing: .2px; }.heroContent p { font-size: 11px; }.heroNoteText { padding: 12px 14px; }.heroNoteArrow { margin-right: 14px; }.noteImage { flex-basis: 64px; width: 64px; min-height: 64px; }.serumNote { top: 35px; right: 6%; }.washNote { bottom: 75px; left: 6%; }.heroBottom { font-size: 7px; letter-spacing: .6px; }.heroButton { margin-top: 24px; font-size: 9px; }
   .wordStrip { padding: 25px 20px; gap: 12px; flex-wrap: wrap; }.wordStrip span { font-size: 20px; }.wordStrip svg { width: 14px; }.wordStrip span:last-child, .wordStrip svg:last-of-type { display: none; }
   .categories { grid-template-columns: 1fr 1fr; }.categoryIntro, .category { border-bottom: 1px solid #e2ddd5; padding: 24px; }.categoryIntro h2 { font-size: 29px; }.categoryIntro a { font-size: 8px; padding: 12px 10px; }.story { grid-template-columns: 1fr; }.storyLeft { padding: 40px 8%; }.trioImage { height: 330px; }.storyCopy h2 { font-size: 46px; }.portrait { min-height: 560px; }.portraitCaption { left: 30px; bottom: 30px; }.portraitCaption p { font-size: 38px; }
   .collection { padding: 50px 5% 40px; }.sectionHeading { gap: 15px; align-items: center; }.sectionHeading h2 { font-size: 34px; }.previewLabel { max-width: 75px; text-align: right; line-height: 1.8; }.productShelf > li { flex-basis: 78%; }.previewCollection { grid-template-columns: 1fr; }.previewImage { height: 320px; }.previewCopy { padding: 35px 9%; }.previewCopy h3 { font-size: 40px; }.shelfControls { gap: 5px; }.shelfControls button { width: 30px; height: 34px; }.loadingShelf { grid-template-columns: 1fr 1fr; }.loadingShelf > div:nth-child(n+3) { display: none; }
@@ -288,7 +294,7 @@
 .categoryGrid { max-width: 1440px; margin-inline: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #e7e1d9; border: 1px solid #e7e1d9; }
 .categoryTile { position: relative; display: flex; flex-direction: column; min-height: 180px; padding: 24px; background: #fff; transition: background .2s ease; }
 .categoryTile:hover { background: #f8dfc8; }
-.categoryTileImage { position: absolute; top: 20px; right: 20px; width: 35%; aspect-ratio: 1; overflow: hidden; background: #f1ede7; }
+.categoryTileImage { position: absolute; top: 0; right: 0; width: 35%; aspect-ratio: 1; overflow: hidden; background: #f1ede7; }
 .categoryTilePhoto { object-fit: cover; transition: transform .3s ease; }
 .categoryTile:hover .categoryTilePhoto { transform: scale(1.04); }
 .categoryTile h3 { max-width: 62%; font: 400 clamp(23px, 2.4vw, 34px)/1.1 "Bodoni MT", Didot, "Times New Roman", serif; margin: auto 0 18px; }
@@ -297,7 +303,7 @@
 .categoryTileBottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 10px; color: #746b61; }
 .bestsellerGrid { max-width: 1440px; margin-inline: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
 @media(max-width:900px) { .categoryGrid, .bestsellerGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media(max-width:700px) { .categories { padding: 42px 5%; } .categoriesHeading { align-items: flex-start; flex-direction: column; } .categoryTile { min-height: 145px; padding: 18px; } .categoryTileImage { top: 15px; right: 15px; } .categoryTile h3 { font-size: 25px; } .bestsellerGrid { gap: 10px; } }
+@media(max-width:700px) { .categories { padding: 42px 5%; } .categoriesHeading { align-items: flex-start; flex-direction: column; } .categoryTile { min-height: 145px; padding: 18px; } .categoryTile h3 { font-size: 25px; } .bestsellerGrid { gap: 10px; } }
 
 
 /* A shorter editorial story follows the product grid. */

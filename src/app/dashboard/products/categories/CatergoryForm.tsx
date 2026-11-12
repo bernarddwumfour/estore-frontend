@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { showCategoryStorefrontStatus } from "./storefrontStatus";
 import {
   Select,
   SelectContent,
@@ -194,8 +195,8 @@ export default function CategoryForm({ categoryId, onSuccess, onCancel }: Catego
       });
       return response.data;
     },
-    onSuccess: () => {
-      toast.success("Category created successfully");
+    onSuccess: (response) => {
+      showCategoryStorefrontStatus("Category created", response?.data?.storefront_revalidation);
       queryClient.invalidateQueries({ queryKey: [endpoints.products.adminlistCategories] });
       queryClient.invalidateQueries({ queryKey: ['all-categories'] });
       form.reset();
@@ -254,8 +255,8 @@ export default function CategoryForm({ categoryId, onSuccess, onCancel }: Catego
       );
       return response.data;
     },
-    onSuccess: () => {
-      toast.success("Category updated successfully");
+    onSuccess: (response) => {
+      showCategoryStorefrontStatus("Category updated", response?.data?.storefront_revalidation);
       queryClient.invalidateQueries({ queryKey: [endpoints.products.adminlistCategories] });
       queryClient.invalidateQueries({ queryKey: ['all-categories'] });
       queryClient.invalidateQueries({ queryKey: ['category', categoryId] });

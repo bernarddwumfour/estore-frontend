@@ -14,6 +14,7 @@ import securityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
 import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
 import CategoryForm from './CatergoryForm';
+import { showCategoryStorefrontStatus } from './storefrontStatus';
 import { DataDisplay } from '@/widgets/data-display/DataDisplay';
 import { DataTable } from '@/widgets/custom-table/DataTable';
 import { ActionItem, ActionsDropdown } from '@/widgets/actions-dropdown/ActionsDropdown';
@@ -257,7 +258,12 @@ function CategoriesPageContent() {
     onSuccess: (response) => {
       const { data, message } = response;
       const { success_count, failed_count } = data;
-      if (success_count > 0) toast.success(message || `Processed ${success_count} categories`);
+      if (success_count > 0) {
+        showCategoryStorefrontStatus(
+          message || `Processed ${success_count} categories`,
+          data.storefront_revalidation,
+        );
+      }
       if (failed_count > 0) toast.error(`${failed_count} failed`);
       invalidateCategoryQueries();
       refetch();

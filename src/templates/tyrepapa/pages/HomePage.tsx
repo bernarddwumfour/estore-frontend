@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, CircleDot, LayoutGrid, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CircleDot, Sparkles } from "lucide-react";
 import { endpoints } from "@/constants/endpoints/endpoints";
 import type { ProductType } from "@/types/productTypes";
 import ProductShelf from "../components/ProductShelf";
@@ -17,20 +17,38 @@ async function Categories() {
   if (base) {
     try {
       const url = new URL(`${base.replace(/\/+$/, "")}${endpoints.products.listCategories}`);
-      url.searchParams.set("limit", "8");
+      url.searchParams.set("limit", "7");
       const response = await fetch(url, { next: { revalidate: 300, tags: ["categories"] }, signal: AbortSignal.timeout(20000) });
       if (!response.ok) throw new Error("Categories unavailable");
       const data = await response.json();
-      if (data.success && Array.isArray(data.data?.categories)) categories = data.data.categories.slice(0, 8);
+      if (data.success && Array.isArray(data.data?.categories)) categories = data.data.categories.slice(0, 7);
     } catch { /* Keep a useful route to the full collection. */ }
   }
   return <section className={styles.categories} aria-label="Explore categories">
     <div className={styles.categoriesHeading}><div className={styles.categoriesHeadingCopy}><span className={styles.eyebrow}>EXPLORE THE RANGE</span><h2>Find your <em>fit.</em></h2></div><Link href="/products">Shop all tyres <ArrowUpRight size={16} /></Link></div>
-    {categories.length ? <div className={styles.categoryGrid}>{categories.map((category, i) => <Link className={styles.categoryTile} key={category.id} href={`/products?category=${encodeURIComponent(category.slug)}`}><span className={styles.categoryNumber}>{String(i + 1).padStart(2, "0")} / CATEGORY</span>{category.image && <div className={styles.categoryTileImage}><Image src={category.image} alt="" fill sizes="(max-width: 700px) 16vw, (max-width: 900px) 18vw, 9vw" className={styles.categoryTilePhoto} /></div>}<h3>{category.name}</h3><span className={styles.categoryTileBottom}>{typeof category.product_count === "number" ? `${category.product_count} tyres` : "Explore category"}<ArrowRight size={18} strokeWidth={1} /></span></Link>)}</div> : <EmptyState compact icon={LayoutGrid} title="Categories are coming soon" description="We’re preparing easier ways to explore the tyre range. You can still browse every tyre today." action={{ href: "/products", label: "Browse all tyres" }} />}
+    <div className={styles.categoryGrid}>
+      <Link className={styles.categoryTile} href="/products">
+        <span className={styles.categoryNumber}>01 / CATEGORY</span>
+        <div className={styles.categoryTileImage}><Image src="/tyrepapa/all-categories.webp" alt="" fill sizes="(max-width: 700px) 16vw, (max-width: 900px) 18vw, 9vw" className={styles.categoryTilePhoto} /></div>
+        <h3>All tyres</h3>
+        <span className={styles.categoryTileBottom}>Explore the full range<ArrowRight size={18} strokeWidth={1} /></span>
+      </Link>
+      {categories.map((category, i) => <Link className={styles.categoryTile} key={category.id} href={`/products?category=${encodeURIComponent(category.slug)}`}><span className={styles.categoryNumber}>{String(i + 2).padStart(2, "0")} / CATEGORY</span>{category.image && <div className={styles.categoryTileImage}><Image src={category.image} alt="" fill sizes="(max-width: 700px) 16vw, (max-width: 900px) 18vw, 9vw" className={styles.categoryTilePhoto} /></div>}<h3>{category.name}</h3><span className={styles.categoryTileBottom}>{typeof category.product_count === "number" ? `${category.product_count} tyres` : "Explore category"}<ArrowRight size={18} strokeWidth={1} /></span></Link>)}
+    </div>
   </section>;
 }
 
 const shop = (search: string) => `/products?q=${encodeURIComponent(search)}`;
+const heroCategories = {
+  saloons: {
+    href: "/products?category=saloons",
+    image: "https://res.cloudinary.com/qrctmxnb/image/upload/v1/media/categories/2026/11/saloons_dij24e",
+  },
+  suvs: {
+    href: "/products?category=suvs",
+    image: "https://res.cloudinary.com/qrctmxnb/image/upload/v1/media/categories/2026/11/suvs_oqqsfd",
+  },
+} as const;
 
 async function Collection() {
   let products: ProductType[] = [];
@@ -63,8 +81,8 @@ export default function HomePage() {
     <section className={styles.hero} aria-labelledby="tyre-title">
       <Image src="/tyrepapa/tyre-hero.png" alt="" fill priority sizes="100vw" className={styles.heroImage} />
       <div className={styles.heroContent}><span className={styles.eyebrow}>CAR TYRES FOR THE ROAD AHEAD.</span><h1 id="tyre-title">Tyres for every car.<br /><em>Ready for every road.</em></h1><p>Explore tyre sizes and styles to find the right fit for your drive.</p><Link href="/products" className={styles.heroButton}>Shop car tyres <ArrowUpRight size={16} /></Link></div>
-      <Link href={shop("all-season")} className={`${styles.heroNote} ${styles.serumNote}`}><span className={styles.noteNumber}>01</span><span>All-season tyres<small>For changing conditions</small></span><ArrowUpRight size={18} /></Link>
-      <Link href={shop("performance")} className={`${styles.heroNote} ${styles.washNote}`}><span className={styles.noteNumber}>02</span><span>Performance tyres<small>For a more responsive drive</small></span><ArrowUpRight size={18} /></Link>
+      <Link href={heroCategories.saloons.href} className={`${styles.heroNote} ${styles.serumNote}`}><span className={styles.noteImage}><Image src={heroCategories.saloons.image} alt="" fill sizes="(max-width: 700px) 64px, 86px" /></span><span className={styles.heroNoteText}>Saloons<small>Tyres for the everyday drive</small></span><ArrowUpRight className={styles.heroNoteArrow} size={18} /></Link>
+      <Link href={heroCategories.suvs.href} className={`${styles.heroNote} ${styles.washNote}`}><span className={styles.noteImage}><Image src={heroCategories.suvs.image} alt="" fill sizes="(max-width: 700px) 64px, 86px" /></span><span className={styles.heroNoteText}>SUVs<small>Ready for every route</small></span><ArrowUpRight className={styles.heroNoteArrow} size={18} /></Link>
       <div className={styles.heroBottom}><span>THE TYREPAPA RANGE</span><a href="#our-story">Scroll to explore ↓</a></div>
     </section>
 

@@ -263,6 +263,8 @@
 .tyrepapa-detail .product-detail-layout [data-slot="button"][data-variant="default"] { background: #20201e; color: #fff; border-color: #20201e; }
 .tyrepapa-detail .product-detail-layout [data-slot="button"][data-variant="default"]:hover { background: #4e4034; }
 .tyrepapa-detail .product-detail-layout :is(.text-blue-600, .text-green-600) { color: #806447; }
+.tyrepapa-detail .product-detail-layout .variant-option:hover { border-color: #8d6f50; }
+.tyrepapa-detail .product-detail-layout .variant-option { border-radius: 0; }
 .tyrepapa-detail .product-detail-layout .bg-blue-100 { background: #f7e6d5; }
 .tyrepapa-detail .product-detail-layout .border-gray-900 { border-color: #8d6f50; }
 .tyrepapa-detail .product-detail-layout .ring-gray-900 { --tw-ring-color: #8d6f50; }
@@ -343,6 +345,7 @@
 [data-storefront-theme="tyrepapa-surface"][role="dialog"] a.bg-gray-700 { background: #20201e; color: #fff; }
 [data-storefront-theme="furniture-surface"] :is(.bg-blue-600, .bg-blue-700, .bg-slate-900) { background-color: #654035; }
 [data-storefront-theme="furniture-surface"] :is(.text-blue-600, .text-blue-700, .text-emerald-600) { color: #654035; }
+[data-storefront-theme="furniture-surface"] .variant-option:hover { border-color: #654035; }
 [data-storefront-theme="furniture-surface"] :is(.bg-blue-50, .bg-blue-100, .bg-emerald-50) { background-color: #f0e2dc; }
 [data-storefront-theme="furniture-surface"] :is(input, textarea, select):focus-visible { outline-color: #654035; border-color: #654035; }
 [data-storefront-theme="tyrepapa-surface"] :is(.text-blue-800, .text-blue-900) { color: #684d37; }

@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Gift, Clock, Package, Minus, Plus, ShoppingBag, ArrowLeft } from "lucide-react";
 import { endpoints } from "@/constants/endpoints/endpoints";
-import unAuthenticatedAxios from "@/axios-instances/UnAuthenticatedAxios";
 import { PromotionType } from "@/types/promotionTypes";
 import { ProductType } from "@/types/productTypes";
 import AddToCartButton from "./AddToCartButton";
@@ -11,6 +10,13 @@ import Product from "../../products/Product";
 import TyrePapaProductCard from "@/templates/tyrepapa/components/ProductCard";
 import { formatCurrency } from "@/lib/currency";
 import { storefrontTheme } from "@/templates/storefront-theme";
+
+export const revalidate = 300;
+
+// Build no promotion slugs ahead of time; new ones are generated on first visit.
+export function generateStaticParams() {
+    return [];
+}
 // Define the type for the page props
 interface PageProps {
     params: Promise<{ slug: string }>;
@@ -57,15 +63,21 @@ const formatDate = (dateString: string | null): string => {
 };
 
 // Fetch package data
-async function getPackage(slug: string) {
+async function getPackage(slug: string): Promise<PromotionType | null> {
     try {
-        const response = await unAuthenticatedAxios.get(
-            `${endpoints.promotions.promotionDetails.replace(":slug", slug)}`
-        );
-        return response.data.data;
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || "http://localhost:8000/api";
+        const path = endpoints.promotions.promotionDetails.replace(":slug", encodeURIComponent(slug));
+        const response = await fetch(`${baseUrl}${path}`, {
+            next: { revalidate: 300, tags: ["promotions", `promotion-${slug}`] },
+        });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error(`Promotion request failed: ${response.status}`);
+        const payload = await response.json();
+        if (!payload.success) return null;
+        return payload.data;
     } catch (error) {
         console.error("Error fetching package:", error);
-        return null;
+        throw error;
     }
 }
 

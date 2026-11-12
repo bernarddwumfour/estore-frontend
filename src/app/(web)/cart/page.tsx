@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCartStore } from '@/app/lib/store/cart-store';
-import { Trash, Package, ChevronDown, ChevronUp, Gift, ShoppingCart, Home } from 'lucide-react';
+import { Trash, ChevronDown, ChevronUp, ShoppingCart, Home } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/templates/page-header';
@@ -37,7 +37,7 @@ export default function CartPage() {
               <ShoppingCart className="h-24 w-24 text-gray-300 mx-auto" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4">Your Cart is Empty</h1>
-            <p className="text-gray-600 mb-8">Looks like you haven't added any products to your cart yet.</p>
+            <p className="text-gray-600 mb-8">Looks like you haven&apos;t added any products to your cart yet.</p>
             <div className="space-y-4">
               <Button asChild size="lg" className="w-full h-12 text-base">
                 <Link href="/products"><Home className="mr-2 h-5 w-5" /> Browse Products</Link>
@@ -87,12 +87,14 @@ export default function CartPage() {
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {item.attributes && Object.entries(item.attributes).length > 0
-                                ? Object.entries(item.attributes).map(([key, val]) => `${key}: ${val}`).join(', ')
-                                : 'Standard'
-                              }
-                            </p>
+                            {storefrontTheme !== 'tyrepapa-surface' && (
+                              <p className="text-sm text-gray-500 mt-1">
+                                {item.attributes && Object.entries(item.attributes).length > 0
+                                  ? Object.entries(item.attributes).map(([key, val]) => `${key}: ${val}`).join(', ')
+                                  : 'Standard'
+                                }
+                              </p>
+                            )}
                             <p className="text-sm text-gray-500 mt-2">
                               {formatCurrency(item.price)} each
                             </p>

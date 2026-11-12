@@ -1,26 +1,14 @@
 // app/(web)/packages/page.tsx
 import { endpoints } from "@/constants/endpoints/endpoints";
-import unAuthenticatedAxios from "@/axios-instances/UnAuthenticatedAxios";
 import Link from "next/link";
 import Image from "next/image";
 import { Package, Clock, Gift } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
+import FurniturePromotionsPage from "@/templates/furniture/pages/PromotionsPage";
 import TyrePapaPromotionsPage from "@/templates/tyrepapa/pages/PromotionsPage";
 import type { PromotionType } from "@/types/promotionTypes";
 
-interface PackageCardProps {
-    id: string;
-    slug: string;
-    name: string;
-    description: string;
-    bundle_price: number;
-    original_total: number;
-    savings_amount: number;
-    images: Array<{ url: string; alt_text: string }>;
-    ends_at: string | null;
-    items: any[];
-    free_items: any[];
-}
+export const revalidate = 300;
 
 const formatDate = (dateString: string | null): string => {
     if (!dateString) return "No end date";
@@ -28,20 +16,29 @@ const formatDate = (dateString: string | null): string => {
     return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 };
 
-async function getPackages() {
+async function getPackages(): Promise<PromotionType[]> {
     try {
-        const response = await unAuthenticatedAxios.get(endpoints.promotions.listPromotions);
-        return response.data.data.promotions || [];
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || "http://localhost:8000/api";
+        const response = await fetch(`${baseUrl}${endpoints.promotions.listPromotions}`, {
+            next: { revalidate: 300, tags: ["promotions"] },
+        });
+        if (!response.ok) throw new Error(`Promotions request failed: ${response.status}`);
+        const payload = await response.json();
+        if (!payload.success || !Array.isArray(payload.data?.promotions)) throw new Error("Invalid promotions response");
+        return payload.data.promotions;
     } catch (error) {
         console.error("Error fetching packages:", error);
-        return [];
+        throw error;
     }
 }
 
 export default async function PackagesPage() {
     const packages = await getPackages();
     if (process.env.NEXT_PUBLIC_STORE === "tyrepapa") {
-        return <TyrePapaPromotionsPage promotions={packages as PromotionType[]} />;
+        return <TyrePapaPromotionsPage promotions={packages} />;
+    }
+    if (process.env.NEXT_PUBLIC_STORE === "furniture") {
+        return <FurniturePromotionsPage promotions={packages} />;
     }
 
     return (
@@ -72,7 +69,7 @@ export default async function PackagesPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {packages.map((pkg: PackageCardProps) => {
+                        {packages.map((pkg) => {
                             const mainImage = pkg.images?.[0]?.url || "";
                             const itemCount = pkg.items?.length || 0;
                             const freeItemCount = pkg.free_items?.length || 0;

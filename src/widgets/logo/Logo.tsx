@@ -6,16 +6,18 @@ import BrandLogo from "@/templates/tyrepapa/components/BrandLogo";
 export default function Logo({
   light = false,
   compact = false,
+  sidebar = false,
   href = "/",
   onClick,
 }: {
   light?: boolean;
   compact?: boolean;
+  sidebar?: boolean;
   href?: string;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
 }) {
   if (process.env.NEXT_PUBLIC_STORE === "tyrepapa") {
-    return <BrandLogo href={href} onClick={onClick} tone={light ? "gold" : "ink"} compact={compact} />;
+    return <BrandLogo href={href} onClick={onClick} tone={light ? "gold" : "ink"} compact={compact} sidebar={sidebar} />;
   }
   const furniture = process.env.NEXT_PUBLIC_STORE === "furniture";
   const name = furniture ? "oak&loom" : "iPlug";

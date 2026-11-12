@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo, ReactNode } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Bookmark, ShoppingCart, Minus, Plus, Trash, AlertCircle, Package } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -97,7 +98,6 @@ export function ProductOptions({
   defaultVariant: any;
   onVariantChange?: (variant: any) => void;
 }) {
-  const router = useRouter();
   const selectedVariant = defaultVariant;
 
   if (!selectedVariant || product.variants.length === 0) {
@@ -167,17 +167,16 @@ export function ProductOptions({
                 .join(" · ");
 
               return (
-                <button
+                <Link
                   key={variant.id}
-                  type="button"
+                  href={`/products/${product.slug}${variant.slug ? `/${variant.slug}` : ''}`}
                   onClick={() => {
                     onVariantChange?.(variant);
-                    if (variant.slug) router.push(`/products/${product.slug}/${variant.slug}`);
                   }}
-                  className={`group flex items-center gap-2 rounded-full border p-1 pr-3 text-left text-xs font-medium transition ${
+                  className={`variant-option group flex items-center gap-2 rounded-full border p-1 pr-3 text-left text-xs font-medium transition ${
                     selected
                       ? "border-gray-900 bg-gray-900 text-white"
-                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-500"
+                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-900"
                   }`}
                   aria-label={`Select ${label}`}
                 >
@@ -187,7 +186,7 @@ export function ProductOptions({
                     ) : null}
                   </span>
                   {label || "Configuration"}
-                </button>
+                </Link>
               );
             })}
           </div>
