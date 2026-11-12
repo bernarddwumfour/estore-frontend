@@ -112,9 +112,10 @@ function ProductCard({
   const variantLabel = (
     variant: (typeof variants)[number]
   ) => {
-    const attributes = Object.values(
-      variant.attributes ?? {}
-    ).filter(Boolean);
+    const attributes = Object.entries(variant.attributes ?? {})
+      .filter(([key]) => !['compatible_vehicles', 'vehicle_types'].includes(key))
+      .map(([, value]) => Array.isArray(value) ? value.join(', ') : value)
+      .filter(Boolean);
 
     return attributes.length
       ? attributes.join(" · ")
