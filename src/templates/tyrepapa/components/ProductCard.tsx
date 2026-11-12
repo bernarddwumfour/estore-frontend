@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,6 +10,7 @@ import AddToWishList from "@/app/(web)/products/(components)/AddToWishList";
 import { formatCurrency } from "@/lib/currency";
 import type { ProductCardProps } from "../../contract";
 import { tyreProductName } from "../product-name";
+import BuyNowCartDialog from "@/components/storefront/BuyNowCartDialog";
 import styles from "../tyrepapa.module.css";
 
 function carNames(value: unknown): string[] {
@@ -24,6 +26,8 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
     ...carNames(attributes?.compatible_vehicles),
     ...carNames(attributes?.vehicle_types),
   ]));
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const items = useCartStore(s => s.items);
   const addItem = useCartStore(s => s.addItem);
   const updateQuantity = useCartStore(s => s.updateQuantity);
   const removeItem = useCartStore(s => s.removeItem);
@@ -42,8 +46,10 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
 
   function buyNow() {
     if (!variant || !available) return;
+    const hasOtherItems = items.some(item => item.variantId !== variant.id);
     addToBag();
-    router.push("/checkout");
+    if (hasOtherItems) setIsDialogOpen(true);
+    else router.push("/checkout");
   }
 
   function changeQuantity(delta: number) {
@@ -89,5 +95,6 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
         </button>
       </div>
     </div>
+    <BuyNowCartDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
   </li>;
 }

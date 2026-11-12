@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/app/lib/store/cart-store';
 import AddToWishList from '../(components)/AddToWishList';
 import { formatCurrency } from '@/lib/currency';
+import BuyNowCartDialog from '@/components/storefront/BuyNowCartDialog';
 
 // Types
 interface StockStatus {
@@ -208,6 +209,7 @@ export function CartActions({
 }) {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Internal state for variant if not provided externally
   const [internalSelectedOptions, setInternalSelectedOptions] = useState<Record<string, string>>(
@@ -264,8 +266,10 @@ export function CartActions({
 
   const handleBuyNow = () => {
     if (!selectedVariant || !isAvailable) return;
+    const hasOtherItems = items.some(item => item.variantId !== selectedVariant.id);
     handleAddToCart();
-    router.push('/checkout');
+    if (hasOtherItems) setIsDialogOpen(true);
+    else router.push('/checkout');
   };
 
   // Quantity controls
@@ -354,6 +358,7 @@ export function CartActions({
         </Button>
         <AddToWishList variantId={selectedVariant?.id} className='relative w-15 rounded-md top-0 left-0' iconSize={"w-12"} />
       </div>
+      <BuyNowCartDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </div>
   );
 }

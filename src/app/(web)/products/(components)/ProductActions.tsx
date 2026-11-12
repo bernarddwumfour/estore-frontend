@@ -1,24 +1,19 @@
 // app/components/Product/ProductActions.tsx
 'use client'
 
-import { storefrontTheme } from '@/templates/storefront-theme'
 import { useCartStore } from '@/app/lib/store/cart-store'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react'
+import { ShoppingCart, Plus, Minus } from 'lucide-react'
 import { useRouter } from "next/navigation"
 import React, { useState } from 'react'
-import { ProductType, StockStatus } from '@/types/productTypes'
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { DialogTrigger } from '@radix-ui/react-dialog'
-import Image from 'next/image'
-import Link from 'next/link'
-import { formatCurrency } from '@/lib/currency'
+import { ProductType, ProductVariantImage } from '@/types/productTypes'
+import BuyNowCartDialog from '@/components/storefront/BuyNowCartDialog'
 
 interface ProductActionsProps {
   product: ProductType
   defaultVariant: ProductType['default_variant']
   hasDefaultVariant: boolean
-  mainImage: any
+  mainImage: ProductVariantImage | null
   hasDiscount: boolean
 }
 
@@ -50,7 +45,6 @@ const ProductActions = ({
   const isInCart = useCartStore((state) => state.isInCart)
   const getItemQuantity = useCartStore((state) => state.getItemQuantity)
   const items = useCartStore((state) => state.items)
-  const getTotalPrice = useCartStore((state) => state.getTotalPrice)
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
@@ -79,20 +73,15 @@ const ProductActions = ({
     })
   }
 
-  const handleOpenDialogWithAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    handleAddToCart(e)
-    setIsDialogOpen(true)
-  }
-
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
+    if (!variantAvailable || !defaultVariant) return
+    const hasOtherItems = items.some(item => item.variantId !== defaultVariant.id)
     handleAddToCart(e)
-    router.push("/checkout")
+    if (hasOtherItems) setIsDialogOpen(true)
+    else router.push("/checkout")
   }
 
   const handleIncrement = (e: React.MouseEvent) => {
@@ -163,132 +152,9 @@ const ProductActions = ({
           </Button>
         )}
 
-        {variantAvailable && (
-          <>
-            {items.length === 0 ? (
-              <Button
-                variant="outline"
-                className="flex-shrink-0"
-                onClick={handleBuyNow}
-                aria-label="Buy now"
-              >
-                Buy Now
-              </Button>
-            ) : (
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="flex-shrink-0"
-                    onClick={handleOpenDialogWithAddToCart}
-                    aria-label="Buy now"
-                  >
-                    Buy Now
-                  </Button>
-                </DialogTrigger>
-                <DialogContent data-storefront-theme={storefrontTheme} className='sm:max-w-[600px] max-h-[85dvh] overflow-y-auto'>
-                  <DialogTitle>
-                    You are about to Checkout with these items in cart.
-                  </DialogTitle>
-                  <DialogDescription>
-                    Please check the products in your cart, edit them if needed and proceed to checkout once you're done.
-                  </DialogDescription>
-                  <>
-                    <ul className="space-y-6">
-                      {items.map((item) => (
-                        <li key={item.variantId || item.sku} className="flex items-start gap-4">
-                          <Link href={`/products/${item.slug}`} className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
-                            <Image
-                              width={88}
-                              height={88}
-                              src={`${item.imageUrl}`}
-                              alt={item.title}
-                              className="object-cover h-full w-full"
-                            />
-                          </Link>
-
-                          <div className="flex-1">
-                            <h3 className="text-sm font-medium text-gray-900">
-                              {item.title}
-                            </h3>
-                            <dl className="mt-1 space-y-1 text-xs text-gray-600">
-                              <div>
-                                <dt className="inline font-medium">Price:</dt>
-                                <dd className="inline ml-1">{formatCurrency(item.price)}</dd>
-                              </div>
-                              <div>
-                                <dt className="inline font-medium">Total:</dt>
-                                <dd className="inline ml-1 font-medium text-gray-900">
-                                  {formatCurrency(item.price * item.quantity)}
-                                </dd>
-                              </div>
-                            </dl>
-
-                            <div className="mt-3 flex items-center gap-1">
-                              <button
-                                className="h-5 w-5 border border-gray-300 rounded-sm text-sm font-medium transition hover:bg-gray-50"
-                                onClick={() => updateQuantity(item.variantId || item.sku, item.quantity - 1)}
-                              >
-                                -
-                              </button>
-                              <span className="text-sm font-medium w-8 text-center">
-                                {item.quantity}
-                              </span>
-                              <button
-                                className="h-5 w-5 border border-gray-300 rounded-sm text-sm font-medium transition hover:bg-gray-50"
-                                onClick={() => updateQuantity(item.variantId || item.sku, item.quantity + 1)}
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="text-right">
-                            <p className="text-sm font-medium text-gray-900">
-                              {formatCurrency(item.price * item.quantity)}
-                            </p>
-                            <button
-                              className="mt-2 text-gray-600 transition hover:text-red-600"
-                              onClick={() => removeItem(item.variantId || item.sku)}
-                            >
-                              <span className="sr-only">Remove item</span>
-                              <Trash2 className='w-4' />
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <div className="mt-4 border-t border-gray-200 pt-2">
-                      <div className="flex justify-between text-base font-medium text-gray-900 mb-6">
-                        <p>Subtotal</p>
-                        <p>{formatCurrency(getTotalPrice())}</p>
-                      </div>
-
-                      <div className="space-y-3">
-                        <Link
-                          href="/checkout"
-                          className="block text-center rounded-sm bg-gray-700 px-5 py-3 text-sm text-gray-100 transition hover:bg-gray-600"
-                        >
-                          Checkout
-                        </Link>
-
-                        <DialogClose asChild>
-                          <button
-                            className="block cursor-pointer w-full text-center text-sm text-gray-500 underline underline-offset-4 transition hover:text-gray-600"
-                          >
-                            Continue shopping
-                          </button>
-                        </DialogClose>
-                      </div>
-                    </div>
-                  </>
-                </DialogContent>
-              </Dialog>
-            )}
-          </>
-        )}
+        {variantAvailable && <Button variant="outline" className="flex-shrink-0" onClick={handleBuyNow} aria-label="Buy now">Buy Now</Button>}
       </div>
+      <BuyNowCartDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </div>
   )
 }
