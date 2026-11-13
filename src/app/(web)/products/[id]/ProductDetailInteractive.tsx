@@ -53,13 +53,13 @@ export function ProductImageGallery({
         {selectedVariant && (
           <div className="absolute top-4 right-4">
             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${selectedVariant.stock_status === 'in_stock'
-              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+              ? 'bg-emerald-700 text-white'
               : selectedVariant.stock_status === 'low_stock'
-                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+                ? 'bg-amber-600 text-white'
+                : 'bg-rose-700 text-white'
               }`}>
               {selectedVariant.stock_status === 'in_stock' && 'In Stock'}
-              {selectedVariant.stock_status === 'low_stock' && 'In Stock'}
+              {selectedVariant.stock_status === 'low_stock' && 'Low Stock'}
               {selectedVariant.stock_status === 'out_of_stock' && 'Out of Stock'}
             </span>
           </div>
