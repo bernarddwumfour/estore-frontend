@@ -24,7 +24,6 @@ const nextConfig: NextConfig = {
         hostname: "www.tailwind-kit.com",
       },
     ],
-    unoptimized: true,
   },
 };
 

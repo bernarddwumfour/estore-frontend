@@ -132,11 +132,6 @@ function StandaloneFilters({
             <div className={cn("flex items-center justify-between pb-4 border-b border-slate-100")} >
                 <div className={cn("flex items-center gap-3")} >
                     <FilterButton onClick={onOpenModal} hasActiveFilters={hasActiveFilters} activeFilterCount={activeFilterCount} />
-                    {hasActiveFilters && (
-                        <span className={cn("text-xs text-slate-500")} >
-                            {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active
-                        </span>
-                    )}
                 </div>
                 {hasActiveFilters && (
                     <button
