@@ -58,6 +58,24 @@ interface PopularAddress {
   is_free: boolean;
 }
 
+function PaymentNetworkMarks() {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2" aria-label="Visa, Mastercard, MTN MoMo, Telecel, and AT Money">
+      <span className="flex h-7 items-center rounded border border-gray-200 bg-white px-2 font-extrabold italic tracking-tight text-[#1a1f71]" aria-label="Visa">VISA</span>
+      <span className="flex h-7 items-center gap-1 rounded border border-gray-200 bg-white px-2" aria-label="Mastercard">
+        <span className="relative flex h-4 w-7 items-center">
+          <span className="absolute left-0 h-4 w-4 rounded-full bg-[#eb001b]/90" />
+          <span className="absolute right-0 h-4 w-4 rounded-full bg-[#f79e1b]/90" />
+        </span>
+        <span className="text-[10px] font-semibold text-gray-700">mastercard</span>
+      </span>
+      <span className="flex h-7 items-center rounded border border-[#ffcc00] bg-[#ffcc00] px-2 text-[11px] font-extrabold italic text-black" aria-label="MTN MoMo">MTN</span>
+      <span className="flex h-7 items-center rounded border border-[#ed1c24] bg-white px-2 text-[11px] font-bold lowercase text-[#ed1c24]" aria-label="Telecel">telecel</span>
+      <span className="flex h-7 items-center rounded border border-gray-200 bg-white px-2 text-[11px] font-bold text-[#1268b3]" aria-label="AT Money">AT<span className="ml-1 font-medium text-gray-600">Money</span></span>
+    </div>
+  );
+}
+
 interface GuestInfo {
   email: string;
   first_name: string;
@@ -1071,20 +1089,26 @@ export default function CheckoutPage() {
                     {(checkoutMeta?.payment_methods ?? [
                       { id: 'paystack', name: 'Paystack', description: 'Pay with card, mobile money, or bank transfer' },
                       { id: 'pod', name: 'Pay on Delivery', description: 'Pay when your order arrives' },
-                    ]).map((method) => (
-                      <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <RadioGroupItem value={method.id} id={method.id} />
-                          <Label htmlFor={method.id} className="cursor-pointer">
-                            <p className="font-medium text-base">{method.name}</p>
-                            <p className="text-sm text-gray-500">{method.description}</p>
-                          </Label>
+                    ]).map((method) => {
+                      const isPaystack = method.id === 'paystack';
+                      return (
+                        <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                          <div className="flex items-start gap-3">
+                            <RadioGroupItem value={method.id} id={method.id} className="mt-1" />
+                            <div>
+                              <Label htmlFor={method.id} className="block cursor-pointer">
+                                <span className="block font-medium text-base">{isPaystack ? 'Pay now' : method.name}</span>
+                                <span className="block text-sm text-gray-500">{isPaystack ? 'Pay securely by card or mobile money' : method.description}</span>
+                              </Label>
+                              {isPaystack && <PaymentNetworkMarks />}
+                            </div>
+                          </div>
+                          {method.id === 'pod' && (
+                            <Badge variant="outline" className="text-green-600 border-green-600 px-3 py-1">No upfront payment</Badge>
+                          )}
                         </div>
-                        {method.id === 'pod' && (
-                          <Badge variant="outline" className="text-green-600 border-green-600 px-3 py-1">No upfront payment</Badge>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                     {checkoutMeta?.payment_methods?.length === 0 && (
                       <p className="text-sm text-red-600">No payment methods are currently available. Please try again later.</p>
                     )}
@@ -1232,7 +1256,9 @@ export default function CheckoutPage() {
                       {isLoading ? (
                         <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
                       ) : (
-                        !isAuthenticated ? 'Place Order as Guest' : (formData.payment_method === 'pod' ? 'Place Order (Pay on Delivery)' : 'Proceed to Payment')
+                        !isAuthenticated
+                          ? (formData.payment_method === 'paystack' ? 'Pay now as guest' : 'Place Order as Guest')
+                          : (formData.payment_method === 'pod' ? 'Place Order (Pay on Delivery)' : 'Pay now')
                       )}
                     </Button>
                   </div>
