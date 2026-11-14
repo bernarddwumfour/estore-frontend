@@ -15,15 +15,17 @@ import { useDebounce } from "@/app/lib/hooks/use-debounce"
 import { endpoints } from "@/constants/endpoints/endpoints"
 import unAuthenticatedAxios from "@/axios-instances/UnAuthenticatedAxios"
 import { formatCurrency } from "@/lib/currency"
+import { tyreProductName } from "@/templates/tyrepapa/product-name"
 
 interface SearchResult {
     id: string
     title: string
+    product_title?: string
     slug: string
+    variant_slug?: string
     description: string
     min_price: number
     max_price: number
-    has_stock: boolean
     average_rating: number
     total_reviews: number
     category?: {
@@ -33,6 +35,9 @@ interface SearchResult {
     }
     default_variant?: {
         id: string
+        sku?: string
+        is_in_stock?: boolean
+        attributes?: Record<string, unknown>
         images?: Array<{ url: string }>
     }
 }
@@ -52,6 +57,28 @@ interface RecentSearchItem {
     timestamp: number
 }
 
+const isTyrePapaStore = process.env.NEXT_PUBLIC_STORE === "tyrepapa"
+
+function getSearchResultTitle(result: SearchResult) {
+    return isTyrePapaStore
+        ? tyreProductName(result.product_title || result.title, result.default_variant?.attributes)
+        : result.title
+}
+
+function getSearchResultCategory(result: SearchResult) {
+    const category = result.category?.name
+    if (!category || !isTyrePapaStore) return category
+
+    const attributes = result.default_variant?.attributes
+    const values = [attributes?.compatible_vehicles, attributes?.vehicle_types]
+        .flatMap(value => Array.isArray(value) ? value : [value])
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .map(value => value.trim())
+        .filter(value => value.toLowerCase() !== category.toLowerCase())
+    const cars = Array.from(new Set(values))
+    return cars.length ? `${category} (for ${cars.join(", ")})` : category
+}
+
 // API functions using unAuthenticatedAxios
 const searchProducts = async (query: string) => {
     const params = new URLSearchParams({
@@ -63,7 +90,7 @@ const searchProducts = async (query: string) => {
     return {
         products: response.data.data.products || [],
         total: response.data.data.total || 0,
-        resultType: response.data.data.result_type as "matching" | "related" | "none" | undefined
+        resultType: response.data.data.result_type as "matching" | "related" | "none" | undefined,
     }
 }
 
@@ -121,7 +148,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
 
     // React Query for search
     const { data: searchData, isLoading, isFetching } = useQuery({
-        queryKey: ['search', debouncedQuery],
+        queryKey: ['variant-search', debouncedQuery],
         queryFn: () => searchProducts(debouncedQuery),
         enabled: debouncedQuery.length >= 2 && isOpen,
         staleTime: 0,
@@ -191,18 +218,22 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
 
     const handleResultClick = (result: SearchResult, searchQuery: string) => {
         saveRecentSearch(result, searchQuery)
-        router.push(`/products/${result.slug}`)
+        router.push(result.variant_slug
+            ? `/products/${result.slug}/${result.variant_slug}`
+            : `/products/${result.slug}`)
         onClose()
     }
 
     const handleRecentClick = (recent: RecentSearchItem) => {
-        router.push(`/products/${recent.product.slug}`)
+        router.push(recent.product.variant_slug
+            ? `/products/${recent.product.slug}/${recent.product.variant_slug}`
+            : `/products/${recent.product.slug}`)
         onClose()
     }
 
     const handleViewAllResults = (searchQuery: string) => {
         if (searchQuery.trim().length >= 2) {
-            router.push(`/products?q=${encodeURIComponent(searchQuery)}`)
+            router.push(`/products?q=${encodeURIComponent(searchQuery)}&display=variants`)
             onClose()
         }
     }
@@ -232,7 +263,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                     <div className="flex items-start justify-between gap-4 pb-6">
                       <div className="min-w-0 max-w-xl space-y-4">
                         <h2 className={cn("text-slate-400 font-bold uppercase tracking-[0.3em] text-xs")} >
-                            Search through hundreds of products
+                            Search matching variants
                         </h2>
                         <h3 className={cn("text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight")} >
                             What are you <span className={cn("text-slate-400")} >looking for?</span>
@@ -263,7 +294,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                     setSelectedIndex(-1)
                                 }}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Search for products..."
+                                placeholder="Search for products, options, or SKUs..."
                                 className={cn("w-full border-0 bg-transparent py-2.5 pl-2 pr-3 text-sm outline-none placeholder:text-slate-400")}
                                 aria-label="Search products"
                                 autoComplete="off"
@@ -300,8 +331,8 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                     {debouncedQuery.length >= 2 && !isLoadingData && (
                         <div className={cn("mt-1.5 text-xs text-slate-500")} >
                             {results.length > 0
-                                ? `${totalResults} ${isRelated ? 'related ' : ''}product${totalResults > 1 ? 's' : ''} found`
-                                : 'No products found'
+                                ? `${totalResults} ${isRelated ? 'related ' : 'matching '}variant${totalResults > 1 ? 's' : ''} found`
+                                : 'No matching variants found'
                             }
                         </div>
                     )}
@@ -314,13 +345,16 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                 <div className={cn("space-y-1.5")} >
                                     <div className="mb-3" role="status">
                                         <h4 className={cn("text-sm font-semibold text-slate-900")}>
-                                            {isRelated ? "Related results" : "Matching search results"}
+                                            {isRelated ? "Related variants" : "Matching variants"}
                                         </h4>
                                         {isRelated && <p className={cn("mt-1 text-xs text-slate-500")}>
-                                            No matching products found. Here are some related products you might like.
+                                            No direct matches found. Here are some related variants you might like.
                                         </p>}
                                     </div>
-                                    {results.map((result: SearchResult, index: number) => (
+                                    {results.map((result: SearchResult, index: number) => {
+                                        const displayTitle = getSearchResultTitle(result)
+                                        const displayCategory = getSearchResultCategory(result)
+                                        return (
                                         <button
                                             type="button"
                                             key={result.id}
@@ -338,7 +372,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                                 {result.default_variant?.images?.[0]?.url ? (
                                                     <img
                                                         src={result.default_variant.images[0].url}
-                                                        alt={result.title}
+                                                        alt={displayTitle}
                                                         className={cn("h-full w-full object-cover")}
                                                     />
                                                 ) : (
@@ -353,11 +387,11 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                                 <div className={cn("flex items-start justify-between gap-2")} >
                                                     <div>
                                                         <div className={cn("font-medium text-sm text-slate-900 truncate")} >
-                                                            {result.title}
+                                                            {displayTitle}
                                                         </div>
-                                                        {result.category && (
+                                                        {displayCategory && (
                                                             <div className={cn("text-xs text-slate-500")} >
-                                                                {result.category.name}
+                                                                {displayCategory}
                                                             </div>
                                                         )}
                                                     </div>
@@ -368,7 +402,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                                     </div>
                                                 </div>
                                                 <div className={cn("mt-1 flex items-center gap-3")} >
-                                                    {result.has_stock ? (
+                                                    {result.default_variant?.is_in_stock ? (
                                                         <span className={cn("inline-flex items-center gap-1 text-xs text-emerald-600")} >
                                                             <span className={cn("h-1.5 w-1.5 rounded-full bg-emerald-500")}  />
                                                             In Stock
@@ -387,7 +421,8 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                                 </div>
                                             </div>
                                         </button>
-                                    ))}
+                                        )
+                                    })}
 
                                     {/* View all results link */}
                                     {totalResults > results.length && (
@@ -396,7 +431,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                             onClick={() => handleViewAllResults(query)}
                                             className={cn("w-full text-center py-2 text-sm text-slate-500 hover:text-slate-900 transition-colors border-t border-slate-100 mt-2")}
                                         >
-                                            View all {totalResults} results →
+                                            View all {totalResults} matching variants →
                                         </button>
                                     )}
                                 </div>
@@ -404,7 +439,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                 !isLoadingData && (
                                     <div className={cn("text-center py-8")} >
                                         <Package className={cn("mx-auto h-10 w-10 text-slate-300")}  />
-                                        <p className={cn("mt-2 text-sm text-slate-500")} >No products found</p>
+                                        <p className={cn("mt-2 text-sm text-slate-500")} >No matching variants found</p>
                                         <p className={cn("text-xs text-slate-400")} >
                                             Try adjusting your search terms
                                         </p>
@@ -419,7 +454,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                         <div className={cn("flex items-center justify-between mb-3")} >
                                             <h3 className={cn("text-xs font-medium text-slate-500 flex items-center gap-1.5")} >
                                                 <Clock className={cn("h-3.5 w-3.5")}  />
-                                                Recent Products
+                                                Recent Variants
                                             </h3>
                                             <button
                                                 type="button"
@@ -432,6 +467,8 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                         <div className={cn("space-y-1.5")} >
                                             {recentSearches.map((recent, index) => {
                                                 const itemIndex = results.length + index
+                                                const displayTitle = getSearchResultTitle(recent.product)
+                                                const displayCategory = getSearchResultCategory(recent.product)
                                                 return (
                                                     <button
                                                         type="button"
@@ -450,7 +487,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                                             {recent.product.default_variant?.images?.[0]?.url ? (
                                                                 <img
                                                                     src={recent.product.default_variant.images[0].url}
-                                                                    alt={recent.product.title}
+                                                                    alt={displayTitle}
                                                                     className={cn("h-full w-full object-cover")}
                                                                 />
                                                             ) : (
@@ -465,11 +502,11 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                                             <div className={cn("flex items-start justify-between gap-2")} >
                                                                 <div>
                                                                     <div className={cn("font-medium text-sm text-slate-900 truncate")} >
-                                                                        {recent.product.title}
+                                                                        {displayTitle}
                                                                     </div>
-                                                                    {recent.product.category && (
+                                                                    {displayCategory && (
                                                                         <div className={cn("text-xs text-slate-500")} >
-                                                                            {recent.product.category.name}
+                                                                            {displayCategory}
                                                                         </div>
                                                                     )}
                                                                     {recent.query && (
@@ -486,7 +523,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                                                 </div>
                                                             </div>
                                                             <div className={cn("mt-1 flex items-center gap-3")} >
-                                                                {recent.product.has_stock ? (
+                                                                {recent.product.default_variant?.is_in_stock ? (
                                                                     <span className={cn("inline-flex items-center gap-1 text-xs text-emerald-600")} >
                                                                         <span className={cn("h-1.5 w-1.5 rounded-full bg-emerald-500")}  />
                                                                         In Stock

@@ -22,6 +22,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   const sort_by = typeof resolvedParams.sort_by === 'string' ? resolvedParams.sort_by : 'created_at';
   const sort_order = typeof resolvedParams.sort_order === 'string' ? resolvedParams.sort_order : 'desc';
   const search = typeof resolvedParams.q === 'string' ? resolvedParams.q : undefined;
+  const display = resolvedParams.display === 'variants' ? 'variants' : 'products';
   const page = resolvedParams.page ? parseInt(String(resolvedParams.page)) : 1;
   const limit = resolvedParams.limit ? parseInt(String(resolvedParams.limit)) : 20;
 
@@ -54,6 +55,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
       sort_by={sort_by}
       sort_order={sort_order}
       search={search}
+      display={display}
       page={page}
       limit={limit}
     />

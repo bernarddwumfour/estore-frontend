@@ -252,6 +252,9 @@ export function AdvancedFilters({
                 params.set(k, String(v))
             }
         })
+        if (searchParams.get("display") === "variants") {
+            params.set("display", "variants")
+        }
         const url = `/products${params.toString() ? `?${params.toString()}` : ''}`
         router.push(url)
         setIsModalOpen(false)
