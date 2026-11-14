@@ -38,6 +38,7 @@ import {
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { SearchModal } from "@/widgets/search-modal/SearchModal";
+import searchPanelStyles from "@/widgets/search-modal/SearchPanel.module.css";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -60,9 +61,17 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartopen, setcartopen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const totalItems = useCartStore((state) => state.getTotalItems());
   const { user, logout } = useAuth();
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -299,6 +308,8 @@ export default function Navbar() {
       <SearchModal
         isOpen={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
+        variant="header-panel"
+        panelClassName={isScrolled ? searchPanelStyles.furniturePanelScrolled : searchPanelStyles.furniturePanel}
       />
     </>
   );

@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAuth } from "@/lib/use-auth"
 import { Button } from "@/components/ui/button"
 import { SearchModal } from "../search-modal/SearchModal"
+import searchPanelStyles from "../search-modal/SearchPanel.module.css"
 
 export default function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -296,6 +297,8 @@ export default function Navbar() {
             <SearchModal
                 isOpen={searchModalOpen}
                 onClose={() => setSearchModalOpen(false)}
+                variant="header-panel"
+                panelClassName={searchPanelStyles.defaultPanel}
             />
         </>
     )
