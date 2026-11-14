@@ -79,7 +79,7 @@ async function Collection() {
 export default function HomePage() {
   return <div className={styles.page} id="top">
     <section className={styles.hero} aria-labelledby="tyre-title">
-      <Image src="/tyrepapa/tyre-hero.png" alt="" fill priority sizes="100vw" className={styles.heroImage} />
+      <Image src="/tyrepapa/tyre-hero-road-stack-v4-preview.png" alt="" fill priority sizes="100vw" className={styles.heroImage} />
       <div className={styles.heroContent}><span className={styles.eyebrow}>CAR TYRES FOR THE ROAD AHEAD.</span><h1 id="tyre-title">Tyres for every car.<br /><em>Ready for every road.</em></h1><p>Explore tyre sizes and styles to find the right fit for your drive.</p><Link href="/products" className={styles.heroButton}>Shop car tyres <ArrowUpRight size={16} /></Link></div>
       <Link href={heroCategories.saloons.href} className={`${styles.heroNote} ${styles.serumNote}`}><span className={styles.noteImage}><Image src={heroCategories.saloons.image} alt="" fill sizes="(max-width: 700px) 64px, 86px" /></span><span className={styles.heroNoteText}>Saloons<small>Tyres for the everyday drive</small></span><ArrowUpRight className={styles.heroNoteArrow} size={18} /></Link>
       <Link href={heroCategories.suvs.href} className={`${styles.heroNote} ${styles.washNote}`}><span className={styles.noteImage}><Image src={heroCategories.suvs.image} alt="" fill sizes="(max-width: 700px) 64px, 86px" /></span><span className={styles.heroNoteText}>SUVs<small>Ready for every route</small></span><ArrowUpRight className={styles.heroNoteArrow} size={18} /></Link>

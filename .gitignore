@@ -38,6 +38,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Product variant images are stored in Cloudinary and must not be bundled in the repo.
+/public/product-variants/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

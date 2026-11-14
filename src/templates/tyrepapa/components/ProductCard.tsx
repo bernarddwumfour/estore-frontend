@@ -91,7 +91,7 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
           </button>
         )}
         <button type="button" onClick={buyNow} disabled={!available} aria-label={available ? `Buy ${displayTitle} now` : `${displayTitle} is unavailable`}>
-          Buy now <span>↗</span>
+          Buy now
         </button>
       </div>
     </div>
