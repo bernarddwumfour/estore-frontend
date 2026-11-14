@@ -45,10 +45,33 @@ const tyrepapaColors: Record<string, string> = {
   'ring-slate-400': 'ring-[#b68d63]',
 };
 
+const beautyColors: Record<string, string> = {
+  'bg-slate-950': 'bg-[#39271f]',
+  'bg-slate-900': 'bg-[#39271f]',
+  'bg-slate-800': 'bg-[#5a4033]',
+  'bg-slate-200': 'bg-[#e9dfd6]',
+  'bg-slate-100': 'bg-[#f4eee8]',
+  'bg-slate-50': 'bg-[#fbf8f4]',
+  'bg-emerald-500': 'bg-[#9b5c40]',
+  'text-slate-900': 'text-[#39271f]',
+  'text-slate-700': 'text-[#57463b]',
+  'text-slate-600': 'text-[#75665b]',
+  'text-slate-500': 'text-[#85766c]',
+  'text-slate-400': 'text-[#a29388]',
+  'border-slate-950': 'border-[#39271f]',
+  'border-slate-900': 'border-[#39271f]',
+  'border-slate-400': 'border-[#9b5c40]',
+  'border-slate-300': 'border-[#d8c9bd]',
+  'border-slate-200': 'border-[#e9dfd6]',
+  'border-slate-100': 'border-[#f0e8e1]',
+  'ring-slate-400': 'ring-[#9b5c40]',
+};
+
 export function filterThemeClasses(...inputs: Parameters<typeof mergeClasses>) {
   const classes = mergeClasses(...inputs);
   const colors = process.env.NEXT_PUBLIC_STORE === 'furniture' ? furnitureColors
-    : process.env.NEXT_PUBLIC_STORE === 'tyrepapa' ? tyrepapaColors : null;
+    : process.env.NEXT_PUBLIC_STORE === 'tyrepapa' ? tyrepapaColors
+      : process.env.NEXT_PUBLIC_STORE === 'beauty' ? beautyColors : null;
   if (!colors) return classes;
   return classes.replace(/(?:bg|text|border|ring)-(?:slate|emerald)-\d+/g,
     color => colors[color] ?? color);

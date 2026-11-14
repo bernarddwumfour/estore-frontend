@@ -14,15 +14,16 @@ const lato = Lato({
 });
 
 const isTyrePapa = process.env.NEXT_PUBLIC_STORE === "tyrepapa";
+const isBeauty = process.env.NEXT_PUBLIC_STORE === "beauty";
 
-const brandIcon = isTyrePapa ? "/tyrepapa/favicon.svg" : process.env.NEXT_PUBLIC_STORE === "furniture"
+const brandIcon = isTyrePapa ? "/tyrepapa/favicon.svg" : isBeauty ? "/beauty/favicon.svg" : process.env.NEXT_PUBLIC_STORE === "furniture"
   ? "/brand/oakandloom-mark.png"
   : "/brand/iplug-mark.png";
 
 export const metadata: Metadata = {
   icons: { icon: brandIcon, shortcut: brandIcon, apple: brandIcon },
-  title: isTyrePapa ? "TyrePapa — Find the right set" : process.env.NEXT_PUBLIC_STORE === "furniture" ? "oak&loom" : "iPlug",
-  description: isTyrePapa ? "Explore tyres for your car and the journeys ahead with TyrePapa." : process.env.NEXT_PUBLIC_STORE === "furniture"
+  title: isTyrePapa ? "TyrePapa — Find the right set" : isBeauty ? "Reel Spa — Beauty & wellness" : process.env.NEXT_PUBLIC_STORE === "furniture" ? "oak&loom" : "iPlug",
+  description: isTyrePapa ? "Explore tyres for your car and the journeys ahead with TyrePapa." : isBeauty ? "Thoughtful spa treatments, beauty rituals and skincare from Reel Spa." : process.env.NEXT_PUBLIC_STORE === "furniture"
     ? "Thoughtfully crafted furniture and home essentials from oak&loom."
     : "Premium tech gadgets and accessories for modern living.",
 };

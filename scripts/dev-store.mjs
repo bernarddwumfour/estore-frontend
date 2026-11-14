@@ -2,10 +2,10 @@ import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { parseEnv } from "node:util";
 
-const profiles = { iplug: ".env.iplug", oak: ".env.oakandloom", tyrepapa: ".env.tyrepapa" };
+const profiles = { iplug: ".env.iplug", oak: ".env.oakandloom", tyrepapa: ".env.tyrepapa", beauty: ".env" };
 const profile = process.argv[2];
 if (!Object.hasOwn(profiles, profile)) {
-  console.error("Usage: node scripts/dev-store.mjs <iplug|oak|tyrepapa> [Next.js arguments]");
+  console.error("Usage: node scripts/dev-store.mjs <iplug|oak|tyrepapa|beauty> [Next.js arguments]");
   process.exit(1);
 }
 
@@ -17,9 +17,15 @@ try {
   process.exit(1);
 }
 
+const childEnv = { ...process.env, ...values };
+if (profile === "beauty") {
+  childEnv.NEXT_PUBLIC_STORE = "beauty";
+  childEnv.NEXT_DEV_DIST_DIR = ".next-beauty";
+}
+
 const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", ...process.argv.slice(3)], {
   stdio: "inherit",
-  env: { ...process.env, ...values },
+  env: childEnv,
 });
 child.on("error", (error) => {
   console.error("Could not start Next.js:", error.message);

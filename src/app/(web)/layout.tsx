@@ -12,7 +12,7 @@ const layout = ({ children }: { children: ReactNode }) => {
       <T.Navbar />
 
       <NextTopLoader
-        color={process.env.NEXT_PUBLIC_STORE === "furniture" ? "#654035" : process.env.NEXT_PUBLIC_STORE === "tyrepapa" ? "#b68d63" : "#080808"}
+        color={process.env.NEXT_PUBLIC_STORE === "furniture" ? "#654035" : process.env.NEXT_PUBLIC_STORE === "tyrepapa" ? "#b68d63" : process.env.NEXT_PUBLIC_STORE === "beauty" ? "#92583e" : "#080808"}
         initialPosition={0.08}
         crawlSpeed={200}
         height={4}

@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev:iplug": "node scripts/dev-store.mjs iplug",
     "dev:oak": "node scripts/dev-store.mjs oak",
+    "dev:beauty": "node scripts/dev-store.mjs beauty",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

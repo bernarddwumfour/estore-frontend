@@ -352,3 +352,19 @@
 [data-storefront-theme="tyrepapa-surface"] :is(.border-blue-100, .border-blue-200) { border-color: #e5c8a8; }
 [data-storefront-theme="furniture-surface"] :is(.text-blue-800, .text-blue-900) { color: #654035; }
 [data-storefront-theme="furniture-surface"] :is(.border-blue-100, .border-blue-200) { border-color: #d6bcb1; }
+
+/* Match shared catalog, product detail, and commerce overlays to the beauty storefront. */
+[data-storefront-theme="beauty-surface"] { background: #fffdf9; color: #39271f; }
+[data-storefront-theme="beauty-surface"] :is(.bg-gray-50, .bg-gray-100) { background-color: #fbf8f4; }
+[data-storefront-theme="beauty-surface"] :is(.text-gray-900, .text-gray-800, .text-slate-900) { color: #39271f; }
+[data-storefront-theme="beauty-surface"] :is(.text-gray-500, .text-gray-600, .text-gray-700, .text-slate-600) { color: #75665b; }
+[data-storefront-theme="beauty-surface"] :is(.border-gray-100, .border-gray-200, .border-gray-300, .border-slate-200) { border-color: #e9dfd6; }
+[data-storefront-theme="beauty-surface"] :is(.bg-blue-600, .bg-blue-700, .bg-slate-900) { background-color: #92583e; }
+[data-storefront-theme="beauty-surface"] :is(.text-blue-600, .text-blue-700, .text-emerald-600) { color: #92583e; }
+[data-storefront-theme="beauty-surface"] :is(.bg-blue-50, .bg-blue-100, .bg-emerald-50) { background-color: #f7eee7; }
+[data-storefront-theme="beauty-surface"] [data-slot="button"][data-variant="default"] { background-color: #92583e; color: #fff; border-color: #92583e; }
+[data-storefront-theme="beauty-surface"] [data-slot="button"][data-variant="default"]:hover { background-color: #75432f; }
+[data-storefront-theme="beauty-surface"] :is(input, textarea, select):focus-visible { outline-color: #9b5c40; border-color: #9b5c40; }
+[data-storefront-theme="beauty-surface"] .product-detail-layout h1,
+[data-storefront-theme="beauty-surface"] .product-detail-layout h2 { font-family: "Bodoni MT", Didot, "Times New Roman", serif; font-weight: 400; }
+[data-storefront-theme="beauty-surface"] :is(h1, h2) { font-family: "Bodoni MT", Didot, "Times New Roman", serif; font-weight: 400; letter-spacing: -.035em; }

@@ -2,6 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 import DefaultAuthShell from "./default/components/AuthShell";
 import FurnitureAuthShell from "./furniture/components/AuthShell";
 import TyrePapaAuthShell from "./tyrepapa/components/AuthShell";
+import BeautyAuthShell from "./beauty/components/AuthShell";
 
 /**
  * Client-safe accessor for the active store's auth shell.
@@ -15,6 +16,7 @@ const shells: Record<string, ComponentType<{ children: ReactNode }>> = {
   default: DefaultAuthShell,
   furniture: FurnitureAuthShell,
   tyrepapa: TyrePapaAuthShell,
+  beauty: BeautyAuthShell,
 };
 
 const activeStore = process.env.NEXT_PUBLIC_STORE ?? "default";

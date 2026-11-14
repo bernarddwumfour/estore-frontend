@@ -19,6 +19,11 @@ export default function Logo({
   if (process.env.NEXT_PUBLIC_STORE === "tyrepapa") {
     return <BrandLogo href={href} onClick={onClick} tone={light ? "gold" : "ink"} compact={compact} sidebar={sidebar} />;
   }
+  if (process.env.NEXT_PUBLIC_STORE === "beauty") {
+    return <Link href={href} onClick={onClick} aria-label="Reel Spa home" className={`inline-flex shrink-0 items-center gap-2 font-serif font-semibold tracking-[-0.05em] text-[#39271f] ${compact ? "text-base" : "text-xl"}`}>
+      <span className="text-[#9b5c40]">✳</span>{!compact && "Reel Spa"}
+    </Link>;
+  }
   const furniture = process.env.NEXT_PUBLIC_STORE === "furniture";
   const name = furniture ? "oak&loom" : "iPlug";
   const src = furniture ? "/brand/oak-and-loom-logo.png" : "/brand/iplug-logo.png";

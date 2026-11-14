@@ -78,6 +78,21 @@ both currently point to the local API on port 8000. Start the matching backend
 profile using `manage_store.py` in the backend project. These environment
 files are local and ignored by Git.
 
+## Beauty storefront
+
+Run `npm run dev:beauty -- --port 3003` to preview the Reel Spa beauty template.
+It reads the shared local `.env` API settings, selects `NEXT_PUBLIC_STORE=beauty`
+for this process, and writes its Next.js build files to `.next-beauty` so it can
+run alongside another local storefront. It displays products from whichever API
+is configured in `.env`; treatments and their sample prices are frontend-only
+content in `src/templates/beauty/pages/HomePage.tsx` and need no service API.
+
+For a deployment, set `NEXT_PUBLIC_STORE=beauty` and point
+`NEXT_PUBLIC_API_BASE_URL` at the existing catalog API in that deployment's
+build environment, then build and redeploy the frontend. The template does not
+add or require backend routes. `NEXT_DEV_DIST_DIR` is only used by the local
+preview command.
+
 
 ## TyrePapa storefront
 
