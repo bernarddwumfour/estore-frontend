@@ -355,10 +355,13 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                         const displayTitle = getSearchResultTitle(result)
                                         const displayCategory = getSearchResultCategory(result)
                                         return (
-                                        <button
-                                            type="button"
+                                        <Link
+                                            href={result.variant_slug ? `/products/${result.slug}/${result.variant_slug}` : `/products/${result.slug}`}
                                             key={result.id}
-                                            onClick={() => handleResultClick(result, query)}
+                                            onClick={(event) => {
+                                                saveRecentSearch(result, query)
+                                                if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) onClose()
+                                            }}
                                             className={cn(
                                                 "w-full flex items-center gap-3 rounded-lg p-2.5 text-left transition-all border cursor-pointer",
                                                 index === selectedIndex
@@ -420,19 +423,19 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                                     )}
                                                 </div>
                                             </div>
-                                        </button>
+                                        </Link>
                                         )
                                     })}
 
                                     {/* View all results link */}
                                     {totalResults > results.length && (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleViewAllResults(query)}
+                                        <Link
+                                            href={`/products?q=${encodeURIComponent(query)}&display=variants`}
+                                            onClick={(event) => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) onClose() }}
                                             className={cn("w-full text-center py-2 text-sm text-slate-500 hover:text-slate-900 transition-colors border-t border-slate-100 mt-2")}
                                         >
                                             View all {totalResults} matching variants →
-                                        </button>
+                                        </Link>
                                     )}
                                 </div>
                             ) : (
@@ -470,10 +473,10 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                                 const displayTitle = getSearchResultTitle(recent.product)
                                                 const displayCategory = getSearchResultCategory(recent.product)
                                                 return (
-                                                    <button
-                                                        type="button"
+                                                    <Link
+                                                        href={recent.product.variant_slug ? `/products/${recent.product.slug}/${recent.product.variant_slug}` : `/products/${recent.product.slug}`}
                                                         key={recent.product.id}
-                                                        onClick={() => handleRecentClick(recent)}
+                                                        onClick={(event) => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) onClose() }}
                                                         className={cn(
                                                             "w-full flex items-center gap-3 rounded-lg p-2.5 text-left transition-all border cursor-pointer",
                                                             itemIndex === selectedIndex
@@ -541,7 +544,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "", variant = "ful
                                                                 )}
                                                             </div>
                                                         </div>
-                                                    </button>
+                                                    </Link>
                                                 )
                                             })}
                                         </div>
