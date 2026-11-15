@@ -6,7 +6,7 @@ import ProductsGrid from "@/app/(web)/products/ProductsGrid";
 import ProductsGridSkeleton from "@/app/(web)/products/(components)/ProductsGridSkeleton";
 
 const services = [
-  { number: "01", title: "Organic Radiance Facial", text: "A gentle reset with botanical care, a deep cleanse and a glow that feels like you.", duration: "60 min", price: "From GH₵ 350", image: "/beauty/facial.webp", alt: "Botanical facial treatment at Reel Spa" },
+  { number: "01", title: "Organic Radiance Facial", text: "A gentle reset with botanical care, a deep cleanse and a glow that feels like you.", duration: "60 min", price: "From GH₵ 350", image: "/beauty/facial.webp", alt: "Botanical facial treatment at Olive & Aura" },
   { number: "02", title: "Signature Body Massage", text: "Slow, considered massage work to help you release tension and settle back into yourself.", duration: "75 min", price: "From GH₵ 420", image: "/beauty/massage.webp", alt: "Hot stone massage treatment" },
   { number: "03", title: "The Skin Ritual", text: "A personalised treatment pairing gentle exfoliation with nourishing, skin-loving ingredients.", duration: "50 min", price: "From GH₵ 300", image: "/beauty/skincare.webp", alt: "Natural skincare products for an at-home ritual" },
 ];
@@ -23,7 +23,7 @@ export default function HomePage() {
   return (
     <div className="overflow-hidden bg-[#fffdf9] text-[#30231d]">
       <section className="relative isolate min-h-[620px] bg-[#49382e] sm:min-h-[690px]">
-          <Image src="/beauty/hero.webp" alt="A calming massage at Reel Spa" fill priority sizes="100vw" className="object-cover object-center" />
+          <Image src="/beauty/hero.webp" alt="A calming massage at Olive & Aura" fill priority sizes="100vw" className="object-cover object-center" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#211913]/75 via-[#211913]/35 to-[#211913]/5" />
         <div className="relative mx-auto flex min-h-[620px] max-w-[1280px] items-center px-6 pb-14 pt-12 sm:min-h-[690px] sm:px-12 lg:px-20">
           <div className="max-w-[650px] text-white">
@@ -60,19 +60,19 @@ export default function HomePage() {
 
       <section className="mx-auto grid max-w-[1120px] items-center gap-10 px-5 py-20 sm:px-8 sm:py-24 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
         <div className="relative min-h-[430px] sm:min-h-[500px]">
-          <div className="absolute bottom-0 left-0 top-12 w-[72%] overflow-hidden"><Image src="/beauty/interior.webp" alt="The calm, sunlit Reel Spa treatment room" fill sizes="(max-width: 1024px) 70vw, 36vw" className="object-cover" /></div>
+          <div className="absolute bottom-0 left-0 top-12 w-[72%] overflow-hidden"><Image src="/beauty/interior.webp" alt="The calm, sunlit Olive & Aura treatment room" fill sizes="(max-width: 1024px) 70vw, 36vw" className="object-cover" /></div>
           <div className="absolute right-0 top-0 h-[72%] w-[47%] overflow-hidden border-[8px] border-[#fffdf9]"><Image src="/beauty/skincare.webp" alt="Natural skincare selected for a soothing self-care ritual" fill sizes="(max-width: 1024px) 50vw, 24vw" className="object-cover" /></div>
           <div className="absolute bottom-5 right-[10%] flex h-24 w-24 flex-col items-center justify-center rounded-full bg-[#92583e] text-center text-white"><Sparkles className="h-5 w-5" /><span className="mt-1 text-[8px] uppercase leading-4 tracking-[0.12em]">A softer<br />kind of care</span></div>
         </div>
         <div className="max-w-lg py-4">
           <Eyebrow>Come back to yourself</Eyebrow>
           <h2 className="mt-4 font-serif text-4xl leading-[1.06] tracking-[-0.04em] sm:text-5xl">A little pause can change the whole day.</h2>
-          <p className="mt-5 text-sm leading-7 text-[#75665b]">At Reel Spa, every detail is an invitation to slow down. Our therapists take time to listen, then shape each visit around your skin, your body and the kind of rest you need.</p>
+          <p className="mt-5 text-sm leading-7 text-[#75665b]">At Olive & Aura, every detail is an invitation to slow down. Our therapists take time to listen, then shape each visit around your skin, your body and the kind of rest you need.</p>
           <div className="mt-7 grid gap-4 sm:grid-cols-2">
             <div className="flex gap-3"><Leaf className="mt-1 h-5 w-5 shrink-0 text-[#9b5c40]" /><div><h3 className="font-serif text-lg">Gentle ingredients</h3><p className="mt-1 text-xs leading-5 text-[#75665b]">Thoughtfully chosen products and unhurried care.</p></div></div>
             <div className="flex gap-3"><Flower2 className="mt-1 h-5 w-5 shrink-0 text-[#9b5c40]" /><div><h3 className="font-serif text-lg">Care that’s personal</h3><p className="mt-1 text-xs leading-5 text-[#75665b]">Treatments shaped around what feels right for you.</p></div></div>
           </div>
-          <Link href="/about" className="mt-8 inline-flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#92583e]">More about Reel Spa <ArrowRight className="h-4 w-4" /></Link>
+          <Link href="/about" className="mt-8 inline-flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#92583e]">More about Olive & Aura <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </section>
 

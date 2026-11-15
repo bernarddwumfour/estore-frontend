@@ -19,9 +19,9 @@ export default function Logo({
   if (process.env.NEXT_PUBLIC_STORE === "tyrepapa") {
     return <BrandLogo href={href} onClick={onClick} tone={light ? "gold" : "ink"} compact={compact} sidebar={sidebar} />;
   }
-  if (process.env.NEXT_PUBLIC_STORE === "beauty") {
-    return <Link href={href} onClick={onClick} aria-label="Reel Spa home" className={`inline-flex shrink-0 items-center gap-2 font-serif font-semibold tracking-[-0.05em] text-[#39271f] ${compact ? "text-base" : "text-xl"}`}>
-      <span className="text-[#9b5c40]">✳</span>{!compact && "Reel Spa"}
+  if (process.env.NEXT_PUBLIC_STORE === "oliveandaura") {
+    return <Link href={href} onClick={onClick} aria-label="Olive & Aura home" className="inline-flex shrink-0 items-center">
+      <Image src="/beauty/oliveandaura-horizontal.png" alt="Olive & Aura" width={2048} height={960} priority className={compact ? "h-auto w-24" : "h-auto w-36 sm:w-40"} />
     </Link>;
   }
   const furniture = process.env.NEXT_PUBLIC_STORE === "furniture";

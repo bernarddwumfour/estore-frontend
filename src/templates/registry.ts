@@ -15,7 +15,7 @@ const registries: Record<string, Template> = {
   default: defaultTemplate,
   furniture: { ...defaultTemplate, ...furniture },
   tyrepapa: { ...defaultTemplate, ...tyrepapa },
-  beauty: { ...defaultTemplate, ...beauty },
+  oliveandaura: { ...defaultTemplate, ...beauty },
 };
 
 const activeStore = process.env.NEXT_PUBLIC_STORE ?? "default";

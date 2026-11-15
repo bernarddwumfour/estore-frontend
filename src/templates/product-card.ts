@@ -16,7 +16,7 @@ const cards: Record<string, ComponentType<ProductCardProps>> = {
   default: DefaultProductCard,
   furniture: FurnitureProductCard,
   tyrepapa: TyrePapaProductCard,
-  beauty: BeautyProductCard,
+  oliveandaura: BeautyProductCard,
 };
 
 const activeStore = process.env.NEXT_PUBLIC_STORE ?? "default";

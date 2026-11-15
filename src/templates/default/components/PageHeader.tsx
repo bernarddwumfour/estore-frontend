@@ -6,7 +6,7 @@ import type { PageHeaderProps } from "../../contract";
  * stay consistent across the default store.
  */
 export default function PageHeader({ title, subtitle, description }: PageHeaderProps) {
-  const isBeauty = process.env.NEXT_PUBLIC_STORE === "beauty";
+  const isBeauty = process.env.NEXT_PUBLIC_STORE === "oliveandaura";
 
   return (
     <section className={isBeauty ? "border-b border-[#eee5dd] bg-[#f8f3ed] text-[#30231d]" : "border-b border-slate-100 bg-[#f8f9fa]"}>

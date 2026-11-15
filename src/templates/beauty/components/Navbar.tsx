@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Menu, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import Cart from "@/widgets/cart/Cart";
@@ -30,8 +31,8 @@ export default function Navbar() {
       </div>
       <header className="relative z-50 border-b border-[#eee5dd] bg-[#fffdf9] text-[#30231d]">
         <nav className="mx-auto flex h-[76px] max-w-[1280px] items-center justify-between px-5 lg:px-10" aria-label="Main navigation">
-          <Link href="/" className="font-serif text-[25px] font-semibold tracking-[-0.06em]" aria-label="Reel Spa home">
-            <span className="mr-2 inline-block align-middle text-[#9b5c40]">✳</span>Reel Spa
+          <Link href="/" className="flex shrink-0 items-center" aria-label="Olive & Aura home">
+            <Image src="/beauty/oliveandaura-horizontal.png" alt="Olive & Aura" width={2048} height={960} priority className="h-auto w-[124px] sm:w-[148px]" />
           </Link>
           <div className="hidden items-center gap-8 lg:flex">
             {links.map((link) => <Link key={link.label} href={link.href} className="text-[11px] uppercase tracking-[0.14em] text-[#5f5047] transition-colors hover:text-[#9b5c40]">{link.label}</Link>)}
