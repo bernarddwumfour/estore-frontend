@@ -57,9 +57,9 @@ Set the same long, random `REVALIDATE_SECRET` on the backend and frontend for
 each store. Set the backend's `STOREFRONT_BASE_URL` to that store's public
 frontend origin, such as `https://store.example`. The backend derives the
 fixed `/api/revalidate/blog`, `/api/revalidate/categories`, and
-`/api/revalidate/products` callback URLs
-from that origin. For local development on port 3000, use
-`STOREFRONT_BASE_URL=http://localhost:3000`.
+`/api/revalidate/products` callback URLs from that origin. For local
+development, use the matching frontend port: 3000 for iPlug, 3001 for Oak &
+Loom, 3002 for TyrePapa, and 3003 for Olive & Aura.
 These variables are server-only; never use a `NEXT_PUBLIC_` prefix for the
 secret. Restart or redeploy both services after setting them.
 
@@ -72,46 +72,46 @@ shows “Live on store” when every configured storefront accepts the callback;
 this is an acceptance message, not a check that a shopper has loaded the
 refreshed page yet.
 
-Run `npm run dev:iplug` for the iPlug storefront or `npm run dev:oak` for
-Oak & Loom. These commands load `.env.iplug` or `.env.oakandloom` respectively;
-both currently point to the local API on port 8000. Start the matching backend
-profile using `manage_store.py` in the backend project. These environment
-files are local and ignored by Git.
+Run `npm run dev:iplug` for iPlug (`localhost:3000`, API `localhost:8000`) or
+`npm run dev:oak` for Oak & Loom (`localhost:3001`, API `localhost:8001`). Each
+command loads its own ignored environment profile and isolated Next.js build
+directory. Start the matching backend profile with `manage_store.py` in the
+backend project.
 
-## Beauty storefront
+## Olive & Aura storefront
 
-Run `npm run dev:beauty -- --port 3003` to preview the Reel Spa beauty template.
-It reads the shared local `.env` API settings, selects `NEXT_PUBLIC_STORE=beauty`
-for this process, and writes its Next.js build files to `.next-beauty` so it can
-run alongside another local storefront. It displays products from whichever API
-is configured in `.env`; treatments and their sample prices are frontend-only
-content in `src/templates/beauty/pages/HomePage.tsx` and need no service API.
+Run `npm run dev:oliveandaura` to preview the Olive & Aura
+storefront. It loads the ignored `.env.oliveandaura` profile, sets
+`NEXT_PUBLIC_STORE=oliveandaura`, and writes Next.js build files to
+`.next-oliveandaura` so it can run alongside other storefronts. Its API URL is
+configured independently from the other local profiles. Treatments and their
+sample prices remain frontend-only content in `src/templates/beauty/pages/HomePage.tsx`.
+The local profile points to `http://localhost:8003/api`, reserved for the
+Olive & Aura backend profile. Start it with
+`venv/bin/python manage_store.py oliveandaura runserver` after its dedicated
+database URL is configured in the backend `.env.oliveandaura` file.
 
-For a deployment, set `NEXT_PUBLIC_STORE=beauty` and point
-`NEXT_PUBLIC_API_BASE_URL` at the existing catalog API in that deployment's
-build environment, then build and redeploy the frontend. The template does not
-add or require backend routes. `NEXT_DEV_DIST_DIR` is only used by the local
-preview command.
+For a deployment, set `NEXT_PUBLIC_STORE=oliveandaura` and point
+`NEXT_PUBLIC_API_BASE_URL` at the Olive & Aura API in that deployment's build
+environment, then build and redeploy the frontend. `NEXT_DEV_DIST_DIR` is only
+used by the local preview command.
 
 
 ## TyrePapa storefront
 
-Run `npm run dev:tyrepapa -- --port 3002` for TyrePapa. It loads the local,
+Run `npm run dev:tyrepapa` for TyrePapa (`localhost:3002`, API `localhost:8002`). It loads the local,
 ignored `.env.tyrepapa` profile:
 
 ```dotenv
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8002/api
 NEXT_PUBLIC_STORE=tyrepapa
 NEXT_DEV_DIST_DIR=.next-tyrepapa
 ```
 
-The frontend profile currently points to `http://localhost:8000/api`. The
-backend selector has profiles for iPlug and Oak & Loom only; TyrePapa does not
-yet have a separate backend environment/database profile. The frontend will
-use whichever API is running on port 8000, so it does not isolate catalog or
-customer data by itself. The separate Next.js build directory lets TyrePapa
-run alongside the other storefronts. Restart the dev server after changing an
-environment profile.
+The backend selector has a matching TyrePapa environment profile and defaults
+to port 8002. The separate frontend and backend ports and isolated Next.js build
+directory let TyrePapa run beside the other storefronts. Restart the dev server
+after changing an environment profile.
 
 For deployment, commit and push `src/templates/tyrepapa`, `public/tyrepapa`,
 and the storefront registry changes before building. The local `.env.tyrepapa`
@@ -119,7 +119,7 @@ file is ignored by Git and is not sent with the deployment. Set
 `NEXT_PUBLIC_STORE=tyrepapa` and `NEXT_PUBLIC_API_BASE_URL` to the public API
 URL in the deployment project's build environment, then trigger a new build.
 A runtime-only change to `NEXT_PUBLIC_STORE` cannot switch an already built
-frontend. Do not use `localhost:8000` for the deployed API URL; that address
+frontend. Do not use a `localhost` URL for the deployed API; it
 refers to each visitor's own machine. `NEXT_DEV_DIST_DIR` is only for local
 preview isolation and can be left unset in deployment.
 

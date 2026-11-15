@@ -2,10 +2,12 @@ import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { parseEnv } from "node:util";
 
-const profiles = { iplug: ".env.iplug", oak: ".env.oakandloom", tyrepapa: ".env.tyrepapa", beauty: ".env" };
+const profiles = { iplug: ".env.iplug", oak: ".env.oakandloom", tyrepapa: ".env.tyrepapa", oliveandaura: ".env.oliveandaura" };
+const defaultPorts = { iplug: 3000, oak: 3001, tyrepapa: 3002, oliveandaura: 3003 };
+const defaultDistDirs = { iplug: ".next-iplug", oak: ".next-oakandloom", tyrepapa: ".next-tyrepapa", oliveandaura: ".next-oliveandaura" };
 const profile = process.argv[2];
 if (!Object.hasOwn(profiles, profile)) {
-  console.error("Usage: node scripts/dev-store.mjs <iplug|oak|tyrepapa|beauty> [Next.js arguments]");
+  console.error("Usage: node scripts/dev-store.mjs <iplug|oak|tyrepapa|oliveandaura> [Next.js arguments]");
   process.exit(1);
 }
 
@@ -18,12 +20,17 @@ try {
 }
 
 const childEnv = { ...process.env, ...values };
-if (profile === "beauty") {
-  childEnv.NEXT_PUBLIC_STORE = "beauty";
-  childEnv.NEXT_DEV_DIST_DIR = ".next-beauty";
+childEnv.NEXT_DEV_DIST_DIR ||= defaultDistDirs[profile];
+if (profile === "oliveandaura") {
+  childEnv.NEXT_PUBLIC_STORE = "oliveandaura";
+  childEnv.NEXT_DEV_DIST_DIR = ".next-oliveandaura";
 }
 
-const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", ...process.argv.slice(3)], {
+const nextArgs = process.argv.slice(3);
+const hasExplicitPort = nextArgs.some((arg) => arg === "-p" || arg === "--port" || arg.startsWith("--port=") || /^-p\d+$/.test(arg));
+if (!hasExplicitPort && !childEnv.PORT) nextArgs.push("--port", String(defaultPorts[profile]));
+
+const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", ...nextArgs], {
   stdio: "inherit",
   env: childEnv,
 });

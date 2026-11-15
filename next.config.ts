@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Isolate the tyrepapa preview from a concurrently running existing store.
+  // Isolate each storefront preview so they can run side by side.
   distDir: process.env.NEXT_DEV_DIST_DIR || ".next",
   images: {
     remotePatterns: [
@@ -19,6 +19,12 @@ const nextConfig: NextConfig = {
         port: '8000',
         pathname: '/media/**',
       },
+      ...['8001', '8002', '8003'].map((port) => ({
+        protocol: 'http' as const,
+        hostname: 'localhost',
+        port,
+        pathname: '/media/**',
+      })),
       {
         protocol: "https",
         hostname: "www.tailwind-kit.com",

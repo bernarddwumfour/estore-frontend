@@ -37,8 +37,12 @@
     "**/*.mts",
     ".next-tyrepapa/types/**/*.ts",
     ".next-tyrepapa/dev/types/**/*.ts",
-    ".next-beauty/types/**/*.ts",
-    ".next-beauty/dev/types/**/*.ts"
+    ".next-iplug/types/**/*.ts",
+    ".next-iplug/dev/types/**/*.ts",
+    ".next-oakandloom/types/**/*.ts",
+    ".next-oakandloom/dev/types/**/*.ts",
+    ".next-oliveandaura/types/**/*.ts",
+    ".next-oliveandaura/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
