@@ -8,6 +8,7 @@ import { useTheme } from 'next-themes';
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
+  Calendar,
   Package,
   ShoppingCart,
   Users,
@@ -61,6 +62,7 @@ import { AdminAssistantLauncher } from '@/widgets/admin-assistant/AdminAssistant
 // Navigation structure for e-commerce
 const SIDEBAR_LINKS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
+  { icon: Calendar, label: 'Appointments', href: '/dashboard/appointments' },
   {
     icon: MonitorDot,
     label: 'POS',

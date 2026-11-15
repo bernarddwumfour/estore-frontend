@@ -52,6 +52,7 @@ export interface AssistantResponse {
   products?: AssistantProduct[];
   promotions?: AssistantPromotion[];
   order_draft?: AssistantOrderDraft | null;
+  appointment_review?: { action: "book" | "cancel"; review_path: string } | null;
   order_tracking?: AssistantOrderTracking | null;
   requires_shipping_address?: boolean;
 }

@@ -72,6 +72,7 @@ type AssistantChatMessage = ChatMessageData & {
   products?: AssistantProduct[];
   promotions?: AssistantPromotion[];
   orderDraft?: AssistantOrderDraft | null;
+  appointmentReview?: { action: "book" | "cancel"; review_path: string } | null;
   orderTracking?: AssistantOrderTracking | null;
   requiresShippingAddress?: boolean;
 };
@@ -265,6 +266,7 @@ export function ChatAssistant({
           products: result.products ?? [],
           promotions: result.promotions ?? [],
           orderDraft: result.order_draft ?? null,
+          appointmentReview: result.appointment_review ?? null,
           orderTracking: result.order_tracking ?? null,
           requiresShippingAddress: result.requires_shipping_address ?? false,
         },
@@ -443,6 +445,9 @@ export function ChatAssistant({
                     )}
                   {message.role === "assistant" && Boolean(message.promotions?.length) && (
                     <PromotionResults promotions={message.promotions ?? []} theme={theme} />
+                  )}
+                  {message.role === "assistant" && message.appointmentReview && (
+                    <a className="inline-flex rounded-md border px-4 py-2 text-sm font-medium" href={message.appointmentReview.review_path}>Review {message.appointmentReview.action === "book" ? "appointment" : "cancellation"}</a>
                   )}
                   {message.role === "assistant" && message.orderDraft && (
                     <OrderReviewCard draft={message.orderDraft} theme={theme} />
