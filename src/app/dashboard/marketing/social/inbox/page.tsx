@@ -192,6 +192,27 @@ function MessageThread({ conversation, onBack }: {
     const id = conversationId(conversation);
     const accountId = conversationAccountId(conversation);
 
+    const accountAgent = useQuery({
+        queryKey: ['social-agent-account', accountId],
+        queryFn: async () => (await securityAxios.get(`/social/admin/agent/accounts/${encodeURIComponent(accountId)}`)).data.data as {enabled: boolean},
+        enabled: !!accountId,
+    });
+    const threadAgent = useQuery({
+        queryKey: ['social-agent-thread', accountId, id],
+        queryFn: async () => (await securityAxios.get(`/social/admin/agent/conversations/${encodeURIComponent(id)}?account_id=${encodeURIComponent(accountId)}`)).data.data as {paused: boolean; needs_attention: boolean; activity: Array<{provider_message_id: string; reply_message_id: string; status: string; error: string}>},
+        enabled: !!id && !!accountId,
+    });
+    const toggleAccount = useMutation({
+        mutationFn: (enabled: boolean) => securityAxios.put(`/social/admin/agent/accounts/${encodeURIComponent(accountId)}`, {enabled}),
+        onSuccess: () => { accountAgent.refetch(); toast.success('Account agent settings updated'); },
+        onError: (error: unknown) => toast.error(apiMessage(error, 'Could not update agent settings')),
+    });
+    const toggleThread = useMutation({
+        mutationFn: (paused: boolean) => securityAxios.put(`/social/admin/agent/conversations/${encodeURIComponent(id)}?account_id=${encodeURIComponent(accountId)}`, {paused}),
+        onSuccess: () => { threadAgent.refetch(); toast.success('Conversation agent settings updated'); },
+        onError: (error: unknown) => toast.error(apiMessage(error, 'Could not update agent settings')),
+    });
+
     const { data: messages, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['social-messages', id, accountId],
         queryFn: () => fetchMessages(id, accountId),
@@ -215,6 +236,7 @@ function MessageThread({ conversation, onBack }: {
         onSuccess: () => {
             setReply('');
             refetch();
+            threadAgent.refetch();
         },
         onError: (error: unknown) => toast.error(apiMessage(error, 'Failed to send message')),
     });
@@ -226,6 +248,12 @@ function MessageThread({ conversation, onBack }: {
 
     return (
         <>
+            {accountId && <div className="flex flex-wrap gap-2 items-center px-4 py-2 border-b text-xs">
+                <span>AI replies for this account: {accountAgent.data?.enabled ? 'On' : 'Off'}</span>
+                <Button size="sm" variant="outline" disabled={!accountAgent.data || toggleAccount.isPending} onClick={() => toggleAccount.mutate(!accountAgent.data?.enabled)}>{accountAgent.data?.enabled ? 'Disable' : 'Enable'}</Button>
+                <Button size="sm" variant="outline" disabled={!threadAgent.data || toggleThread.isPending} onClick={() => toggleThread.mutate(!threadAgent.data?.paused)}>{threadAgent.data?.paused ? 'Resume AI in conversation' : 'Pause AI in conversation'}</Button>
+                {threadAgent.data?.needs_attention && <span className="text-amber-600">Needs staff attention: {threadAgent.data.activity.find(item => item.error)?.error || "Review this conversation"}</span>}
+            </div>}
             {/* Thread header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800">
                 <button
@@ -276,6 +304,8 @@ function MessageThread({ conversation, onBack }: {
                 ) : (
                     messages.map((message, index) => {
                         const outgoing = isOutgoing(message);
+                        const providerId = String(message.id ?? message._id ?? message.messageId ?? message.message_id ?? "");
+                        const agentReply = !!providerId && threadAgent.data?.activity.some(item => item.reply_message_id === providerId);
                         return (
                             <div
                                 key={String(message._id ?? message.id ?? index)}
@@ -290,7 +320,7 @@ function MessageThread({ conversation, onBack }: {
                                     {messageText(message)}
                                 </div>
                                 <span className="text-[10px] text-gray-400 mt-0.5 px-1">
-                                    {clockTime(messageTime(message))}
+                                    {agentReply ? "AI · " : ""}{clockTime(messageTime(message))}
                                 </span>
                             </div>
                         );
@@ -321,6 +351,22 @@ function MessageThread({ conversation, onBack }: {
     );
 }
 
+
+function AgentAccountSettings() {
+    const [accountId, setAccountId] = useState('');
+    const accounts = useQuery({ queryKey: ['social-agent-accounts'], queryFn: async () => (await securityAxios.get(endpoints.social.adminAccounts)).data.data.accounts as Array<Record<string, unknown>> });
+    const settings = useQuery({ queryKey: ['social-agent-account', accountId], enabled: !!accountId, queryFn: async () => (await securityAxios.get(`/social/admin/agent/accounts/${encodeURIComponent(accountId)}`)).data.data as {enabled: boolean; configured: boolean; queue_backend: string; worker_online: boolean | null} });
+    const update = useMutation({ mutationFn: (enabled: boolean) => securityAxios.put(`/social/admin/agent/accounts/${encodeURIComponent(accountId)}`, {enabled}), onSuccess: () => { settings.refetch(); toast.success('Account agent settings updated'); }, onError: (error: unknown) => toast.error(apiMessage(error, 'Could not update agent settings')) });
+    return <div className="flex flex-wrap items-center gap-2 rounded-xl border p-3 text-sm">
+        <span className="font-medium">Automatic AI replies</span>
+        <select aria-label="Social account for AI replies" className="rounded border bg-transparent p-2" value={accountId} onChange={e => setAccountId(e.target.value)}>
+            <option value="">Select an account</option>
+            {accounts.data?.map(account => { const id = readString(account, ['id', '_id', 'accountId']); return id ? <option key={id} value={id}>{readString(account, ['name', 'displayName', 'username']) || id} · {readString(account, ['platform'])}</option> : null; })}
+        </select>
+        {accountId && settings.data && <><span>{settings.data.enabled ? 'On' : 'Off'}</span><Button size="sm" variant="outline" disabled={update.isPending || (!settings.data.enabled && !settings.data.configured)} onClick={() => update.mutate(!settings.data?.enabled)}>{settings.data.enabled ? 'Disable' : 'Enable'}</Button>{!settings.data.configured && <span className="text-amber-600">Configure the webhook secret to enable replies.</span>}{settings.data.queue_backend === "database" && !settings.data.worker_online && <span className="text-amber-600">Database worker is offline; messages will wait in the queue.</span>}</>}
+        {accounts.isError && <span className="text-red-600">Unable to load accounts.</span>}
+    </div>;
+}
 
 export default function SocialInboxPage() {
     const [platform, setPlatform] = useState('');
@@ -368,6 +414,8 @@ export default function SocialInboxPage() {
                     </Link>
                 </div>
             </div>
+
+            <AgentAccountSettings />
 
             {conversationsError ? (
                 <div className="text-center py-12">
