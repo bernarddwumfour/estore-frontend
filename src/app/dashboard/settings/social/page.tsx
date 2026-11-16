@@ -570,6 +570,23 @@ function AccountsCard({ accounts, profiles, refetchAll, notConfigured, error, is
 
 /* ---------------- Page ---------------- */
 
+
+const accountIdForAgent = accountId;
+
+function AgentAccountSettings({ accounts }: { accounts: SocialAccount[] }) {
+    const [accountId, setAccountId] = useState('');
+    const settings = useQuery({ queryKey: ['social-agent-account', accountId], enabled: !!accountId, queryFn: async () => (await securityAxios.get(`/social/admin/agent/accounts/${encodeURIComponent(accountId)}`)).data.data as {enabled: boolean; configured: boolean; queue_backend: string; worker_online: boolean | null} });
+    const update = useMutation({ mutationFn: (enabled: boolean) => securityAxios.put(`/social/admin/agent/accounts/${encodeURIComponent(accountId)}`, {enabled}), onSuccess: () => { settings.refetch(); toast.success('Account agent settings updated'); }, onError: (error: unknown) => toast.error(apiMessage(error, 'Could not update agent settings')) });
+    return <div className="flex flex-wrap items-center gap-2 rounded-xl border p-3 text-sm">
+        <span className="font-medium">Automatic AI replies</span>
+        <select aria-label="Social account for AI replies" className="rounded border bg-transparent p-2" value={accountId} onChange={e => setAccountId(e.target.value)}>
+            <option value="">Select an account</option>
+            {accounts.map(account => { const id = accountIdForAgent(account); return id ? <option key={id} value={id}>{accountLabel(account)}</option> : null; })}
+        </select>
+        {accountId && settings.data && <><span>{settings.data.enabled ? 'On' : 'Off'}</span><Button size="sm" variant="outline" disabled={update.isPending || (!settings.data.enabled && !settings.data.configured)} onClick={() => update.mutate(!settings.data?.enabled)}>{settings.data.enabled ? 'Disable' : 'Enable'}</Button>{!settings.data.configured && <span className="text-amber-600">Configure the webhook secret to enable replies.</span>}{settings.data.queue_backend === "database" && !settings.data.worker_online && <span className="text-amber-600">Database worker is offline; messages will wait in the queue.</span>}</>}
+    </div>;
+}
+
 export default function SocialSettingsPage() {
     const queryClient = useQueryClient();
 
@@ -668,6 +685,7 @@ export default function SocialSettingsPage() {
             ) : (
                 <>
                     <ModeSwitch config={configQuery.data} />
+                    {!notConfigured && <AgentAccountSettings accounts={accountsQuery.data || []} />}
                     {!notConfigured && usageQuery.data && <UsageCard usage={usageQuery.data} />}
                     <div className="grid grid-cols-1 xl:grid-cols-[3fr_2fr] gap-5 items-start">
                         <AccountsCard
