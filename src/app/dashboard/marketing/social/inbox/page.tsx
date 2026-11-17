@@ -3,7 +3,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getAuthCookie } from '@/lib/providers/auth-provider';
 import { ArrowLeft, Loader2, MessageSquare, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import securityAxios from '@/axios-instances/SecurityAxios';
@@ -183,9 +184,10 @@ function ConversationItem({ conversation, active, onSelect }: {
 
 /* ---------------- Message thread ---------------- */
 
-function MessageThread({ conversation, onBack }: {
+function MessageThread({ conversation, onBack, liveConnected }: {
     conversation: Conversation;
     onBack: () => void;
+    liveConnected: boolean;
 }) {
     const [reply, setReply] = useState('');
     const bottomRef = useRef<HTMLDivElement>(null);
@@ -208,7 +210,7 @@ function MessageThread({ conversation, onBack }: {
         queryFn: () => fetchMessages(id, accountId),
         enabled: !!id && !!accountId,
         retry: false,
-        refetchInterval: 5000,
+        refetchInterval: liveConnected ? 60000 : 30000,
     });
 
     // keep the newest message in view, like any messenger
@@ -341,7 +343,61 @@ function MessageThread({ conversation, onBack }: {
 }
 
 
+function useSocialInboxEvents() {
+    const client = useQueryClient();
+    const [connected, setConnected] = useState(false);
+    useEffect(() => {
+        const controller = new AbortController();
+        let retryTimer: ReturnType<typeof setTimeout> | undefined;
+        const refresh = () => {
+            client.invalidateQueries({queryKey: ['social-conversations']});
+            client.invalidateQueries({queryKey: ['social-messages']});
+            client.invalidateQueries({queryKey: ['social-agent-thread']});
+        };
+        const connect = async () => {
+            try {
+                const token = getAuthCookie()?.tokens?.access_token;
+                if (!token) throw new Error('Not signed in');
+                const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+                const response = await fetch(`${base}/social/admin/inbox/events`, {
+                    headers: {Authorization: `Bearer ${token}`, Accept: 'text/event-stream'},
+                    cache: 'no-store', signal: controller.signal,
+                });
+                if (!response.ok || !response.body || !response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('Stream unavailable');
+                setConnected(true);
+                refresh();
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                while (!controller.signal.aborted) {
+                    const {value, done} = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, {stream: true}).replace(/\r\n/g, '\n');
+                    let boundary: number;
+                    while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+                        const event = buffer.slice(0, boundary);
+                        buffer = buffer.slice(boundary + 2);
+                        if (event.split('\n').some(line => line.trim() === 'event: inbox.changed')) refresh();
+                    }
+                    if (buffer.length > 65536) throw new Error('Invalid stream');
+                }
+            } catch {
+                // Polling continues while the connection is unavailable.
+            } finally {
+                if (!controller.signal.aborted) {
+                    setConnected(false);
+                    retryTimer = setTimeout(connect, 5000);
+                }
+            }
+        };
+        connect();
+        return () => { controller.abort(); if (retryTimer) clearTimeout(retryTimer); };
+    }, [client]);
+    return connected;
+}
+
 export default function SocialInboxPage() {
+    const liveConnected = useSocialInboxEvents();
     const [platform, setPlatform] = useState('');
     const [selectedId, setSelectedId] = useState<string>('');
     const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
@@ -356,7 +412,7 @@ export default function SocialInboxPage() {
         queryKey: ['social-conversations', platform],
         queryFn: () => fetchConversations(platform),
         retry: false,
-        refetchInterval: 30000, // keep previews fresh, messenger-style
+        refetchInterval: liveConnected ? 60000 : 30000,
     });
 
     const selectedConversation =
@@ -443,6 +499,7 @@ export default function SocialInboxPage() {
                                 key={conversationId(selectedConversation)}
                                 conversation={selectedConversation}
                                 onBack={() => setMobileThreadOpen(false)}
+                                liveConnected={liveConnected}
                             />
                         ) : (
                             <div className="flex-1 flex flex-col items-center justify-center text-center px-6 space-y-2">
