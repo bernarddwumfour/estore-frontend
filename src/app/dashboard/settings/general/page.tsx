@@ -139,29 +139,6 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     );
 }
 
-function AISettingsCard({ config }: { config: GeneralConfig }) {
-    const save = useSaveConfig('AI settings saved');
-    const controls = [
-        { key: 'ai_enabled', label: 'Enable AI features' },
-        { key: 'ai_semantic_search_enabled', label: 'Storefront semantic search' },
-        { key: 'ai_discovery_enabled', label: 'Product discovery tools in chat' },
-        { key: 'ai_shopper_enabled', label: 'Shopper assistant' },
-        { key: 'ai_guest_enabled', label: 'Guest assistant' },
-        { key: 'ai_admin_enabled', label: 'Admin assistant' },
-    ] as const;
-    return <SettingsCard icon={<Store size={15} />} title="AI features and agents"
-        description="Control AI assistance for this store. Standard keyword search remains available when AI is off.">
-        {controls.map(({ key, label }) => <div key={key} className="flex items-center justify-between gap-3">
-            <label htmlFor={key} className="text-sm text-gray-700 dark:text-gray-300">{label}</label>
-            <div className="flex items-center gap-2">
-                {save.isPending && save.variables && key in save.variables && <Loader2 size={14} className="animate-spin" />}
-                <Switch id={key} checked={config[key]} disabled={save.isPending || (key !== 'ai_enabled' && !config.ai_enabled)}
-                    onCheckedChange={(value) => save.mutate({ [key]: value })} />
-            </div>
-        </div>)}
-    </SettingsCard>;
-}
-
 /* ---------------- Payments ---------------- */
 
 function PaymentsCard({ config }: { config: GeneralConfig }) {
@@ -543,7 +520,6 @@ export default function GeneralSettingsPage() {
                 // key remounts the editors after each save/refetch so their
                 // local draft state re-initializes from the fresh config
                 <React.Fragment key={config.updated_at ?? 'initial'}>
-                    <AISettingsCard config={config} />
                     <PaymentsCard config={config} />
                     <NotificationsCard config={config} />
                     <OrderRulesCard config={config} />

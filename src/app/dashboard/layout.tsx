@@ -128,6 +128,7 @@ const SIDEBAR_LINKS = [
     isCollapsible: true,
     children: [
       { icon: Settings, label: 'General', href: '/dashboard/settings/general' },
+      { icon: MonitorDot, label: 'AI', href: '/dashboard/settings/ai' },
       { icon: Share2, label: 'Social', href: '/dashboard/settings/social' },
       { icon: Truck, label: 'Shipping', href: '/dashboard/settings/shipping' },
       // { icon: FileText, label: 'Pages', href: '/dashboard/settings/pages' },
