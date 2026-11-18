@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   // Isolate each storefront preview so they can run side by side.
   distDir: process.env.NEXT_DEV_DIST_DIR || ".next",
   images: {
+    // Olive & Aura images are already served by Cloudinary. In local preview,
+    // fetching them again through Next's optimizer returns a 500.
+    unoptimized: process.env.NEXT_PUBLIC_STORE === "oliveandaura",
     remotePatterns: [
       {
         protocol: "https",

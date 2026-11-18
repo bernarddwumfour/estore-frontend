@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:iplug": "node scripts/dev-store.mjs iplug",
     "dev:oak": "node scripts/dev-store.mjs oak",
-    "dev:oliveandaura": "node scripts/dev-store.mjs oliveandaura",
+    "dev:oliveandaura": "node scripts/dev-store.mjs oliveandaura --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

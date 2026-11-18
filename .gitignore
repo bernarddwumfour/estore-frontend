@@ -21,6 +21,10 @@
 /.next-iplug/
 /.next-oakandloom/
 /out/
+/public/tyrepapa/tyre-hero-road-preview.png
+/public/tyrepapa/tyre-hero-road-stack-preview.png
+/public/tyrepapa/tyre-hero-road-stack-v2-preview.png
+/public/tyrepapa/tyre-hero-road-stack-v3-preview.png
 
 # production
 /build
