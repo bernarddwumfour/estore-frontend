@@ -34,7 +34,7 @@ export default function AppointmentsPage() {
   };
   if (settingsQuery.isLoading || exceptionQuery.isLoading || appointmentsQuery.isLoading || requestsQuery.isLoading) return <div className="p-6">Loading appointments…</div>;
   if (!current || settingsQuery.isError || exceptionQuery.isError || appointmentsQuery.isError) return <div className="p-6">Unable to load appointment settings. Please refresh and try again.</div>;
-  return <div className="mx-auto max-w-6xl space-y-8 p-6">
+  return <div className="w-full space-y-8 p-6">
     <div><h1 className="text-2xl font-semibold">Appointments</h1><p className="text-sm text-muted-foreground">Manage availability and customer appointments. One appointment can take place at a time.</p></div>
     <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
     <div className="min-w-0 space-y-6">
