@@ -37,8 +37,8 @@ interface AnalyticsStatTileProps {
  */
 export function AnalyticsStatTile({ label, value, icon, color = 'zinc', footer, className }: AnalyticsStatTileProps) {
     return (
-        <Card className={cn('bg-white dark:bg-black border-gray-200 dark:border-gray-800', className)}>
-            <CardContent className="p-6">
+        <Card className={cn('bg-white dark:bg-black border-gray-200 dark:border-gray-800 py-0', className)}>
+            <CardContent className="px-5 py-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</p>

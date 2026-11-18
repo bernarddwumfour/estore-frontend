@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
  * duplicated byte-for-byte in each page. */
 
 export const KPICardSkeleton = () => (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
-        <CardContent className="p-6">
+    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800 py-0">
+        <CardContent className="px-5 py-4">
             <div className="flex items-center justify-between">
                 <div className="space-y-2">
                     <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
