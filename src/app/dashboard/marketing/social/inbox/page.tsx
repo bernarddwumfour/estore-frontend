@@ -15,6 +15,7 @@ import { clockTime, timeAgo } from '@/lib/format-time';
 import RefreshButton from '@/widgets/refresh-button/RefreshButton';
 import { UserAvatar } from '@/widgets/user-avatar/UserAvatar';
 import { TestModeBadge } from '@/widgets/social/TestModeBadge';
+import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
 
 interface Conversation {
     id?: string;
@@ -190,18 +191,25 @@ function MessageThread({ conversation, onBack, liveConnected }: {
     liveConnected: boolean;
 }) {
     const [reply, setReply] = useState('');
+    const [takeoverOpen, setTakeoverOpen] = useState(false);
+    const queryClient = useQueryClient();
     const bottomRef = useRef<HTMLDivElement>(null);
     const id = conversationId(conversation);
     const accountId = conversationAccountId(conversation);
 
     const threadAgent = useQuery({
         queryKey: ['social-agent-thread', accountId, id],
-        queryFn: async () => (await securityAxios.get(`/social/admin/agent/conversations/${encodeURIComponent(id)}?account_id=${encodeURIComponent(accountId)}`)).data.data as {paused: boolean; needs_attention: boolean; activity: Array<{provider_message_id: string; reply_message_id: string; status: string; error: string}>},
+        queryFn: async () => (await securityAxios.get(`/social/admin/agent/conversations/${encodeURIComponent(id)}?account_id=${encodeURIComponent(accountId)}`)).data.data as {paused: boolean; ai_available: boolean; handler: 'ai' | 'staff'; needs_attention: boolean; activity: Array<{provider_message_id: string; reply_message_id: string; status: string; error: string}>},
         enabled: !!id && !!accountId,
+        refetchInterval: liveConnected ? 60000 : 30000,
     });
     const toggleThread = useMutation({
-        mutationFn: (paused: boolean) => securityAxios.put(`/social/admin/agent/conversations/${encodeURIComponent(id)}?account_id=${encodeURIComponent(accountId)}`, {paused}),
-        onSuccess: () => { threadAgent.refetch(); toast.success('Conversation agent settings updated'); },
+        mutationFn: async (paused: boolean) => (await securityAxios.put(`/social/admin/agent/conversations/${encodeURIComponent(id)}?account_id=${encodeURIComponent(accountId)}`, {paused})).data.data,
+        onSuccess: (data, paused) => {
+            queryClient.setQueryData(['social-agent-thread', accountId, id], data);
+            setTakeoverOpen(false);
+            toast.success(paused ? 'You are handling this conversation' : 'Conversation handed over to AI');
+        },
         onError: (error: unknown) => toast.error(apiMessage(error, 'Could not update agent settings')),
     });
 
@@ -234,15 +242,20 @@ function MessageThread({ conversation, onBack, liveConnected }: {
         onError: (error: unknown) => toast.error(apiMessage(error, 'Failed to send message')),
     });
 
+    const staffHandling = threadAgent.data?.handler === 'staff';
+    const canSend = !!accountId && staffHandling && !toggleThread.isPending && !threadAgent.isError;
     const handleSend = () => {
-        if (!reply.trim() || sendMutation.isPending) return;
+        if (!canSend || !reply.trim() || sendMutation.isPending) return;
         sendMutation.mutate(reply.trim());
     };
 
     return (
         <>
             {accountId && <div className="flex flex-wrap gap-2 items-center px-4 py-2 border-b text-xs">
-                <Button size="sm" variant="outline" disabled={!threadAgent.data || toggleThread.isPending} onClick={() => toggleThread.mutate(!threadAgent.data?.paused)}>{threadAgent.data?.paused ? 'Resume AI in conversation' : 'Pause AI in conversation'}</Button>
+                <span className="font-medium">{threadAgent.isError ? 'Unable to load conversation control' : !threadAgent.data ? 'Loading conversation control…' : staffHandling ? 'Handled by staff' : 'Handled by AI'}</span>
+                {!staffHandling && threadAgent.data && <Button size="sm" variant="outline" disabled={toggleThread.isPending} onClick={() => setTakeoverOpen(true)}>Take over from AI</Button>}
+                {staffHandling && <Button size="sm" variant="outline" disabled={!threadAgent.data?.ai_available || toggleThread.isPending || sendMutation.isPending} onClick={() => toggleThread.mutate(false)}>Hand over to AI</Button>}
+                {staffHandling && !threadAgent.data?.ai_available && <span className="text-gray-500">Enable the guest assistant and social AI replies in AI settings to hand over.</span>}
                 {threadAgent.data?.needs_attention && <span className="text-amber-600">Needs staff attention: {threadAgent.data.activity.find(item => item.error)?.error || "Review this conversation"}</span>}
             </div>}
             {/* Thread header */}
@@ -320,18 +333,24 @@ function MessageThread({ conversation, onBack, liveConnected }: {
                 <div ref={bottomRef} />
             </div>
 
+            <InfoDialog open={takeoverOpen} onOpenChange={setTakeoverOpen}
+                title="Take over from AI?"
+                infoMessage="AI replies will pause for this conversation. You can reply manually and hand it back to AI later."
+                primaryButtonText={toggleThread.isPending ? 'Taking over…' : 'Take over'}
+                primaryAction={() => { if (!toggleThread.isPending) toggleThread.mutate(true); }}
+                secondaryAction={() => setTakeoverOpen(false)} />
             {/* Reply box */}
             <div className="p-3 border-t border-gray-200 dark:border-gray-800 flex gap-2">
                 <input
                     value={reply}
                     onChange={(e) => setReply(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder="Type a message..."
-                    disabled={sendMutation.isPending || !accountId}
+                    placeholder={threadAgent.data?.handler === 'ai' ? "AI is handling this conversation" : "Type a message..."}
+                    disabled={sendMutation.isPending || !canSend}
                     className="flex-1 px-4 py-2 text-sm border border-gray-200 dark:border-gray-800 rounded-full bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-400/40 disabled:opacity-60"
                 />
                 <Button
-                    disabled={!reply.trim() || sendMutation.isPending || !accountId}
+                    disabled={!reply.trim() || sendMutation.isPending || !canSend}
                     onClick={handleSend}
                     className="rounded-full gap-2"
                 >
