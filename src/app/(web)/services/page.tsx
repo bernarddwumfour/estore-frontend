@@ -1,6 +1,6 @@
 "use client"
 
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import {
     Wrench,
@@ -12,7 +12,10 @@ import {
     X
 } from "lucide-react"
 import * as Dialog from "@radix-ui/react-dialog"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
+import unAuthenticatedAxios from "@/axios-instances/UnAuthenticatedAxios"
+import { toast } from "sonner"
 
 interface ServiceCard {
     id: string
@@ -21,6 +24,15 @@ interface ServiceCard {
     description: string
     basePrice: string
     icon: React.ComponentType<{ className?: string }>
+}
+
+interface ApiService {
+    id: string
+    title: string
+    slug: string
+    short_description: string
+    description: string
+    options: { pricing_type: "fixed" | "from" | "quote"; price: string | null }[]
 }
 
 interface ServiceFormInputs {
@@ -33,46 +45,35 @@ interface ServiceFormInputs {
     issueDescription: string
 }
 
-const AVAILABLE_SERVICES: ServiceCard[] = [
-    {
-        id: "srv-1",
-        title: "Battery Replacement",
-        slug: "battery-replacement",
-        description: "Restore your device to peak performance with genuine battery cells.",
-        basePrice: "From $69",
-        icon: Wrench,
-    },
-    {
-        id: "srv-2",
-        title: "Screen Repair",
-        slug: "screen-repair",
-        description: "Fix cracked glass and unresponsive screens with TrueTone calibration.",
-        basePrice: "From $149",
-        icon: Smartphone,
-    },
-    {
-        id: "srv-3",
-        title: "Trade-In Evaluation",
-        slug: "trade-in",
-        description: "Turn your old device into instant store credit.",
-        basePrice: "Instant Quote",
-        icon: RefreshCw,
-    },
-    {
-        id: "srv-4",
-        title: "Logic Board Repair",
-        slug: "hardware-diagnostics",
-        description: "Advanced micro-soldering for water damage and booting errors.",
-        basePrice: "Free Assessment",
-        icon: ShieldAlert,
-    },
-]
+const serviceIcons: Record<string, ServiceCard["icon"]> = {
+    "battery-replacement": Wrench,
+    "screen-repair": Smartphone,
+    "trade-in": RefreshCw,
+    "hardware-diagnostics": ShieldAlert,
+}
+
+function toServiceCard(service: ApiService): ServiceCard {
+    const option = service.options[0]
+    const price = option?.price ? new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(Number(option.price)) : null
+    return {
+        id: service.id,
+        title: service.title,
+        slug: service.slug,
+        description: service.short_description || service.description,
+        basePrice: option?.pricing_type === "quote" || !price ? "Request a quote" : `${option.pricing_type === "from" ? "From " : ""}${price}`,
+        icon: serviceIcons[service.slug] || Wrench,
+    }
+}
 
 export default function ServicesPage() {
     const [isOpen, setIsOpen] = useState(false)
-    const [selectedService, setSelectedService] = useState<ServiceCard | null>(null)
+    const servicesQuery = useQuery({
+        queryKey: ["iplug-services"],
+        queryFn: async () => (await unAuthenticatedAxios.get("/services?sort=order&limit=100")).data.data.services as ApiService[],
+    })
+    const availableServices = useMemo(() => (servicesQuery.data || []).map(toServiceCard), [servicesQuery.data])
 
-    const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<ServiceFormInputs>({
+    const { register, handleSubmit, setValue, control, formState: { errors, isSubmitting }, reset } = useForm<ServiceFormInputs>({
         defaultValues: {
             serviceType: "",
             customServiceType: "",
@@ -84,23 +85,22 @@ export default function ServicesPage() {
         }
     })
 
-    const selectedServiceType = watch("serviceType")
+    const selectedServiceType = useWatch({ control, name: "serviceType" })
 
     // Update issue description when service type changes
     useEffect(() => {
         if (selectedServiceType && selectedServiceType !== "other") {
-            const service = AVAILABLE_SERVICES.find(s => s.slug === selectedServiceType)
+            const service = availableServices.find(s => s.slug === selectedServiceType)
             if (service) {
                 setValue("issueDescription", `I need help with ${service.title}. My device is having issues with: `)
             }
         } else if (selectedServiceType === "other") {
             setValue("issueDescription", "Please describe what service you need: ")
         }
-    }, [selectedServiceType, setValue])
+    }, [selectedServiceType, setValue, availableServices])
 
     // Open modal and pre-populate fields matching card attributes
     const handleOpenRequestForm = (service: ServiceCard) => {
-        setSelectedService(service)
         reset({
             serviceType: service.slug,
             customServiceType: "",
@@ -113,17 +113,29 @@ export default function ServicesPage() {
         setIsOpen(true)
     }
 
-    const onSubmit = (data: ServiceFormInputs) => {
-        const finalServiceType = data.serviceType === "other" ? data.customServiceType : data.serviceType
-        console.log("Submitted:", { ...data, serviceType: finalServiceType })
-        alert("Thanks! We'll get back to you within 24 hours.")
-        setIsOpen(false)
+    const onSubmit = async (data: ServiceFormInputs) => {
+        try {
+            await unAuthenticatedAxios.post("/services/requests", {
+                service_type: data.serviceType,
+                custom_service_type: data.customServiceType,
+                device_model: data.deviceModel,
+                customer_name: data.clientName,
+                customer_email: data.clientEmail,
+                customer_phone: data.clientPhone,
+                issue_description: data.issueDescription,
+            })
+            toast.success("Service request submitted. We'll be in touch soon.")
+            setIsOpen(false)
+            reset()
+        } catch {
+            toast.error("Could not submit your request. Please try again.")
+        }
     }
 
     // Get service title for display
     const getServiceTitle = () => {
         if (selectedServiceType === "other") return "Other Service"
-        const service = AVAILABLE_SERVICES.find(s => s.slug === selectedServiceType)
+        const service = availableServices.find(s => s.slug === selectedServiceType)
         return service ? service.title : "Service Request"
     }
 
@@ -145,7 +157,7 @@ export default function ServicesPage() {
                         </h1>
                     </div>
                     <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed pt-2">
-                        Choose a service below to get started. We'll handle the rest.
+                        Choose a service below to get started. We&apos;ll handle the rest.
                     </p>
                 </div>
             </section>
@@ -164,7 +176,10 @@ export default function ServicesPage() {
 
                     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {AVAILABLE_SERVICES.map((service) => {
+                            {servicesQuery.isLoading && <p className="col-span-full text-center text-slate-500">Loading services…</p>}
+                            {servicesQuery.isError && <p role="alert" className="col-span-full text-center text-red-600">Services could not be loaded. Please try again.</p>}
+                            {servicesQuery.isSuccess && availableServices.length === 0 && <p className="col-span-full text-center text-slate-500">No services are available yet.</p>}
+                            {availableServices.map((service) => {
                                 const IconComponent = service.icon
                                 return (
                                     <div
@@ -210,7 +225,7 @@ export default function ServicesPage() {
                                             Request {getServiceTitle()}
                                         </Dialog.Title>
                                         <Dialog.Description className="text-sm text-slate-500">
-                                            Tell us about your device and we'll reach out shortly.
+                                            Tell us about your device and we&apos;ll reach out shortly.
                                         </Dialog.Description>
                                     </div>
                                     <Dialog.Close asChild>
@@ -231,10 +246,7 @@ export default function ServicesPage() {
                                             className="w-full bg-[#f8f9fa] border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-slate-950 transition-colors cursor-pointer"
                                         >
                                             <option value="">Select a service</option>
-                                            <option value="battery-replacement">Battery Replacement</option>
-                                            <option value="screen-repair">Screen Repair</option>
-                                            <option value="trade-in">Trade-In Evaluation</option>
-                                            <option value="hardware-diagnostics">Logic Board Repair</option>
+                                            {availableServices.map(service => <option key={service.id} value={service.slug}>{service.title}</option>)}
                                             <option value="other">Other (please specify)</option>
                                         </select>
                                         {errors.serviceType && (
@@ -356,8 +368,8 @@ export default function ServicesPage() {
 
                                     {/* Submit Button */}
                                     <div className="pt-4">
-                                        <Button type="submit" className="w-full flex items-center justify-center gap-2">
-                                            Submit Request
+                                        <Button type="submit" disabled={isSubmitting} className="w-full flex items-center justify-center gap-2">
+                                            {isSubmitting ? "Submitting…" : "Submit Request"}
                                             <Send className="h-4 w-4" />
                                         </Button>
                                     </div>
