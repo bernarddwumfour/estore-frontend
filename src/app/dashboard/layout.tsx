@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Calendar,
   Package,
+  Wrench,
   ShoppingCart,
   Users,
   Settings,
@@ -62,7 +63,6 @@ import { AdminAssistantLauncher } from '@/widgets/admin-assistant/AdminAssistant
 // Navigation structure for e-commerce
 const SIDEBAR_LINKS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-  { icon: Calendar, label: 'Appointments', href: '/dashboard/appointments' },
   {
     icon: MonitorDot,
     label: 'POS',
@@ -73,6 +73,7 @@ const SIDEBAR_LINKS = [
     //   { icon: Layers, label: 'POS', href: '/dashboard/pos' },
     // ]
   },
+  { icon: Calendar, label: 'Appointments', href: '/dashboard/appointments' },
   {
     icon: Package,
     label: 'Products',
@@ -83,6 +84,16 @@ const SIDEBAR_LINKS = [
       { icon: Package, label: 'All Products', href: '/dashboard/products' },
       { icon: Tag, label: 'Poduct Variants', href: '/dashboard/products/variants' },
     ]
+  },
+  {
+    icon: Wrench,
+    label: 'Services',
+    isCollapsible: true,
+    children: [
+      { icon: Layers, label: 'Categories', href: '/dashboard/services/categories' },
+      { icon: Wrench, label: 'All Services', href: '/dashboard/services' },
+      { icon: Tag, label: 'Service Options', href: '/dashboard/services/options' },
+    ],
   },
   {
     icon: ShoppingCart,
@@ -153,7 +164,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // --- States ---
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [openMenus, setOpenMenus] = useState<string[]>(['Products', 'Orders', 'Users', 'Marketing', 'Store Settings', 'Audit Logs']);
+  const [openMenus, setOpenMenus] = useState<string[]>(['Products', 'Services', 'Orders', 'Users', 'Marketing', 'Store Settings', 'Audit Logs']);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
 
