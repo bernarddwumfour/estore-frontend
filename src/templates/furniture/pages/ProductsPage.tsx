@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import ProductsGridSkeleton from "@/app/(web)/products/(components)/ProductsGridSkeleton";
 import ProductsGridWrapper from "@/app/(web)/products/(components)/ProductsGridWrapper";
 import { AdvancedFilters } from "@/widgets/advanced-filters/AdvancedFilters";
+import ProductFiltersSkeleton from "@/widgets/advanced-filters/ProductFiltersSkeleton";
 import Categories, { CategoriesSkeleton } from "../components/Categories";
 import PageHeader from "../components/PageHeader";
 import type { ProductsPageProps } from "../../contract";
@@ -27,16 +28,14 @@ export default function ProductsPage({ searchParams }: ProductsPageProps) {
 
       {/* Filters + grid */}
       <section className="container mx-auto px-4 py-12 lg:px-8">
-        <Suspense fallback={<ProductsGridSkeleton />}>
-          <div className="flex flex-col gap-6 lg:flex-row">
-            <div className="flex-shrink-0 lg:sticky lg:top-32 lg:h-fit lg:w-[280px] lg:rounded-2xl lg:border lg:border-[#e7e1d3] lg:p-4 xl:w-[300px]">
-              <AdvancedFilters />
-            </div>
-            <div className="min-w-0 flex-1">
-              <ProductsGridWrapper searchParams={searchParams} />
-            </div>
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <div className="flex-shrink-0 lg:sticky lg:top-32 lg:h-fit lg:w-[280px] lg:rounded-2xl lg:border lg:border-[#e7e1d3] lg:p-4 xl:w-[300px]">
+            <Suspense fallback={<ProductFiltersSkeleton />}><AdvancedFilters /></Suspense>
           </div>
-        </Suspense>
+          <div className="min-w-0 flex-1">
+            <Suspense fallback={<ProductsGridSkeleton />}><ProductsGridWrapper searchParams={searchParams} /></Suspense>
+          </div>
+        </div>
       </section>
     </div>
   );

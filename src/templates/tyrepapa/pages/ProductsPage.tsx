@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import ProductsGridSkeleton from "@/app/(web)/products/(components)/ProductsGridSkeleton";
 import ProductsGridWrapper from "@/app/(web)/products/(components)/ProductsGridWrapper";
 import { AdvancedFilters } from "@/widgets/advanced-filters/AdvancedFilters";
+import ProductFiltersSkeleton from "@/widgets/advanced-filters/ProductFiltersSkeleton";
 import Categories from "../components/Categories";
 import CategoriesSkeleton from "../components/CategoriesSkeleton";
 import type { ProductsPageProps } from "../../contract";
@@ -14,7 +15,7 @@ export default function ProductsPage({ searchParams }: ProductsPageProps) {
     </Suspense>
     <section className={styles.shopBody} aria-label="Browse products">
       <div className={styles.shopLayout}>
-        <aside className={styles.shopFilters} aria-label="Product filters"><Suspense fallback={<p>Loading filters...</p>}><AdvancedFilters /></Suspense></aside>
+        <aside className={styles.shopFilters} aria-label="Product filters"><Suspense fallback={<ProductFiltersSkeleton />}><AdvancedFilters /></Suspense></aside>
         <div className={styles.shopResults}><Suspense fallback={<ProductsGridSkeleton />}><ProductsGridWrapper searchParams={searchParams} /></Suspense></div>
       </div>
     </section>
