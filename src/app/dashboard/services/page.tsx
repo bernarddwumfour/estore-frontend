@@ -16,6 +16,7 @@ import { ActionsDropdown } from '@/widgets/actions-dropdown/ActionsDropdown';
 import { CustomFilter, type FilterConfig } from '@/widgets/custom-filter/CustomFilterFromUrl';
 import { CustomPagination, type PaginationMeta } from '@/widgets/custom-pagination/CustomPagination';
 import ServiceForm from './ServiceForm';
+import { ServiceOptionForm } from './ServiceOptionForm';
 import type { AdminService, ServiceCategory } from './types';
 
 type ServicePage = { services: AdminService[]; total: number; pagination: { page: number; limit: number; total_pages: number } };
@@ -35,6 +36,8 @@ function ServicesContent() {
   const params = useSearchParams();
   const client = useQueryClient();
   const [creating, setCreating] = useState(false);
+  const [editingService, setEditingService] = useState<AdminService | null>(null);
+  const [addingOptionFor, setAddingOptionFor] = useState<AdminService | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<ServiceRow | null>(null);
   const page = Math.max(1, Number(params.get('page')) || 1);
   const limit = Math.min(100, Math.max(1, Number(params.get('limit')) || 20));
@@ -87,11 +90,17 @@ function ServicesContent() {
     <CustomDialog title="Create New Service" description="Create a draft, then add a booking option before publishing." open={creating} onOpenChange={setCreating} contentWidth="max-w-[800px]">
       {categories.isError ? <p className="text-sm text-destructive">Could not load service categories.</p> : <ServiceForm categories={categories.data ?? []} onSaved={item => { setCreating(false); router.push(`/dashboard/services/${item.id}`); }} onCancel={() => setCreating(false)} />}
     </CustomDialog>
+    <CustomDialog title="Edit Service" description="Update the service details and storefront status." open={!!editingService} onOpenChange={open => { if (!open) setEditingService(null); }} contentWidth="max-w-[800px]">
+      {categories.isError ? <p className="text-sm text-destructive">Could not load service categories.</p> : editingService && <ServiceForm key={editingService.id} service={editingService} categories={categories.data ?? []} onSaved={() => setEditingService(null)} onCancel={() => setEditingService(null)} />}
+    </CustomDialog>
+    <CustomDialog title="Add Service Option" description={`Add a booking option for ${addingOptionFor?.title ?? 'this service'}.`} open={!!addingOptionFor} onOpenChange={open => { if (!open) setAddingOptionFor(null); }} contentWidth="max-w-[600px]">
+      {addingOptionFor && <ServiceOptionForm key={addingOptionFor.id} serviceId={addingOptionFor.id} onCancel={() => setAddingOptionFor(null)} onSaved={() => setAddingOptionFor(null)} />}
+    </CustomDialog>
     <InfoDialog open={!!archiveTarget} onOpenChange={open => { if (!open) setArchiveTarget(null); }} title="Archive Service" infoMessage={`Archive ${archiveTarget?.title ?? 'this service'}? It will no longer appear on the storefront.`} variant="info" primaryButtonText="Archive" primaryAction={() => { if (archiveTarget) archive.mutate(archiveTarget.id); setArchiveTarget(null); }} secondaryAction={() => setArchiveTarget(null)} />
     {services.isLoading ? <TableSkeleton /> : services.isError ? <p role="alert" className="rounded-lg border p-8 text-center text-destructive">Could not load services. Try Refresh.</p> : <DataTable<ServiceRow> data={rows} excludeColumns={['id', 'hasActiveOption']} images={{ image: row => row.image }} links={{ title: row => `/dashboard/services/${row.id}` }} dots={{ status: { published: 'emerald', draft: 'amber', archived: 'rose' } }} badges={{ featured: { true: 'amber', false: 'zinc' } }} renderActions={row => <ActionsDropdown actions={[
       { label: 'View Details', icon: <Eye />, onClick: () => router.push(`/dashboard/services/${row.id}`), color: 'emerald' },
-      { label: 'Edit Service', icon: <Edit />, onClick: () => router.push(`/dashboard/services/${row.id}?edit=1`), color: 'blue' },
-      { label: 'Add Option', icon: <Plus />, onClick: () => router.push(`/dashboard/services/${row.id}?addOption=1`), color: 'violet' },
+      { label: 'Edit Service', icon: <Edit />, onClick: () => { const service = services.data?.services.find(item => item.id === row.id); if (service) setEditingService(service); }, color: 'blue' },
+      { label: 'Add Option', icon: <Plus />, onClick: () => { const service = services.data?.services.find(item => item.id === row.id); if (service) setAddingOptionFor(service); }, color: 'violet' },
       { label: 'View Options', icon: <Tag />, onClick: () => router.push(`/dashboard/services/${row.id}#booking-options`), color: 'amber' },
       { label: row.featured ? 'Remove Featured' : 'Mark Featured', icon: <Star />, onClick: () => updateService.mutate({ id: row.id, values: { is_featured: !row.featured } }), color: 'amber', disabled: updateService.isPending || archive.isPending },
       { label: row.status === 'published' ? 'Move to Draft' : row.status === 'draft' ? 'Publish' : 'Restore to Draft', icon: row.status === 'published' ? <FileText /> : <CheckCircle />, onClick: () => updateService.mutate({ id: row.id, values: { status: row.status === 'published' || row.status === 'archived' ? 'draft' : 'published' } }), color: 'emerald', disabled: updateService.isPending || archive.isPending || (row.status === 'draft' && !row.hasActiveOption) },

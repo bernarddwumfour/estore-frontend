@@ -3,23 +3,23 @@
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle, Edit, Eye, RefreshCw, Star, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle, Edit, Eye, Plus, RefreshCw, Star, Trash2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import securityAxios from '@/axios-instances/SecurityAxios';
 import { apiMessage } from '@/lib/api-message';
 import { formatCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { ActionsDropdown } from '@/widgets/actions-dropdown/ActionsDropdown';
+import { CustomDialog } from '@/widgets/custom-dialog/CustomDialog';
 import { DataTable } from '@/widgets/custom-table/DataTable';
 import { TableSkeleton } from '@/widgets/custom-table/TableSkeleton';
 import { CustomFilter, type FilterConfig } from '@/widgets/custom-filter/CustomFilterFromUrl';
 import { CustomPagination, type PaginationMeta } from '@/widgets/custom-pagination/CustomPagination';
 import { InfoDialog } from '@/widgets/custom-dialog/InfoDialog';
-import type { ServiceOption, ServiceStatus } from '../types';
+import type { ServiceStatus } from '../types';
+import { ServiceOptionForm, type ServiceChoice, type ListedServiceOption } from '../ServiceOptionForm';
 
-type ListedOption = ServiceOption & {
-  service: { id: string; title: string; status: ServiceStatus };
-};
+type ListedOption = ListedServiceOption & { service: ListedServiceOption['service'] & { status: ServiceStatus } };
 type OptionPage = {
   options: ListedOption[];
   total: number;
@@ -50,6 +50,8 @@ function ServiceOptionsContent() {
   const client = useQueryClient();
   const params = useSearchParams();
   const [deleteTarget, setDeleteTarget] = useState<ListedOption | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingOption, setEditingOption] = useState<ListedOption | null>(null);
   const page = Math.max(1, Number(params.get('page')) || 1);
   const limit = Math.min(100, Math.max(1, Number(params.get('limit')) || 20));
   const search = params.get('search') || '';
@@ -59,6 +61,11 @@ function ServiceOptionsContent() {
     queryFn: async () => (await securityAxios.get('/services/admin/options', {
       params: { page, limit, search, is_active: isActive },
     })).data.data as OptionPage,
+  });
+  const services = useQuery({
+    queryKey: ['admin-services-for-option-create'],
+    queryFn: async () => (await securityAxios.get('/services/admin/services', { params: { page: 1, limit: 100 } })).data.data.services as ServiceChoice[],
+    enabled: createDialogOpen,
   });
   const updateOption = useMutation({
     mutationFn: ({ item, values }: { item: ListedOption; values: Record<string, boolean> }) => securityAxios.patch(`/services/admin/services/${item.service.id}/options/${item.id}`, values),
@@ -101,16 +108,18 @@ function ServiceOptionsContent() {
     start_index: data.total ? (data.pagination.page - 1) * data.pagination.limit + 1 : 0,
     end_index: Math.min(data.total, data.pagination.page * data.pagination.limit),
   } : null;
-  const manage = (row: OptionRow) => {
-    const item = items.find(option => option.id === row.id);
-    if (item) router.push(`/dashboard/services/${item.service.id}?option=${item.id}`);
-  };
   const findOption = (row: OptionRow) => items.find(option => option.id === row.id);
 
   return <div className="space-y-6">
     <div><h1 className="text-2xl font-bold tracking-tight">Service Options</h1><p className="text-sm text-muted-foreground">Manage the pricing and appointment choices for each service.</p></div>
-    <div className="flex justify-end"><Button variant="outline" className="gap-2" onClick={() => options.refetch()}><RefreshCw size={16} />Refresh</Button></div>
+    <div className="flex justify-between"><Button className="gap-2" onClick={() => setCreateDialogOpen(true)}><Plus size={16} />New Option</Button><Button variant="outline" className="gap-2" onClick={() => options.refetch()}><RefreshCw size={16} />Refresh</Button></div>
     <CustomFilter config={filterConfig} />
+    <CustomDialog title="Create Service Option" description="Choose the service and enter its option details." open={createDialogOpen} onOpenChange={setCreateDialogOpen} contentWidth="max-w-[600px]">
+      {services.isLoading ? <p className="text-sm text-muted-foreground">Loading services…</p> : services.isError ? <p role="alert" className="text-sm text-destructive">Could not load services. Close this dialog and try again.</p> : services.data?.length ? <ServiceOptionForm key="create" services={services.data} onCancel={() => setCreateDialogOpen(false)} onSaved={() => setCreateDialogOpen(false)} /> : <div className="space-y-4"><p className="text-sm text-muted-foreground">Create a service before adding options.</p><div className="flex justify-end"><Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Close</Button></div></div>}
+    </CustomDialog>
+    <CustomDialog title="Edit Service Option" description={`Update the option for ${editingOption?.service.title ?? 'this service'}.`} open={!!editingOption} onOpenChange={open => { if (!open) setEditingOption(null); }} contentWidth="max-w-[600px]">
+      {editingOption && <ServiceOptionForm key={editingOption.id} services={[]} option={editingOption} onCancel={() => setEditingOption(null)} onSaved={() => setEditingOption(null)} />}
+    </CustomDialog>
     <InfoDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }} title="Delete Service Option" infoMessage={`Delete ${deleteTarget?.name ?? 'this option'}? An option used by an appointment cannot be deleted.`} variant="error" primaryButtonText="Delete" primaryAction={() => { if (deleteTarget) deleteOption.mutate(deleteTarget); setDeleteTarget(null); }} secondaryAction={() => setDeleteTarget(null)} />
     {options.isLoading ? <TableSkeleton /> : options.isError ? <p role="alert" className="rounded-lg border p-8 text-center text-destructive">Could not load service options. Try Refresh.</p> : <DataTable<OptionRow> data={rows} excludeColumns={['id']} links={{ service: row => {
       const item = items.find(option => option.id === row.id);
@@ -121,7 +130,7 @@ function ServiceOptionsContent() {
       const busy = updateOption.isPending || deleteOption.isPending;
       return <ActionsDropdown actions={[
         { label: 'View Service', icon: <Eye />, onClick: () => router.push(`/dashboard/services/${item.service.id}#booking-options`), color: 'blue' },
-        { label: 'Edit Option', icon: <Edit />, onClick: () => manage(row), color: 'emerald' },
+        { label: 'Edit Option', icon: <Edit />, onClick: () => setEditingOption(item), color: 'emerald' },
         { label: item.is_active ? 'Deactivate' : 'Activate', icon: item.is_active ? <XCircle /> : <CheckCircle />, onClick: () => updateOption.mutate({ item, values: { is_active: !item.is_active } }), color: item.is_active ? 'rose' : 'emerald', disabled: busy },
         { label: item.is_default ? 'Unset as Default' : 'Set as Default', icon: <Star />, onClick: () => updateOption.mutate({ item, values: { is_default: !item.is_default } }), color: 'amber', disabled: busy },
         { label: 'Delete Option', icon: <Trash2 />, onClick: () => setDeleteTarget(item), variant: 'destructive', disabled: busy },
