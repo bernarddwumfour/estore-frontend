@@ -1,4 +1,5 @@
 export const endpoints = {
+  templates: { adminBase: '/templates/admin', list: '/templates/admin/templates', categories: '/templates/admin/categories', groups: '/templates/admin/groups', instances: '/templates/admin/instances', assets: '/templates/admin/assets' },
   assistant: {
     guestChat: "/assistant/guest/chat/",
   },

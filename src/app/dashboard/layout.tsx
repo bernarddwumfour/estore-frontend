@@ -44,7 +44,8 @@ import {
   TicketPercent,
   Share2,
   Inbox,
-  FileText
+  FileText,
+  FileImage,
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -131,6 +132,18 @@ const SIDEBAR_LINKS = [
       { icon: Share2, label: 'Social Posts', href: '/dashboard/marketing/social' },
       { icon: Inbox, label: 'Social Inbox', href: '/dashboard/marketing/social/inbox' },
       { icon: FileText, label: 'Blog', href: '/dashboard/marketing/blog' },
+
+    ]
+  },
+  {
+    icon: FileImage,
+    label: 'Templates',
+    isCollapsible: true,
+    children: [
+      { icon: FileImage, label: 'All Templates', href: '/dashboard/templates' },
+      { icon: Layers, label: 'Categories', href: '/dashboard/templates/categories' },
+      { icon: Layers, label: 'Groups', href: '/dashboard/templates/groups' },
+      { icon: FileText, label: 'Saved Results', href: '/dashboard/templates/instances' },
     ]
   },
   {
