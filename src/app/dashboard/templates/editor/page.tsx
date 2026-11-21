@@ -7,7 +7,7 @@ import api from '@/axios-instances/SecurityAxios';
 import { apiMessage } from '@/lib/api-message';
 import { allRecords, base, persistImages, upgradeCanvas, type Template as ApiTemplate, type Category, type Slot } from '../api';
 import { Canvas, Circle as FabricCircle, Control, controlsUtils, FabricImage, Gradient as FabricGradient, Line as FabricLine, Path as FabricPath, PencilBrush, Rect, Textbox, Triangle as FabricTriangle, FabricObject } from 'fabric';
-import { ArrowDownToLine, ArrowUpToLine, ChevronDown, Circle, Copy, Download, Eye, EyeOff, ImagePlus, Lock, Minus, MoreHorizontal, MousePointer2, PaintBucket, PenTool, Pencil, Plus, Redo2, RotateCcw, RotateCw, Save, Square, Trash2, Triangle, Type, Undo2, Unlock, WandSparkles } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpToLine, ChevronDown, Circle, Copy, Download, Eye, EyeOff, ImagePlus, Loader2, Lock, Minus, MoreHorizontal, MousePointer2, PaintBucket, PenTool, Pencil, Plus, Redo2, RotateCcw, RotateCw, Save, Square, Trash2, Triangle, Type, Undo2, Unlock, WandSparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,11 +22,17 @@ import '@orshot/colorshot/styles.css';
 import { parseGradient } from '@orshot/colorshot';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-FabricObject.customProperties = [...new Set([...FabricObject.customProperties, 'templateSlot', 'templateSlotType', 'name', 'frameWidth', 'frameHeight', 'frameLeft', 'frameTop', 'cropFrameWidth', 'cropFrameHeight', 'cropBaseScale', 'cropCenterX', 'cropCenterY', 'cropZoom'])];
+FabricObject.customProperties = [...new Set([...FabricObject.customProperties, 'templateSlot', 'templateSlotType', 'templateImageFrame', 'name', 'frameWidth', 'frameHeight', 'frameLeft', 'frameTop', 'cropFrameWidth', 'cropFrameHeight', 'cropBaseScale', 'cropCenterX', 'cropCenterY', 'cropZoom'])];
 type TemplateRecord = { apiTemplate?: ApiTemplate; id: string; name: string; width: number; height: number; json: Record<string, unknown>; updatedAt: string };
 type TemplateConfig = { name?: string; width?: number; height?: number; background?: string | Record<string, unknown>; elements: Array<Record<string, unknown>> };
 type TemplateSlot = { key: string; type: 'text' | 'image'; defaultValue: string };
-const toEditorRecord = (template: ApiTemplate): TemplateRecord => ({ id: template.id, name: template.name, width: template.content.width!, height: template.content.height!, json: template.content.json!, updatedAt: template.updated_at ?? '', apiTemplate: template });
+const toEditorRecord = (template: ApiTemplate): TemplateRecord => {
+  const { width, height, json } = template.content;
+  if (!width || !height || !json || !Array.isArray(json.objects)) {
+    throw new Error(`Template "${template.name}" is missing its saved canvas JSON or dimensions.`);
+  }
+  return { id: template.id, name: template.name, width, height, json, updatedAt: template.updated_at ?? '', apiTemplate: template };
+};
 const SAMPLE_CONFIG = JSON.stringify({
   name: 'Cosmetic Gold Sale', width: 720, height: 720, background: '#8d0908',
   elements: [
@@ -142,6 +148,10 @@ const getSlotTypeForObject = (object?: FabricObject | null): 'text' | 'image' | 
   if (object instanceof FabricImage) return 'image';
   return null;
 };
+const canBecomeImageFrame = (object?: FabricObject | null) => !!object && !getObjectName(object)?.startsWith('image-slot:') && (
+  object instanceof Rect || object instanceof FabricCircle || object instanceof FabricTriangle ||
+  (object instanceof FabricPath && getObjectName(object) === 'custom-shape')
+);
 const fireModified = (canvas: Canvas, object: FabricObject) => canvas.fire('object:modified', { target: object });
 const makeRotationControl = (x: number, y: number, offsetX: number, offsetY: number) => new Control({
   x, y, offsetX, offsetY, sizeX: 22, sizeY: 22, cursorStyle: 'grab', actionName: 'rotate',
@@ -222,7 +232,7 @@ function FillPicker({ label, mode, onModeChange, startColor, onStartColorChange,
   };
   return <Popover open={open} onOpenChange={setOpen}>
     <PopoverTrigger asChild>{children}</PopoverTrigger>
-    <PopoverContent side={side} align="start" sideOffset={8} collisionPadding={16} onInteractOutside={keepColorPopoverOpen} className="w-[min(18rem,calc(100vw-2rem))] space-y-3">
+    <PopoverContent side={side} align="start" sideOffset={8} collisionPadding={16} onInteractOutside={keepColorPopoverOpen} className="template-editor-portal w-[min(18rem,calc(100vw-2rem))] space-y-3">
       <div className="text-sm font-semibold">{label}</div>
       <ColorPicker value={pickerValue} onChange={updatePickerValue} modes={['solid', 'linear']} outputFormat="hex" eyeDropper storageKey="estore-template-editor-colors" swatches={[{ id: 'recent', label: 'Recent', recent: true }]} size="sm" alpha={false} />
       <Button size="sm" className="w-full" onClick={() => { onApply(); setOpen(false); }}>Apply {mode === 'gradient' ? 'gradient' : 'color'}</Button>
@@ -238,7 +248,7 @@ function SingleColorPicker({ label, value, onChange, side = 'left' }: { label: s
   };
   return <Popover open={open} onOpenChange={setOpen}>
     <PopoverTrigger asChild><button type="button" aria-label={label} title={label} className="h-9 w-12 shrink-0 cursor-pointer rounded border bg-background p-1"><span className="block h-full w-full rounded-sm" style={{ background: value }}/></button></PopoverTrigger>
-    <PopoverContent side={side} align="start" sideOffset={8} collisionPadding={16} onInteractOutside={keepColorPopoverOpen} className="w-[min(17rem,calc(100vw-2rem))] p-2">
+    <PopoverContent side={side} align="start" sideOffset={8} collisionPadding={16} onInteractOutside={keepColorPopoverOpen} className="template-editor-portal w-[min(17rem,calc(100vw-2rem))] p-2">
       <div className="mb-2 text-xs font-medium">{label}</div>
       <ColorPicker value={value} onChange={onChange} modes={['solid']} outputFormat="hex" eyeDropper storageKey="estore-template-editor-colors" swatches={[{ id: 'recent', label: 'Recent', recent: true }]} size="sm" alpha={false}/>
     </PopoverContent>
@@ -372,6 +382,7 @@ export default function MarketingTemplatesPage() {
   const cropMaskDragRef = useRef<{ object: FabricImage; left: number; top: number; clipLeft: number; clipTop: number } | null>(null);
   const cropEditingRef = useRef<FabricImage | null>(null);
   const pendingLoadRef = useRef<TemplateRecord | null>(null);
+  const loadedInitialTemplateRef = useRef<string | null>(null);
   const pendingSlotPreviewRef = useRef<{ record: TemplateRecord; textValues: Record<string, string>; imageSources: Record<string, string> } | null>(null);
   const pendingConfigRef = useRef<TemplateConfig | null>(null);
   const historyRef = useRef<string[]>([]);
@@ -380,7 +391,13 @@ export default function MarketingTemplatesPage() {
   const restoringHistoryRef = useRef(false);
   const clipboardRef = useRef<FabricObject | null>(null);
   const templatesRef = useRef<TemplateRecord[]>([]);
+  const templatesLoadedRef = useRef(false);
+  const categoriesLoadedRef = useRef(false);
+  const templatesRequestRef = useRef<Promise<void> | null>(null);
+  const categoriesRequestRef = useRef<Promise<void> | null>(null);
   const [templates, setTemplates] = useState<TemplateRecord[]>([]);
+  const [canvasVersion, setCanvasVersion] = useState(0);
+  const [openingTemplate, setOpeningTemplate] = useState(false);
   const [templateId, setTemplateId] = useState('');
   const [slotDefinitions, setSlotDefinitions] = useState<Slot[]>([]);
   const [templateDescription, setTemplateDescription] = useState('');
@@ -395,6 +412,7 @@ export default function MarketingTemplatesPage() {
   const [selectedObject, setSelectedObject] = useState(false);
   const [selectionKind, setSelectionKind] = useState<'text' | 'shape' | 'image' | null>(null);
   const [selectedSlotAction, setSelectedSlotAction] = useState<{ type: 'text' | 'image'; hasSlot: boolean } | null>(null);
+  const [selectedImageFrameAction, setSelectedImageFrameAction] = useState<{ eligible: boolean; enabled: boolean } | null>(null);
   const [selectedText, setSelectedText] = useState('');
   const [slotDialog, setSlotDialog] = useState<{ object: FabricObject; type: 'text' | 'image'; originalKey: string } | null>(null);
   const [slotKey, setSlotKey] = useState('');
@@ -449,6 +467,30 @@ export default function MarketingTemplatesPage() {
   const [floatingActionsPosition, setFloatingActionsPosition] = useState<{ left: number; top: number } | null>(null);
   const [draggedLayerIndex, setDraggedLayerIndex] = useState<number | null>(null);
 
+  const ensureTemplatesLoaded = async () => {
+    if (templatesLoadedRef.current) return;
+    if (templatesRequestRef.current) return templatesRequestRef.current;
+    templatesRequestRef.current = allRecords<ApiTemplate>('templates').then(items => {
+      const records = items.filter(item => item.type === 'image').map(toEditorRecord);
+      const merged = new Map(records.map(record => [record.id, record]));
+      templatesRef.current.forEach(record => merged.set(record.id, record));
+      templatesRef.current = [...merged.values()];
+      setTemplates(templatesRef.current);
+      templatesLoadedRef.current = true;
+    }).finally(() => { templatesRequestRef.current = null; });
+    return templatesRequestRef.current;
+  };
+
+  const ensureCategoriesLoaded = async () => {
+    if (categoriesLoadedRef.current) return;
+    if (categoriesRequestRef.current) return categoriesRequestRef.current;
+    categoriesRequestRef.current = allRecords<Category>('categories').then(items => {
+      setCategories(items);
+      categoriesLoadedRef.current = true;
+    }).finally(() => { categoriesRequestRef.current = null; });
+    return categoriesRequestRef.current;
+  };
+
   const updateFloatingActionsPosition = useCallback(() => {
     const canvas = canvasRef.current;
     const active = canvas?.getActiveObject();
@@ -468,7 +510,7 @@ export default function MarketingTemplatesPage() {
   const recordHistoryNow = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || restoringHistoryRef.current) return;
-    const snapshot = JSON.stringify(canvas.toObject(['templateSlot', 'templateSlotType', 'name', 'frameWidth', 'frameHeight', 'frameLeft', 'frameTop', 'cropFrameWidth', 'cropFrameHeight', 'cropBaseScale', 'cropCenterX', 'cropCenterY', 'cropZoom']));
+    const snapshot = JSON.stringify(canvas.toObject(['templateSlot', 'templateSlotType', 'templateImageFrame', 'name', 'frameWidth', 'frameHeight', 'frameLeft', 'frameTop', 'cropFrameWidth', 'cropFrameHeight', 'cropBaseScale', 'cropCenterX', 'cropCenterY', 'cropZoom']));
     const history = historyRef.current.slice(0, historyIndexRef.current + 1);
     if (history.at(-1) !== snapshot) history.push(snapshot);
     if (history.length > 100) history.shift();
@@ -524,23 +566,54 @@ export default function MarketingTemplatesPage() {
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([allRecords<ApiTemplate>('templates'), allRecords<Category>('categories')]).then(async ([items, categoryItems]) => {
+    const selectedId = new URLSearchParams(window.location.search).get('id');
+    if (selectedId) window.requestAnimationFrame(() => { if (!cancelled) setOpeningTemplate(true); });
+    if (!selectedId) return () => { cancelled = true; };
+    void api.get(`${base}/templates/${selectedId}`).then(response => {
       if (cancelled) return;
-      const records = items.filter(t => t.type === 'image').map(toEditorRecord);
-      templatesRef.current = records; setTemplates(records); setCategories(categoryItems);
-      const id = new URLSearchParams(window.location.search).get('id');
-      const record = records.find(t => t.id === id);
-      if (record) {
-        setTemplateId(record.id); setTemplateName(record.name);
-        setSlotDefinitions(record.apiTemplate!.slots); setTemplateDescription(record.apiTemplate!.description);
-        setTemplateStatus(record.apiTemplate!.status); setCategoryIds(record.apiTemplate!.category_ids);
-        const targetFormat = Object.entries(DIMENSIONS).find(([, size]) => size.width === record.width && size.height === record.height)?.[0] as keyof typeof DIMENSIONS | undefined;
-        if (targetFormat && targetFormat !== 'square') { pendingLoadRef.current = record; setFormat(targetFormat); }
-        else { await canvasRef.current?.loadFromJSON(record.json); canvasRef.current?.requestRenderAll(); }
-      }
-    }).catch(error => toast.error(apiMessage(error, 'Could not load templates. Reload to retry.')));
+      const template = response.data.data.template as ApiTemplate;
+      if (template.type !== 'image') throw new Error('This is not an image template.');
+      const record = toEditorRecord(template);
+      templatesRef.current = [record];
+      setTemplates([record]);
+    }).catch(error => { setOpeningTemplate(false); toast.error(apiMessage(error, 'Could not load this template. Reload to retry.')); });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (!canvasVersion) return;
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (!id || loadedInitialTemplateRef.current === id) return;
+    const record = templates.find(template => template.id === id);
+    if (!record) return;
+    const applyRecordDetails = () => {
+      setTemplateId(record.id);
+      setTemplateName(record.name);
+      setSlotDefinitions(record.apiTemplate?.slots ?? []);
+      setTemplateDescription(record.apiTemplate?.description ?? '');
+      setTemplateStatus(record.apiTemplate?.status ?? 'draft');
+      setCategoryIds(record.apiTemplate?.category_ids ?? []);
+    };
+
+    const targetFormat = Object.entries(DIMENSIONS).find(([, size]) => size.width === record.width && size.height === record.height)?.[0] as keyof typeof DIMENSIONS | undefined;
+    if (targetFormat && targetFormat !== format) {
+      loadedInitialTemplateRef.current = id;
+      pendingLoadRef.current = record;
+      window.requestAnimationFrame(() => { applyRecordDetails(); setFormat(targetFormat); });
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) { loadedInitialTemplateRef.current = null; return; }
+    loadedInitialTemplateRef.current = id;
+    void canvas.loadFromJSON(record.json).then(() => {
+      applyRecordDetails();
+      canvas.getObjects().forEach(installRotationControls);
+      canvas.requestRenderAll();
+      scheduleHistory();
+      setOpeningTemplate(false);
+    }).catch(error => { setOpeningTemplate(false); toast.error(apiMessage(error, 'Could not load this template into the editor.')); });
+  }, [templates, canvasVersion, format, scheduleHistory]);
 
   useEffect(() => {
     if (!elementRef.current) return;
@@ -551,7 +624,8 @@ export default function MarketingTemplatesPage() {
       preserveObjectStacking: true,
     });
     canvasRef.current = canvas;
-    const initialSnapshot = JSON.stringify(canvas.toObject(['templateSlot', 'templateSlotType', 'name', 'frameWidth', 'frameHeight', 'frameLeft', 'frameTop', 'cropFrameWidth', 'cropFrameHeight', 'cropBaseScale', 'cropCenterX', 'cropCenterY', 'cropZoom']));
+    setCanvasVersion(version => version + 1);
+    const initialSnapshot = JSON.stringify(canvas.toObject(['templateSlot', 'templateSlotType', 'templateImageFrame', 'name', 'frameWidth', 'frameHeight', 'frameLeft', 'frameTop', 'cropFrameWidth', 'cropFrameHeight', 'cropBaseScale', 'cropCenterX', 'cropCenterY', 'cropZoom']));
     historyRef.current = [initialSnapshot];
     historyIndexRef.current = 0;
     setCanUndo(false);
@@ -579,8 +653,9 @@ export default function MarketingTemplatesPage() {
         const background = canvas.backgroundColor;
         if (typeof background === 'string') { setCanvasBackground(background); setBackgroundFillMode('solid'); }
         else if (background instanceof FabricGradient) { setCanvasBackground(background.colorStops[0]?.color || '#ffffff'); setBackgroundGradientEnd(background.colorStops.at(-1)?.color || '#f97316'); setBackgroundFillMode('gradient'); }
-        canvas.requestRenderAll(); scheduleHistory();
-      });
+        canvas.getObjects().forEach(installRotationControls);
+        canvas.requestRenderAll(); scheduleHistory(); setOpeningTemplate(false);
+      }).catch(error => { setOpeningTemplate(false); toast.error(apiMessage(error, 'Could not load this template into the editor.')); });
     }
     if (pendingConfigRef.current) {
       const config = pendingConfigRef.current;
@@ -608,6 +683,8 @@ export default function MarketingTemplatesPage() {
       const activeSlotType = getSlotTypeForObject(active);
       const activeSlotKey = String(active?.get('templateSlot') || (activeName.startsWith('image-slot:') ? activeName.slice('image-slot:'.length) : active instanceof Textbox ? activeName : ''));
       setSelectedSlotAction(activeSlotType ? { type: activeSlotType, hasSlot: Boolean(activeSlotKey) } : null);
+      const imageFrameEligible = canBecomeImageFrame(active);
+      setSelectedImageFrameAction(imageFrameEligible ? { eligible: true, enabled: active?.get('templateImageFrame') === true } : null);
       if (active) {
         setLeftPanelTab('layers');
         const isCroppedImage = getObjectName(active) === 'image-crop';
@@ -719,7 +796,7 @@ export default function MarketingTemplatesPage() {
       draggedImageRef.current = null;
       if (!drag || Math.hypot((drag.object.left || 0) - drag.left, (drag.object.top || 0) - drag.top) < 4) return;
       const pointer = canvas.getScenePoint(e);
-      const shape = canvas.getObjects().slice().reverse().find(object => object !== drag.object && object.visible && object.lockMovementX !== true && (object instanceof Rect || object instanceof FabricCircle || object instanceof FabricTriangle || (object instanceof FabricPath && getObjectName(object) === 'custom-shape')) && !getObjectName(object)?.startsWith('image-slot:') && object.containsPoint(pointer));
+      const shape = canvas.getObjects().slice().reverse().find(object => object !== drag.object && object.visible && object.lockMovementX !== true && object.get('templateImageFrame') === true && canBecomeImageFrame(object) && object.containsPoint(pointer));
       if (!shape) return;
       const clip = await shape.clone();
       const frame = shape.getBoundingRect();
@@ -912,6 +989,17 @@ export default function MarketingTemplatesPage() {
   const runLayerAction = (index: number, action: ObjectAction) => {
     const object = canvasRef.current?.getObjects()[index];
     if (object) performObjectAction(object, action);
+  };
+
+  const toggleSelectedImageFrame = (object: FabricObject) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !canBecomeImageFrame(object)) return;
+    const enabled = object.get('templateImageFrame') !== true;
+    object.set('templateImageFrame', enabled);
+    setSelectedImageFrameAction({ eligible: true, enabled });
+    canvas.requestRenderAll();
+    fireModified(canvas, object);
+    toast.success(enabled ? 'Shape is now an image frame. Drop an image onto it to crop.' : 'Image frame disabled for this shape.');
   };
 
   const openSlotDialog = (object: FabricObject) => {
@@ -1350,7 +1438,7 @@ export default function MarketingTemplatesPage() {
     if (!templateName.trim()) { toast.error('Enter a template name before saving.'); return false; }
     setSaving(true);
     try {
-      const json = await persistImages(canvas.toObject(['templateSlot', 'templateSlotType', 'name', 'frameWidth', 'frameHeight', 'frameLeft', 'frameTop', 'cropFrameWidth', 'cropFrameHeight', 'cropBaseScale', 'cropCenterX', 'cropCenterY', 'cropZoom'])) as Record<string, unknown>;
+      const json = await persistImages(canvas.toObject(['templateSlot', 'templateSlotType', 'templateImageFrame', 'name', 'frameWidth', 'frameHeight', 'frameLeft', 'frameTop', 'cropFrameWidth', 'cropFrameHeight', 'cropBaseScale', 'cropCenterX', 'cropCenterY', 'cropZoom'])) as Record<string, unknown>;
       const discovered = upgradeCanvas(json);
       const serialized = json.objects as Record<string, unknown>[];
       canvas.getObjects().forEach((object, index) => { object.set('templateSlot', serialized[index]?.templateSlot ?? ''); object.set('templateSlotType', serialized[index]?.templateSlotType ?? ''); });
@@ -1400,12 +1488,14 @@ export default function MarketingTemplatesPage() {
     setSlotTestValues(record ? Object.fromEntries(getTemplateSlots(record).filter(slot => slot.type === 'text').map(slot => [slot.key, slot.defaultValue])) : {});
   };
 
-  const openSlotTester = () => {
+  const openSlotTester = async () => {
+    try { await ensureTemplatesLoaded(); }
+    catch (error) { toast.error(apiMessage(error, 'Could not load saved templates.')); return; }
     const canvas = canvasRef.current;
     const currentDraft: TemplateRecord | null = canvas && canvas.getObjects().length ? {
       id: '__current_canvas__', name: `${templateName || 'Current canvas'} (unsaved)`,
       width: canvas.getWidth(), height: canvas.getHeight(),
-      json: canvas.toObject(['templateSlot', 'templateSlotType', 'name', 'frameWidth', 'frameHeight', 'frameLeft', 'frameTop', 'cropFrameWidth', 'cropFrameHeight', 'cropBaseScale', 'cropCenterX', 'cropCenterY', 'cropZoom']),
+      json: canvas.toObject(['templateSlot', 'templateSlotType', 'templateImageFrame', 'name', 'frameWidth', 'frameHeight', 'frameLeft', 'frameTop', 'cropFrameWidth', 'cropFrameHeight', 'cropBaseScale', 'cropCenterX', 'cropCenterY', 'cropZoom']),
       updatedAt: new Date().toISOString(),
     } : null;
     const available = [...(currentDraft ? [currentDraft] : []), ...templatesRef.current];
@@ -1414,6 +1504,24 @@ export default function MarketingTemplatesPage() {
     const initial = available.some(item => item.id === slotTestTemplateId) ? slotTestTemplateId : available[0]?.id || '';
     if (slotPreviewTemplate?.id === initial) setSlotTestTemplateId(initial);
     else chooseSlotTestTemplate(initial, available);
+  };
+
+  const openSavedTemplates = async () => {
+    try {
+      await ensureTemplatesLoaded();
+      setSavedDialogOpen(true);
+    } catch (error) {
+      toast.error(apiMessage(error, 'Could not load saved templates.'));
+    }
+  };
+
+  const openSaveDetails = async () => {
+    try {
+      await ensureCategoriesLoaded();
+    } catch (error) {
+      toast.error(apiMessage(error, 'Could not load template categories.'));
+    }
+    setSaveDetailsDialogOpen(true);
   };
 
   const previewSlotTest = async () => {
@@ -1503,10 +1611,10 @@ export default function MarketingTemplatesPage() {
     setLeftPanelTab('tools');
   };
 
-  return <div className="space-y-5" onPointerDownCapture={handleWorkspacePointerDownCapture}>
+  return <div className="template-editor space-y-5" onPointerDownCapture={handleWorkspacePointerDownCapture}>
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div><Link href="/dashboard/templates" className="text-sm underline">All templates</Link><h1 className="text-2xl font-bold tracking-tight">Image template</h1><p className="text-sm text-muted-foreground">Create reusable designs for promotions and social posts.</p></div>
-      <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={newTemplate}><Plus className="mr-2 size-4" />New</Button><Button variant="outline" onClick={openSlotTester}>Test slots</Button><Button variant="outline" disabled={saving} onClick={() => setSaveDetailsDialogOpen(true)}><Save className="mr-2 size-4" />Save template</Button><Button onClick={exportPng}><Download className="mr-2 size-4" />{slotPreviewTemplate ? 'Create PNG' : 'Export PNG'}</Button></div>
+      <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={newTemplate}><Plus className="mr-2 size-4" />New</Button><Button variant="outline" onClick={() => void openSlotTester()}>Test slots</Button><Button variant="outline" disabled={saving} onClick={() => void openSaveDetails()}><Save className="mr-2 size-4" />Save template</Button><Button onClick={exportPng}><Download className="mr-2 size-4" />{slotPreviewTemplate ? 'Create PNG' : 'Export PNG'}</Button></div>
     </div>
     <div className="grid gap-4 xl:h-[calc(100vh-200px)] xl:grid-cols-[16rem_minmax(0,1fr)_18rem] xl:items-stretch">
       <div ref={leftPanelRef} className="min-w-0 xl:h-full xl:min-h-0">
@@ -1517,16 +1625,16 @@ export default function MarketingTemplatesPage() {
         </TabsList>
         <TabsContent value="tools" className="mt-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" variant={activeTool === 'select' ? 'secondary' : 'ghost'} className="aspect-square h-auto w-full flex-col justify-center gap-1.5 px-1 py-2" onClick={() => setActiveTool('select')} title="Select and move objects"><MousePointer2 className="size-5"/><span className="text-[11px]">Select</span></Button>
-            <Button type="button" variant={activeTool === 'pen' ? 'secondary' : 'ghost'} className="aspect-square h-auto w-full flex-col justify-center gap-1.5 px-1 py-2" onClick={() => { if (activeTool === 'pen') setActiveTool('select'); else { const canvas = canvasRef.current; canvas?.discardActiveObject(); canvas?.requestRenderAll(); setActiveTool('pen'); } }} title="Draw freehand paths"><Pencil className="size-5"/><span className="text-[11px]">Pen</span></Button>
-            <Button type="button" variant={activeTool === 'bezier' ? 'secondary' : 'ghost'} className="aspect-square h-auto w-full flex-col justify-center gap-1.5 px-1 py-2" onClick={() => { const canvas = canvasRef.current; canvas?.discardActiveObject(); canvas?.requestRenderAll(); setBezierAnchors([]); setActiveTool(activeTool === 'bezier' ? 'select' : 'bezier'); }} title="Create a custom curve or shape"><PenTool className="size-5"/><span className="text-[11px]">Bezier</span></Button>
-            <Button type="button" draggable variant="ghost" className="aspect-square h-auto w-full cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'text')} onClick={addText} title="Add or drag text onto the canvas"><Type className="size-5"/><span className="text-[11px]">Text</span></Button>
-            <Button type="button" draggable variant="ghost" title="Add or drag an image slot onto the canvas" className="aspect-square h-auto w-full cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'image')} onClick={() => { imageSlotToReplaceRef.current = null; imageToReplaceRef.current = null; imagePickerRef.current?.click(); }}><ImagePlus className="size-5"/><span className="text-[11px]">Image</span></Button>
-            <Button type="button" draggable variant="ghost" className="aspect-square h-auto w-full cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'rectangle')} onClick={() => addShape('rectangle')} title="Add or drag rectangle"><Square className="size-5"/><span className="text-[11px]">Rectangle</span></Button>
-            <Button type="button" draggable variant="ghost" className="aspect-square h-auto w-full cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'circle')} onClick={() => addShape('circle')} title="Add or drag circle"><Circle className="size-5"/><span className="text-[11px]">Circle</span></Button>
-            <Button type="button" draggable variant="ghost" className="aspect-square h-auto w-full cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'triangle')} onClick={() => addShape('triangle')} title="Add or drag triangle"><Triangle className="size-5"/><span className="text-[11px]">Triangle</span></Button>
-            <Button type="button" draggable variant="ghost" className="aspect-square h-auto w-full cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'line')} onClick={() => addShape('line')} title="Add or drag line"><Minus className="size-5"/><span className="text-[11px]">Line</span></Button>
-            <FillPicker label="Canvas background" mode={backgroundFillMode} onModeChange={setBackgroundFillMode} startColor={canvasBackground} onStartColorChange={setCanvasBackground} endColor={backgroundGradientEnd} onEndColorChange={setBackgroundGradientEnd} angle={backgroundGradientAngle} onAngleChange={setBackgroundGradientAngle} onApply={applyBackgroundStyle} side="right"><Button type="button" variant="ghost" title="Canvas background color or gradient" className="aspect-square h-auto w-full flex-col justify-center gap-1.5 px-1 py-2"><PaintBucket className="size-5"/><span className="text-[11px]">Background</span><span className="h-1 w-8 rounded-full" style={{ background: backgroundFillMode === 'gradient' ? `linear-gradient(${backgroundGradientAngle + 90}deg, ${canvasBackground}, ${backgroundGradientEnd})` : canvasBackground }}/></Button></FillPicker>
+            <Button type="button" variant={activeTool === 'select' ? 'secondary' : 'ghost'} className="template-editor-tool aspect-square h-auto w-full rounded-md flex-col justify-center gap-1.5 px-1 py-2" onClick={() => setActiveTool('select')} title="Select and move objects"><MousePointer2 className="size-5"/><span className="text-[11px]">Select</span></Button>
+            <Button type="button" variant={activeTool === 'pen' ? 'secondary' : 'ghost'} className="template-editor-tool aspect-square h-auto w-full rounded-md flex-col justify-center gap-1.5 px-1 py-2" onClick={() => { if (activeTool === 'pen') setActiveTool('select'); else { const canvas = canvasRef.current; canvas?.discardActiveObject(); canvas?.requestRenderAll(); setActiveTool('pen'); } }} title="Draw freehand paths"><Pencil className="size-5"/><span className="text-[11px]">Pen</span></Button>
+            <Button type="button" variant={activeTool === 'bezier' ? 'secondary' : 'ghost'} className="template-editor-tool aspect-square h-auto w-full rounded-md flex-col justify-center gap-1.5 px-1 py-2" onClick={() => { const canvas = canvasRef.current; canvas?.discardActiveObject(); canvas?.requestRenderAll(); setBezierAnchors([]); setActiveTool(activeTool === 'bezier' ? 'select' : 'bezier'); }} title="Create a custom curve or shape"><PenTool className="size-5"/><span className="text-[11px]">Bezier</span></Button>
+            <Button type="button" draggable variant="ghost" className="template-editor-tool aspect-square h-auto w-full rounded-md cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'text')} onClick={addText} title="Add or drag text onto the canvas"><Type className="size-5"/><span className="text-[11px]">Text</span></Button>
+            <Button type="button" draggable variant="ghost" title="Add or drag an image slot onto the canvas" className="template-editor-tool aspect-square h-auto w-full rounded-md cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'image')} onClick={() => { imageSlotToReplaceRef.current = null; imageToReplaceRef.current = null; imagePickerRef.current?.click(); }}><ImagePlus className="size-5"/><span className="text-[11px]">Image</span></Button>
+            <Button type="button" draggable variant="ghost" className="template-editor-tool aspect-square h-auto w-full rounded-md cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'rectangle')} onClick={() => addShape('rectangle')} title="Add or drag rectangle"><Square className="size-5"/><span className="text-[11px]">Rectangle</span></Button>
+            <Button type="button" draggable variant="ghost" className="template-editor-tool aspect-square h-auto w-full rounded-md cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'circle')} onClick={() => addShape('circle')} title="Add or drag circle"><Circle className="size-5"/><span className="text-[11px]">Circle</span></Button>
+            <Button type="button" draggable variant="ghost" className="template-editor-tool aspect-square h-auto w-full rounded-md cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'triangle')} onClick={() => addShape('triangle')} title="Add or drag triangle"><Triangle className="size-5"/><span className="text-[11px]">Triangle</span></Button>
+            <Button type="button" draggable variant="ghost" className="template-editor-tool aspect-square h-auto w-full rounded-md cursor-grab flex-col justify-center gap-1.5 px-1 py-2 active:cursor-grabbing" onDragStart={event => startToolDrag(event, 'line')} onClick={() => addShape('line')} title="Add or drag line"><Minus className="size-5"/><span className="text-[11px]">Line</span></Button>
+            <FillPicker label="Canvas background" mode={backgroundFillMode} onModeChange={setBackgroundFillMode} startColor={canvasBackground} onStartColorChange={setCanvasBackground} endColor={backgroundGradientEnd} onEndColorChange={setBackgroundGradientEnd} angle={backgroundGradientAngle} onAngleChange={setBackgroundGradientAngle} onApply={applyBackgroundStyle} side="right"><Button type="button" variant="ghost" title="Canvas background color or gradient" className="template-editor-tool aspect-square h-auto w-full rounded-md flex-col justify-center gap-1.5 px-1 py-2"><PaintBucket className="size-5"/><span className="text-[11px]">Background</span><span className="h-1 w-8 rounded-full" style={{ background: backgroundFillMode === 'gradient' ? `linear-gradient(${backgroundGradientAngle + 90}deg, ${canvasBackground}, ${backgroundGradientEnd})` : canvasBackground }}/></Button></FillPicker>
           </div>
         </TabsContent>
         <TabsContent value="layers" className="mt-3 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:overflow-hidden">
@@ -1561,12 +1669,13 @@ export default function MarketingTemplatesPage() {
           <Button size="icon" variant="ghost" aria-label="Redo" title="Redo (Ctrl/⌘ Shift Z)" disabled={!canRedo} onClick={redo}><Redo2 className="size-4"/></Button>
           {templateId && <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteTemplate()}><Trash2 className="mr-2 size-4" />Archive template</Button>}
           </div>
-          <div className="flex shrink-0 items-center gap-2"><Button size="sm" variant="outline" onClick={() => setSavedDialogOpen(true)}>Saved templates</Button><Button size="sm" onClick={() => setConfigDialogOpen(true)}><WandSparkles className="mr-2 size-4"/>Generate template</Button></div>
+          <div className="flex shrink-0 items-center gap-2"><Button size="sm" variant="outline" onClick={() => void openSavedTemplates()}>Saved templates</Button><Button size="sm" onClick={() => setConfigDialogOpen(true)}><WandSparkles className="mr-2 size-4"/>Generate template</Button></div>
         </div>
         {slotPreviewTemplate && <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2"><div><p className="text-sm font-medium">Previewing {slotPreviewTemplate.name.replace(/ \(unsaved\)$/, '')}</p><p className="text-xs text-muted-foreground">Slot values are applied to this canvas. The saved template stays unchanged.</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setSlotTestDialogOpen(true)}>Edit slots</Button><Button size="sm" variant="ghost" onClick={() => void resetSlotPreview()}>Discard preview</Button></div></div>}
         <div ref={canvasViewportRef} onScroll={updateFloatingActionsPosition} className="relative h-[72vh] w-full min-h-0 overflow-auto rounded-md bg-muted/60 p-4 pb-16 xl:h-auto xl:flex-1">
           <div ref={canvasWrapperRef} onContextMenu={handleCanvasContextMenu} onDragEnter={event => { if (event.dataTransfer.types.includes('application/x-iplug-template-tool')) setCanvasDropActive(true); }} onDragOver={event => { if (event.dataTransfer.types.includes('application/x-iplug-template-tool')) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setCanvasDropActive(false); }} onDrop={event => { handleToolDrop(event); setCanvasDropActive(false); }} className={`relative mx-auto shadow-lg ${canvasDropActive ? 'ring-2 ring-primary ring-offset-2' : ''}`} style={{ width: DIMENSIONS[format].width * zoom, height: DIMENSIONS[format].height * zoom }}>
             <canvas ref={elementRef} />
+            {openingTemplate && <div role="status" aria-live="polite" className="absolute inset-0 z-40 grid place-items-center"><div className="flex items-center gap-3 rounded-lg border bg-card px-5 py-4 text-sm font-medium shadow-lg"><Loader2 className="size-5 animate-spin text-primary"/><span>Loading template…</span></div></div>}
             {activeTool === 'bezier' && <svg viewBox={`0 0 ${DIMENSIONS[format].width} ${DIMENSIONS[format].height}`} preserveAspectRatio="none" aria-label="Bezier path drawing canvas" className="absolute inset-0 z-20 h-full w-full touch-none cursor-crosshair" onPointerDown={addBezierAnchor} onPointerMove={moveBezierHandle} onPointerUp={endBezierHandle} onPointerCancel={endBezierHandle} onDoubleClick={event => event.stopPropagation()}>
               <rect x="0" y="0" width={DIMENSIONS[format].width} height={DIMENSIONS[format].height} fill="transparent" />
               {bezierAnchors.length > 0 && <path d={buildBezierPath(bezierAnchors, false)} fill="none" stroke={penColor} strokeWidth={penWidth} strokeDasharray="6 4"/>}
@@ -1588,6 +1697,7 @@ export default function MarketingTemplatesPage() {
                 <DropdownMenuItem onSelect={() => { const object = canvasRef.current?.getActiveObject(); if (object) performObjectAction(object, 'backward'); }}><ArrowDownToLine/>Move down one layer</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => { const object = canvasRef.current?.getActiveObject(); if (object) performObjectAction(object, 'front'); }}><ArrowUpToLine/>Move to top</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => { const object = canvasRef.current?.getActiveObject(); if (object) performObjectAction(object, 'back'); }}><ArrowDownToLine/>Move to bottom</DropdownMenuItem>
+                {selectedImageFrameAction && <><DropdownMenuSeparator/><DropdownMenuItem onSelect={() => { const object = canvasRef.current?.getActiveObject(); if (object) toggleSelectedImageFrame(object); }}>{selectedImageFrameAction.enabled ? 'Remove image frame' : 'Convert to image frame'}</DropdownMenuItem></>}
                 {selectedSlotAction && <><DropdownMenuSeparator/><DropdownMenuItem onSelect={() => { const object = canvasRef.current?.getActiveObject(); if (object) openSlotDialog(object); }}>{selectedSlotAction.hasSlot ? 'Edit' : 'Create'} {selectedSlotAction.type} slot</DropdownMenuItem></>}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1637,7 +1747,7 @@ export default function MarketingTemplatesPage() {
       <div className="my-1 border-t"/><button role="menuitem" className="w-full rounded px-3 py-2 text-left text-sm text-destructive hover:bg-accent" onClick={() => runContextAction('delete')}>Delete <span className="float-right text-xs">Del</span></button>
     </div></div>}
     <Dialog open={saveDetailsDialogOpen} onOpenChange={setSaveDetailsDialogOpen}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="template-editor-portal sm:max-w-lg">
         <DialogHeader><DialogTitle>Save image template</DialogTitle><DialogDescription>Add the template details and categories before saving this design.</DialogDescription></DialogHeader>
         <div className="space-y-5">
           <div className="space-y-2"><label className="text-sm font-medium" htmlFor="save-template-description">Description</label><Textarea id="save-template-description" value={templateDescription} onChange={event => setTemplateDescription(event.target.value)} placeholder="Describe what this template is for…" /></div>
@@ -1648,7 +1758,7 @@ export default function MarketingTemplatesPage() {
       </DialogContent>
     </Dialog>
     <Dialog open={!!slotDialog} onOpenChange={open => { if (!open) setSlotDialog(null); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="template-editor-portal sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{slotDialog && (slotDialog.originalKey ? 'Edit' : 'Create')} {slotDialog?.type} slot</DialogTitle>
           <DialogDescription>This selected {slotDialog?.type === 'text' ? 'text element' : 'image element'} will be replaceable when someone uses the template.</DialogDescription>
@@ -1666,7 +1776,7 @@ export default function MarketingTemplatesPage() {
       </DialogContent>
     </Dialog>
     <Dialog open={slotTestDialogOpen} onOpenChange={setSlotTestDialogOpen}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="template-editor-portal sm:max-w-xl">
         <DialogHeader><DialogTitle>Test template slots</DialogTitle><DialogDescription>Choose a saved template or the current canvas, fill its text and image slots, then preview the result on the canvas. This local test does not change the saved template.</DialogDescription></DialogHeader>
         {slotTestTemplates.length ? <Select value={slotTestTemplateId} onValueChange={id => chooseSlotTestTemplate(id)}>
           <SelectTrigger><SelectValue placeholder="Choose a template" /></SelectTrigger>
@@ -1689,7 +1799,7 @@ export default function MarketingTemplatesPage() {
       </DialogContent>
     </Dialog>
     <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="template-editor-portal sm:max-w-xl">
         <DialogHeader><DialogTitle>Generate template</DialogTitle><DialogDescription>Paste the reusable template JSON and preview it on the canvas. AI generation will be connected here later.</DialogDescription></DialogHeader>
         <Textarea value={configText} onChange={event => { setConfigText(event.target.value); setConfigError(''); }} rows={14} spellCheck={false} className="max-h-[55vh] overflow-y-auto font-mono text-xs" placeholder="Paste generated template JSON…"/>
         {configError && <p role="alert" className="text-sm text-destructive">{configError}</p>}
@@ -1697,7 +1807,7 @@ export default function MarketingTemplatesPage() {
       </DialogContent>
     </Dialog>
     <Dialog open={savedDialogOpen} onOpenChange={setSavedDialogOpen}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="template-editor-portal sm:max-w-md">
         <DialogHeader><DialogTitle>Saved templates</DialogTitle><DialogDescription>Choose a saved design to continue editing.</DialogDescription></DialogHeader>
         {templates.length ? <div className="max-h-[55vh] space-y-1 overflow-y-auto">{templates.map(item => <button key={item.id} onClick={() => { void loadTemplate(item.id); setSavedDialogOpen(false); }} className={`w-full rounded-md px-3 py-3 text-left text-sm hover:bg-muted ${templateId === item.id ? 'bg-muted font-medium' : ''}`}>{item.name}<span className="block text-xs text-muted-foreground">{new Date(item.updatedAt).toLocaleDateString()}</span></button>)}</div> : <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">No saved templates yet.</p>}
       </DialogContent>

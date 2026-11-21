@@ -1,6 +1,154 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+.template-editor,
+.template-editor-portal {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #111111;
+  --card: #ffffff;
+  --card-foreground: #111111;
+  --popover: #ffffff;
+  --popover-foreground: #111111;
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f3f3;
+  --secondary-foreground: #111111;
+  --muted: #f3f3f3;
+  --muted-foreground: #666666;
+  --accent: #eeeeee;
+  --accent-foreground: #111111;
+  --border: #e2e2e2;
+  --input: #e2e2e2;
+  --ring: #888888;
+  /* Tailwind's @theme inline tokens are resolved at their declaration site,
+     so re-declare the utilities locally instead of inheriting light colors. */
+  --color-background: #ffffff;
+  --color-foreground: #111111;
+  --color-card: #ffffff;
+  --color-card-foreground: #111111;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #111111;
+  --color-primary: #111111;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f3f3f3;
+  --color-secondary-foreground: #111111;
+  --color-muted: #f3f3f3;
+  --color-muted-foreground: #666666;
+  --color-accent: #eeeeee;
+  --color-accent-foreground: #111111;
+  --color-border: #e2e2e2;
+  --color-input: #e2e2e2;
+  --color-ring: #888888;
+}
+
+.dark :is(.template-editor, .template-editor-portal) {
+  color-scheme: dark;
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --card: #151515;
+  --card-foreground: #f5f5f5;
+  --popover: #151515;
+  --popover-foreground: #f5f5f5;
+  --primary: #f5f5f5;
+  --primary-foreground: #111111;
+  --secondary: #292929;
+  --secondary-foreground: #f5f5f5;
+  --muted: #222222;
+  --muted-foreground: #a3a3a3;
+  --accent: #303030;
+  --accent-foreground: #ffffff;
+  --border: #383838;
+  --input: #383838;
+  --ring: #a3a3a3;
+  --color-background: #0a0a0a;
+  --color-foreground: #f5f5f5;
+  --color-card: #151515;
+  --color-card-foreground: #f5f5f5;
+  --color-popover: #151515;
+  --color-popover-foreground: #f5f5f5;
+  --color-primary: #f5f5f5;
+  --color-primary-foreground: #111111;
+  --color-secondary: #292929;
+  --color-secondary-foreground: #f5f5f5;
+  --color-muted: #222222;
+  --color-muted-foreground: #a3a3a3;
+  --color-accent: #303030;
+  --color-accent-foreground: #ffffff;
+  --color-border: #383838;
+  --color-input: #383838;
+  --color-ring: #a3a3a3;
+}
+
+.template-editor {
+  background: transparent !important;
+  color: var(--foreground);
+}
+
+.template-editor-portal [data-colorshot],
+.template-editor-portal [data-colorshot-field] {
+  --cs-accent: var(--primary);
+  --cs-bg: var(--popover);
+  --cs-fg: var(--popover-foreground);
+  --cs-border: var(--border);
+  --cs-radius: var(--radius);
+}
+
+:is(.template-editor, .template-editor-portal) [data-slot="button"][data-variant="outline"] {
+  border-color: var(--border) !important;
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+:is(.template-editor, .template-editor-portal) [data-slot="button"][data-variant="outline"]:hover {
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+:is(.template-editor, .template-editor-portal) [data-slot="button"][data-variant="ghost"] {
+  color: var(--foreground) !important;
+}
+
+:is(.template-editor, .template-editor-portal) [data-slot="button"][data-variant="ghost"]:hover {
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+:is(.template-editor, .template-editor-portal) [data-slot="button"][data-variant="secondary"] {
+  border-color: var(--border) !important;
+  background-color: var(--secondary) !important;
+  color: var(--secondary-foreground) !important;
+}
+
+:is(.template-editor, .template-editor-portal) [data-slot="button"][data-variant="default"] {
+  border-color: var(--primary) !important;
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+:is(.template-editor, .template-editor-portal) [data-slot="button"][data-variant="default"]:hover {
+  filter: brightness(1.12);
+}
+
+.template-editor .template-editor-tool {
+  border-radius: var(--radius-md) !important;
+  background-color: transparent !important;
+  color: var(--foreground) !important;
+}
+
+.template-editor .template-editor-tool:hover,
+.template-editor .template-editor-tool:focus-visible,
+.template-editor .template-editor-tool[data-state="open"] {
+  background-color: var(--secondary) !important;
+  color: var(--secondary-foreground) !important;
+}
+
+.template-editor .template-editor-tool[data-variant="secondary"] {
+  border-color: var(--border) !important;
+  background-color: var(--secondary) !important;
+  color: var(--secondary-foreground) !important;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @keyframes web-loading-type {

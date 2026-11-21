@@ -17,7 +17,7 @@ import { TableSkeleton } from '@/widgets/custom-table/TableSkeleton';
 import { DataTable } from '@/widgets/custom-table/DataTable';
 import { ActionsDropdown } from '@/widgets/actions-dropdown/ActionsDropdown';
 import TemplateRecordForm from './(components)/TemplateRecordForm';
-import { allRecords, base, persistImages, upgradeCanvas, type Template, type Category, type Group } from './api';
+import { allRecords, base, type Template, type Category, type Group } from './api';
 
 type RecordItem = Template | Category | Group;
 function LibraryContent({ kind = 'templates' }: { kind?: 'templates' | 'categories' | 'groups' }) {
@@ -39,18 +39,6 @@ function LibraryContent({ kind = 'templates' }: { kind?: 'templates' | 'categori
     if (duplicate) return api.post(`${base}/${kind}/${item.id}/duplicate`);
     return api.patch(`${base}/${kind}/${item.id}`, { ...item, ...(kind === 'categories' ? { is_active: !(item as Category).is_active } : { status: (item as Template).status === 'archived' ? 'draft' : 'archived' }) });
   }, onSuccess: () => { refresh(); toast.success('Saved'); }, onError: e => toast.error(apiMessage(e, 'Could not update record')) });
-  const importLegacy = useMutation({ mutationFn: async () => {
-    const records = JSON.parse(localStorage.getItem('estore-promotion-templates-v1') || '[]');
-    if (!Array.isArray(records) || !records.length) throw new Error('No browser-saved templates to import');
-    const imported: string[] = JSON.parse(localStorage.getItem('estore-template-imports') || '[]');
-    for (const record of records) {
-      if (imported.includes(record.id)) continue;
-      const json = await persistImages(record.json) as Record<string, unknown>;
-      const slots = upgradeCanvas(json);
-      await api.post(`${base}/templates`, { name: record.name, type: 'image', status: 'draft', content: { json, width: record.width, height: record.height }, slots, category_ids: [] });
-      imported.push(record.id); localStorage.setItem('estore-template-imports', JSON.stringify(imported));
-    }
-  }, onSuccess: () => { refresh(); toast.success('Browser templates imported'); }, onError: e => toast.error(apiMessage(e, e instanceof Error ? e.message : 'Could not import templates')) });
   const items: RecordItem[] = query.data?.[kind] ?? [];
   const filterConfig: FilterConfig = { showSearch: true, searchPlaceholder: 'Search templates…', urlParamPrefix: 'template', fields: [
     { name: 'status', type: 'select', placeholder: 'Status', options: [{ value: 'active', label: 'Active' }, ...(kind !== 'categories' ? [{ value: 'draft', label: 'Draft' }] : []), { value: 'archived', label: 'Archived' }] },
@@ -62,7 +50,7 @@ function LibraryContent({ kind = 'templates' }: { kind?: 'templates' | 'categori
     <div><h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{kind === 'templates' ? 'Templates' : kind === 'categories' ? 'Template Categories' : 'Template Groups'}</h1><p className="text-sm text-gray-500 dark:text-gray-400">{kind === 'templates' ? 'Manage reusable text and image templates' : kind === 'categories' ? 'Organize templates with reusable categories' : 'Bundle templates for a coordinated content set'}</p></div>
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex flex-wrap gap-2">
-        {kind === 'templates' && <><Button variant="outline" disabled={importLegacy.isPending} onClick={() => importLegacy.mutate()}>Import saved templates</Button><Button asChild variant="outline"><Link href="/dashboard/templates/editor">New image template</Link></Button></>}
+        {kind === 'templates' && <Button asChild variant="outline"><Link href="/dashboard/templates/editor">New image template</Link></Button>}
         <Button onClick={() => setEditing('new')} className="gap-2"><Plus size={16}/>{kind === 'templates' ? 'New Text Template' : kind === 'categories' ? 'New Category' : 'New Group'}</Button>
       </div>
       <Button variant="outline" onClick={() => query.refetch()}><RefreshCw size={16} className="mr-2"/>Refresh</Button>
