@@ -1,134 +1,244 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# eStore Frontend
 
-## Getting Started
+A Next.js storefront and staff dashboard shared by four demo stores: **iPlug**, **Oak & Loom**, **TyrePapa**, and **Olive & Aura**. Each deployment selects its branding and page composition at build time and connects to its own Django API.
 
-First, run the development server:
+Companion repository: [eStore Backend](https://github.com/bernarddwumfour/estore-backend).
+
+## Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Requirements](#requirements)
+- [Local setup](#local-setup)
+- [Environment variables](#environment-variables)
+- [Authentication and sessions](#authentication-and-sessions)
+- [Rendering and caching](#rendering-and-caching)
+- [Store templates](#store-templates)
+- [Project structure](#project-structure)
+- [Development and testing](#development-and-testing)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+
+## Features
+
+**Storefront**
+
+- Product and variant discovery, search, filters, sorting, pagination, product reviews, and promotions.
+- Cart, wishlist, guest and customer checkout, payment returns, order history, and order details.
+- Customer registration, login, verification, password recovery, profiles, and affiliate earnings.
+- Services, service requests, appointment review flows, blog posts, and store information pages.
+- Shopping assistant with guest and signed-in conversation behavior.
+
+**Staff dashboard**
+
+- Products, categories, variants, stock, services, service options, and appointments.
+- Orders, transactions, shipping, point of sale, customer accounts, staff, and affiliates.
+- Sales/product/user analytics, promotions, discounts, reviews, blogs, and email campaigns.
+- Social accounts, posts, comments, and an inbox with streaming refresh notifications.
+- Reusable design templates, categories, groups, saved instances, assets, and a canvas editor.
+- Admin assistant, AI controls, store settings, and application logs.
+
+Provider-dependent features require the corresponding backend credentials. Demo pages and illustrative artwork are not a guarantee that payments, shipping, email, or social accounts have been configured.
+
+## Architecture
+
+The application uses Next.js **16.0.10**, React **19.2.1**, TypeScript, Tailwind CSS 4, Radix UI, TanStack Query/Table, Zustand, Axios, React Hook Form/Zod, Recharts, and Fabric. Dependency versions are recorded in [package.json](package.json) and [package-lock.json](package-lock.json).
+
+```mermaid
+flowchart LR
+    Browser[Browser: storefront and dashboard] -->|Same-origin requests and session cookie| BFF[Next.js BFF]
+    BFF -->|Shared server credential and opaque session ID| Django[Django API]
+    SSR[Next.js Server Components] -->|Public fetch or private authenticatedFetch| Django
+    Django --> DB[(Store database)]
+```
+
+The BFF lives under `/api/bff/...`. It handles browser API traffic without exposing Django access or refresh tokens. Public Server Components fetch their data directly from Django; private Server Components use a server-only authentication helper rather than make a request back to their own BFF route.
+
+## Requirements
+
+- Node.js **22.13+ within the 22.x release line**, or **24+**, and npm. This covers the local profile loader's `node:util.parseEnv` use and the installed test tooling's engine requirements.
+- A configured Django backend for the selected store.
+- Access to that store's database and provider integrations through the backend; the frontend does not connect directly to the database or Redis.
+
+## Local setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/bernarddwumfour/estore-frontend.git
+cd estore-frontend
+npm ci
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create the environment profile for the store you want to run. These files are ignored by Git and must be created on a fresh checkout.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Store | Profile | `NEXT_PUBLIC_STORE` | Frontend | Backend | Command |
+| --- | --- | --- | --- | --- | --- |
+| iPlug | `.env.iplug` | `default` | 3000 | 8000 | `npm run dev:iplug` |
+| Oak & Loom | `.env.oakandloom` | `furniture` | 3001 | 8001 | `npm run dev:oak` |
+| TyrePapa | `.env.tyrepapa` | `tyrepapa` | 3002 | 8002 | `npm run dev:tyrepapa` |
+| Olive & Aura | `.env.oliveandaura` | `oliveandaura` | 3003 | 8003 | `npm run dev:oliveandaura` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# Local store selection
-
-## On-demand cache invalidation
-
-Published blog post changes call `POST /api/revalidate/blog` after the backend
-transaction commits. The endpoint refreshes the blog list, the Oak & Loom home
-preview, and the affected post URLs, including an old URL after a slug change.
-The existing five-minute cache lifetime remains a fallback if the callback
-fails. Draft-only changes do not trigger a callback.
-
-Product category saves and deletes also refresh the categories on the home
-and products pages through `POST /api/revalidate/categories`.
-Published product, variant, and variant image changes refresh cached listings
-and the TyrePapa home collection through `POST /api/revalidate/products`.
-Publishing, archiving, deleting, or moving a product also refreshes cached
-category counts when it changes membership. Product detail pages fetch fresh
-data on every request. Routine stock adjustments do not call this endpoint
-unless a published variant crosses between in stock and out of stock.
-
-Set the same long, random `REVALIDATE_SECRET` on the backend and frontend for
-each store. Set the backend's `STOREFRONT_BASE_URL` to that store's public
-frontend origin, such as `https://store.example`. The backend derives the
-fixed `/api/revalidate/blog`, `/api/revalidate/categories`, and
-`/api/revalidate/products` callback URLs from that origin. For local
-development, use the matching frontend port: 3000 for iPlug, 3001 for Oak &
-Loom, 3002 for TyrePapa, and 3003 for Olive & Aura.
-These variables are server-only; never use a `NEXT_PUBLIC_` prefix for the
-secret. Restart or redeploy both services after setting them.
-
-The callback requires an `Authorization: Bearer <secret>` header and a JSON
-body such as `{"slugs":["old-slug","new-slug"]}`. It accepts no arbitrary
-cache tags or paths.
-
-Category admin mutations return a `storefront_revalidation` status. The admin
-shows “Live on store” when every configured storefront accepts the callback;
-this is an acceptance message, not a check that a shopper has loaded the
-refreshed page yet.
-
-Run `npm run dev:iplug` for iPlug (`localhost:3000`, API `localhost:8000`) or
-`npm run dev:oak` for Oak & Loom (`localhost:3001`, API `localhost:8001`). Each
-command loads its own ignored environment profile and isolated Next.js build
-directory. Start the matching backend profile with `manage_store.py` in the
-backend project.
-
-## Olive & Aura storefront
-
-Run `npm run dev:oliveandaura` to preview the Olive & Aura
-storefront. It loads the ignored `.env.oliveandaura` profile, sets
-`NEXT_PUBLIC_STORE=oliveandaura`, and writes Next.js build files to
-`.next-oliveandaura` so it can run alongside other storefronts. Its API URL is
-configured independently from the other local profiles. Treatments and their
-sample prices remain frontend-only content in `src/templates/beauty/pages/HomePage.tsx`.
-The local profile points to `http://localhost:8003/api`, reserved for the
-Olive & Aura backend profile. Start it with
-`venv/bin/python manage_store.py oliveandaura runserver` after its dedicated
-database URL is configured in the backend `.env.oliveandaura` file.
-
-For a deployment, set `NEXT_PUBLIC_STORE=oliveandaura` and point
-`NEXT_PUBLIC_API_BASE_URL` at the Olive & Aura API in that deployment's build
-environment, then build and redeploy the frontend. `NEXT_DEV_DIST_DIR` is only
-used by the local preview command.
-
-
-## TyrePapa storefront
-
-Run `npm run dev:tyrepapa` for TyrePapa (`localhost:3002`, API `localhost:8002`). It loads the local,
-ignored `.env.tyrepapa` profile:
+Example `.env.iplug`:
 
 ```dotenv
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8002/api
-NEXT_PUBLIC_STORE=tyrepapa
-NEXT_DEV_DIST_DIR=.next-tyrepapa
+NEXT_PUBLIC_STORE=default
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
+DJANGO_API_URL=http://localhost:8000/api
+BFF_ORIGIN=http://localhost:3000
+BFF_SHARED_SECRET=replace-with-the-matching-backend-secret
+REVALIDATE_SECRET=replace-with-the-matching-revalidation-secret
 ```
 
-The backend selector has a matching TyrePapa environment profile and defaults
-to port 8002. The separate frontend and backend ports and isolated Next.js build
-directory let TyrePapa run beside the other storefronts. Restart the dev server
-after changing an environment profile.
+Use the matching ports and store value for the other profiles. Generate each shared secret once, then configure the **same value on both servers**:
 
-For deployment, commit and push `src/templates/tyrepapa`, `public/tyrepapa`,
-and the storefront registry changes before building. The local `.env.tyrepapa`
-file is ignored by Git and is not sent with the deployment. Set
-`NEXT_PUBLIC_STORE=tyrepapa` and `NEXT_PUBLIC_API_BASE_URL` to the public API
-URL in the deployment project's build environment, then trigger a new build.
-A runtime-only change to `NEXT_PUBLIC_STORE` cannot switch an already built
-frontend. Do not use a `localhost` URL for the deployed API; it
-refers to each visitor's own machine. `NEXT_DEV_DIST_DIR` is only for local
-preview isolation and can be left unset in deployment.
+```bash
+node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
+```
 
-The template lives in `src/templates/tyrepapa`. Its homepage, navigation, footer,
-and product cards override the baseline; remaining pages currently inherit the
-default template. Navigation search, bag, accounts, and product actions reuse
-shared storefront behavior. Catalog failures and empty catalogs show a labeled
-collection preview, with no fabricated prices, stock, reviews, or discounts.
+Start the backend and apply its migrations first. Then run the frontend command from the table and open its localhost URL. The profile runner isolates Next.js output in `.next-iplug`, `.next-oakandloom`, `.next-tyrepapa`, or `.next-oliveandaura`. Olive & Aura's development command uses Webpack.
 
-Campaign artwork lives in `public/tyrepapa`; replace illustrative imagery with
-approved product photography before preparing a live store. See
-`src/templates/tyrepapa/ASSETS.md` for asset notes.
+`npm run dev` uses Next.js's normal environment loading and default port. It does not select a named profile. The configured demo workspace uses `.env` as the default iPlug environment. Restart development processes after changing environment values.
+
+## Environment variables
+
+[.env.bff.example](.env.bff.example) provides BFF placeholders. Actual store profiles are local files, not deployment configuration.
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_STORE` | Build-time template selection: `default`, `furniture`, `tyrepapa`, or `oliveandaura`. Unknown values fail explicitly. |
+| `NEXT_PUBLIC_API_BASE_URL` | Public Django API URL, including `/api`; used by catalog and other public fetches. |
+| `DJANGO_API_URL` | Server-side Django API URL, including `/api`; falls back to the public API URL if absent. |
+| `BFF_SHARED_SECRET` | Server-to-server credential matching Django's value. Never prefix it with `NEXT_PUBLIC_`. |
+| `BFF_ORIGIN` | Exact storefront origin, including scheme and development port, without a trailing slash. Required for production mutations. |
+| `BFF_CLIENT_IP_HEADER` | Optional trusted ingress header used for client-IP forwarding. Only configure a header the hosting proxy overwrites. Vercel deployments default to `x-vercel-forwarded-for`. |
+| `REVALIDATE_SECRET` | Separate server-only credential matching Django's storefront revalidation secret. |
+| `NEXT_DEV_DIST_DIR` | Output-directory override used by the local profile runner. Normally omit in hosted deployments. |
+| `PORT` | Optional development port override; an override also requires the corresponding origin configuration. |
+
+Each store should have its own backend URL, database, BFF secret, and revalidation secret. Public variables are compiled into the frontend build; changing them requires a rebuild.
+
+## Authentication and sessions
+
+1. Customer or staff login goes through the BFF to Django.
+2. Django validates credentials and creates a random browser session. Its database stores only the session ID's SHA-256 digest, associated user, password fingerprint, and expiry.
+3. Next.js sets the opaque ID in a host-only, store-specific `HttpOnly; SameSite=Lax` cookie. Production cookies also use `Secure` and the `__Host-` prefix.
+4. For subsequent requests, Next.js sends `X-BFF-Key` and `X-BFF-Session` to Django. Django validates the BFF identity and session before applying role and resource-ownership checks.
+5. Sessions expire after seven days. Logout deletes the session; password changes and account deactivation invalidate it on subsequent requests.
+
+The shared secret identifies **the Next.js server**. The session ID identifies **the signed-in user**. Neither replaces authorization checks.
+
+Browser JavaScript stores no access or refresh tokens. `AuthProvider` restores user information through the profile endpoint and exposes loading, authenticated, unauthenticated, or error status. Logout/account changes clear private React Query state; tabs exchange a timestamp notification rather than credentials. Legacy `auth_data` cookies are removed and users must sign in again after migration.
+
+BFF mutations require an exact matching Origin and the `X-Estore-CSRF: 1` custom header. This is a custom-header CSRF defense, not a secret token: cross-origin custom-header requests require a preflight, which the BFF does not authorize. Do not add permissive CORS to these routes.
+
+The proxy restricts upstream paths, discards browser-supplied authorization/BFF headers, strips credential fields from JSON, rejects upstream redirects and debug HTML, and marks responses `no-store`. Multipart bodies and SSE are supported. The assistant namespace's trailing slash is normalized for Django.
+
+The session implementation uses Django's database and requires **no Redis connection from Next.js**. Existing direct JWT API clients retain their separate backend behavior.
+
+## Rendering and caching
+
+| Area | Behavior |
+| --- | --- |
+| Dashboard | Interactive Client Components and React Query beneath a server-validated staff layout. Every API request is separately authorized. |
+| Private server-rendered pages | `authenticatedFetch` reads the session cookie and calls Django directly with `cache: 'no-store'`. |
+| Public product lists | Server Components preserve filtering, pagination, cache tags, and five-minute revalidation; random sorting is uncached. |
+| Product details | Fresh data requests; template composition remains server-rendered. |
+| Wishlist/cart/account controls | Client interactions layered on the storefront; authenticated calls use the BFF. |
+| Checkout | Waits for session initialization; a session-service failure is not silently treated as guest checkout. |
+| Social inbox | Streams events through the BFF, reconnects, and retains polling fallback behavior. |
+
+Django invalidates storefront content after relevant writes through these fixed endpoints:
+
+| Endpoint | Content |
+| --- | --- |
+| `POST /api/revalidate/blog` | Blog lists and affected post URLs, including old slugs. |
+| `POST /api/revalidate/categories` | Cached category displays. |
+| `POST /api/revalidate/products` | Product/variant listings and relevant category counts. |
+| `POST /api/revalidate/services` | Service catalog cache and page. |
+
+Callbacks use `Authorization: Bearer <REVALIDATE_SECRET>`. Django's `STOREFRONT_BASE_URL` identifies the target storefront. A failed callback does not remove the existing time-based cache fallback. Stock changes trigger product invalidation when availability crosses the in-stock/out-of-stock boundary. An admin “Live on store” message means the callback was accepted, not that a shopper's browser was checked.
+
+## Store templates
+
+[src/templates/registry.ts](src/templates/registry.ts) chooses a template at build time. Store overrides extend the default contract, sharing data access and interactions rather than duplicating the application.
+
+- `default`: iPlug baseline.
+- `furniture`: Oak & Loom presentation.
+- `tyrepapa`: TyrePapa homepage, navigation, footer, and product presentation, with shared/default fallbacks. Asset notes live in [public/tyrepapa](public/tyrepapa) and [ASSETS.md](src/templates/tyrepapa/ASSETS.md).
+- `beauty`: Olive & Aura presentation, selected with `oliveandaura`. Homepage treatment descriptions and sample prices are frontend content; do not assume they are synchronized to the backend service catalog.
+
+Storefront templates are distinct from the dashboard's **design-template editor**, which manages reusable canvas content and saved instances through Django's templates API.
+
+## Project structure
+
+```text
+src/app/(web)/           Public storefront and customer pages
+src/app/(auth)/          Customer authentication screens
+src/app/admin/login/    Staff login
+src/app/dashboard/      Staff screens and server layout/client shell
+src/app/api/bff/        Browser-facing API proxy
+src/app/api/revalidate/ Backend-triggered cache invalidation
+src/templates/          Store template contracts and overrides
+src/widgets/            Shared UI and feature widgets
+src/lib/server/         Server-only API/authentication helpers
+src/lib/providers/      Auth and application providers
+src/lib/auth/           Store-specific cookie naming
+src/axios-instances/    Authenticated and guest browser clients
+src/app/lib/            Shared client hooks and Zustand stores
+src/constants/endpoints/ API paths
+public/                 Store artwork and static assets
+scripts/dev-store.mjs   Local store profile runner
+```
+
+## Development and testing
+
+```bash
+npm test
+npm run test:watch
+npm run lint
+npx tsc --noEmit
+npm run build
+npm start
+```
+
+Run focused authentication coverage with:
+
+```bash
+npx vitest run src/lib/providers/auth-provider.test.tsx src/lib/server/bff-policy.test.ts 'src/app/api/bff/[...path]/route.test.ts'
+```
+
+Tests use Vitest, jsdom, and Testing Library. BFF tests cover session cookies, credential stripping, origin checks, multipart forwarding, SSE, public password recovery, and failure handling. They do not replace testing actual hosting upload limits or streaming duration.
+
+Follow [RULES.md](RULES.md): reuse widgets, use React Query for server state, centralize API paths, and provide clear mutation feedback.
+
+**Recorded verification, 2026-11-22:** 19 focused authentication tests pass. The broad run reported four failures in existing Cart, DataTable, and Slider expectations. Full TypeScript checking also reported an extra `ProductDetailPageContent` export in generated Olive & Aura product-route types; source checking without generated route validators passed. These are outstanding checks, not a claim that the full production build is green.
+
+## Deployment
+
+Deploy one frontend project per store on a Node-capable Next.js host. A static export cannot run the BFF or private server-rendered pages.
+
+1. Deploy the matching Django backend and apply all migrations, including `users.0024_browsersession`.
+2. Set the build-time store selection and public API URL in the hosting project.
+3. Set `DJANGO_API_URL`, matching `BFF_SHARED_SECRET`, the deployed `BFF_ORIGIN`, and matching `REVALIDATE_SECRET` in the server environment.
+4. Configure Django's frontend/storefront origins, allowed hosts, provider callbacks, and trusted-origin settings for that deployment.
+5. Install with `npm ci`, build with `npm run build`, and run the host's Next.js runtime or `npm start`.
+6. Verify customer/staff login, reload, logout, private orders, guest checkout, payment return, upload, and inbox streaming on the deployed origins.
+
+Use deployed API addresses, not localhost. Ignored `.env.*` profiles are not uploaded when you push Git. Runtime-only changes cannot switch the compiled store template. Keep `/api/bff` responses out of shared CDN caches. Configure trusted ingress client-IP forwarding so Django's IP-based limits do not group all visitors under the BFF's egress address.
+
+The inbox backend emits streams lasting up to 45 seconds; hosting function duration and buffering must permit that behavior. File sizes must fit both frontend-host and Django limits. Use a separate revalidation secret from the BFF secret.
+
+## Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| Login/session service returns 503 | `DJANGO_API_URL`, backend reachability, and BFF secret configuration. |
+| Login succeeds upstream but BFF returns 502 | Backend BFF code/migration must be deployed; legacy JWT-only login responses are rejected. |
+| Mutation returns 403 | Exact `BFF_ORIGIN`, request Origin/custom header, then backend role permissions. |
+| Session disappears after password change | Expected: password fingerprints invalidate existing sessions. |
+| Every visitor hits login rate limits | Verify trusted client-IP forwarding; do not accept a spoofable header. |
+| Wrong store or branding | `NEXT_PUBLIC_STORE` and the build/profile used to start the process. |
+| Catalog looks stale | Matching revalidation secrets, reachable callback origin, then cache lifetime. |
+| Database relation for browser sessions is missing | Apply backend migrations to the selected store database. |
+| Assistant calls redirect or fail | Keep assistant trailing-slash normalization in the BFF. |
+| Upload or inbox stream fails only when hosted | Check platform body-size, execution-duration, and buffering limits. |
+| New profile fails to start | Create its ignored env file; the profile loader does not generate credentials. |

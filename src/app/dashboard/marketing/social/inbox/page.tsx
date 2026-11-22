@@ -4,7 +4,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getAuthCookie } from '@/lib/providers/auth-provider';
 import { ArrowLeft, Loader2, MessageSquare, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import securityAxios from '@/axios-instances/SecurityAxios';
@@ -375,11 +374,8 @@ function useSocialInboxEvents() {
         };
         const connect = async () => {
             try {
-                const token = getAuthCookie()?.tokens?.access_token;
-                if (!token) throw new Error('Not signed in');
-                const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-                const response = await fetch(`${base}/social/admin/inbox/events`, {
-                    headers: {Authorization: `Bearer ${token}`, Accept: 'text/event-stream'},
+                const response = await fetch('/api/bff/social/admin/inbox/events', {
+                    headers: {Accept: 'text/event-stream'},
                     cache: 'no-store', signal: controller.signal,
                 });
                 if (!response.ok || !response.body || !response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('Stream unavailable');

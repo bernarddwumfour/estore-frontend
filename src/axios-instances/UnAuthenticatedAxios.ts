@@ -1,6 +1,5 @@
 // axios-instances/UnAuthenticatedAxios.ts
 import { endpoints } from "@/constants/endpoints/endpoints";
-import { getAuthCookie, setAuthCookie } from "@/lib/providers/auth-provider";
 import type { ApiResponse } from "@/types/api";
 import axios, {
   AxiosInstance,
@@ -10,10 +9,12 @@ import axios, {
 } from "axios";
 
 const unAuthenticatedAxios: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  baseURL: "/api/bff",
   timeout: 50000,
   headers: {
     "Content-Type": "application/json",
+    "X-Estore-CSRF": "1",
+    "X-Estore-Guest": "1",
   },
 });
 

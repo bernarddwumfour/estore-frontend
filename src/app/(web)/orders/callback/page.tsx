@@ -5,10 +5,11 @@ import { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import UnAuthenticatedAxios from '@/axios-instances/UnAuthenticatedAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import { getAuthCookie } from '@/lib/providers/auth-provider';
+import { useAuth } from '@/lib/use-auth';
 import { storeRecentOrder } from '@/lib/orders/recent-order';
 
 export default function PaymentCallbackPage() {
+  const { user, status: authStatus } = useAuth();
     const searchParams = useSearchParams();
     const router = useRouter();
 
@@ -17,6 +18,7 @@ export default function PaymentCallbackPage() {
     const paymentRef = reference || trxref;
 
     useEffect(() => {
+    if (authStatus === "loading") return;
         const processCallback = async () => {
             if (!paymentRef) {
                 router.push('/orders/cancel?error=No payment reference found');
@@ -34,7 +36,7 @@ export default function PaymentCallbackPage() {
                     const orderId = order.id;
                     storeRecentOrder({
                         order,
-                        isAuthenticated: !!getAuthCookie()?.tokens?.access_token,
+                        isAuthenticated: Boolean(user?.id),
                         source: 'payment_callback',
                         createdAt: new Date().toISOString(),
                     });
@@ -56,7 +58,7 @@ export default function PaymentCallbackPage() {
         };
 
         processCallback();
-    }, [paymentRef, router]);
+    }, [paymentRef, router, user?.id, authStatus]);
 
     return (
         <div className="min-h-screen flex items-center justify-center">

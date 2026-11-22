@@ -7,10 +7,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import UnAuthenticatedAxios from '@/axios-instances/UnAuthenticatedAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import { getAuthCookie } from '@/lib/providers/auth-provider';
+import { useAuth } from '@/lib/use-auth';
 import { storeRecentOrder } from '@/lib/orders/recent-order';
 
 export default function PaymentSuccessPage() {
+  const { user, status: authStatus } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +20,7 @@ export default function PaymentSuccessPage() {
   const orderId = searchParams.get('order_id');
 
   useEffect(() => {
+    if (authStatus === "loading") return;
     const verifyPayment = async () => {
       if (!reference && !orderId) {
         setError('No payment reference found');
@@ -33,7 +35,7 @@ export default function PaymentSuccessPage() {
         if (response.data.success && response.data.data?.order) {
           storeRecentOrder({
             order: response.data.data.order,
-            isAuthenticated: !!getAuthCookie()?.tokens?.access_token,
+            isAuthenticated: Boolean(user?.id),
             source: 'payment_success',
             createdAt: new Date().toISOString(),
           });
@@ -57,7 +59,7 @@ export default function PaymentSuccessPage() {
     };
 
     verifyPayment();
-  }, [orderId, reference, router]);
+  }, [orderId, reference, router, user?.id, authStatus]);
 
   if (error) {
     return (

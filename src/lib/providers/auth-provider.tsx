@@ -1,7 +1,8 @@
 "use client";
 
 import type React from "react";
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import securityAxios from "@/axios-instances/SecurityAxios";
@@ -39,20 +40,6 @@ type User = {
   };
 };
 
-// CHANGED: Added explicit Tokens type for better type safety
-type Tokens = {
-  access_token: string;
-  refresh_token: string;
-  token_type?: string;
-  expires_in?: number;
-};
-
-// CHANGED: Created AuthData type to store both user and tokens together
-type AuthData = {
-  user: User;
-  tokens: Tokens;
-};
-
 function getLoginFailureMessage(error: unknown): string {
   const response = (error as {
     response?: {
@@ -63,10 +50,8 @@ function getLoginFailureMessage(error: unknown): string {
   })?.response;
   const data = response?.data;
 
-  // The current backend can surface django-ratelimit's Ratelimited exception
-  // as 403 until its exception middleware is active. Treat that login response
-  // as a throttle too; the API middleware now normalizes it to 429.
-  if (response?.status === 429 || response?.status === 403) {
+  // Permission/CSRF failures remain distinct from rate limiting.
+  if (response?.status === 429) {
     const retryAfterHeader = response.headers?.["retry-after"];
     const retryAfterSeconds = Number(retryAfterHeader);
     if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
@@ -85,7 +70,7 @@ function getLoginFailureMessage(error: unknown): string {
 
 type AuthContextType = {
   user: User | null;
-  tokens: Tokens | null;
+  status: "loading" | "authenticated" | "unauthenticated" | "error";
   login: (email: string, password: string) => Promise<void>;
   staffLogin: (email: string, password: string) => Promise<void>;
   signup: (userData: Partial<User & { password: string }>) => Promise<void>;
@@ -100,71 +85,9 @@ type AuthContextType = {
   // changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 };
 
-// CHANGED: Changed cookie key from "user" to "auth_data" to store both user and tokens
-const AUTH_COOKIE_KEY = "auth_data";
-
-// ==================== COOKIE UTILITIES ====================
-
-/**
- * CHANGED: Now stores complete auth data (user + tokens) instead of just user
- * This ensures tokens are properly persisted for authenticated requests
- */
-export function setAuthCookie(authData: AuthData, days: number = 7): void {
-  try {
-    const expires = new Date();
-    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-
-    const cookieValue = `${AUTH_COOKIE_KEY}=${encodeURIComponent(
-      JSON.stringify(authData)
-    )};expires=${expires.toUTCString()};path=/;SameSite=Lax${
-      location.protocol === "https:" ? ";Secure" : ""
-    }`;
-
-    document.cookie = cookieValue;
-  } catch (error) {
-    console.error("Failed to set auth cookie:", error);
-  }
-}
-
-/**
- * CHANGED: Returns AuthData (user + tokens) instead of just User
- * This provides access to tokens for authenticated API calls
- */
-export function getAuthCookie(): AuthData | null {
-  try {
-    const nameEQ = `${AUTH_COOKIE_KEY}=`;
-    const cookies = document.cookie.split(";");
-
-    for (let i = 0; i < cookies.length; i++) {
-      let cookie = cookies[i];
-      while (cookie.charAt(0) === " ") {
-        cookie = cookie.substring(1);
-      }
-      if (cookie.indexOf(nameEQ) === 0) {
-        const cookieValue = cookie.substring(nameEQ.length);
-        const decodedValue = decodeURIComponent(cookieValue);
-        return JSON.parse(decodedValue) as AuthData;
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error("Failed to get auth cookie:", error);
-    return null;
-  }
-}
-
-/**
- * CHANGED: Removes the auth_data cookie instead of user cookie
- */
-export function removeAuthCookie(): void {
-  document.cookie = `${AUTH_COOKIE_KEY}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
-}
-
-// ==================== AUTH CONTEXT ====================
-
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  tokens: null,
+  status: "loading",
   login: async () => {},
   staffLogin: async () => {},
   signup: async () => {},
@@ -182,25 +105,55 @@ export const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [tokens, setTokens] = useState<Tokens | null>(null);
+  const [status, setStatus] = useState<"loading" | "authenticated" | "unauthenticated" | "error">("loading");
+  const queryClient = useQueryClient();
+  const authGeneration = useRef(0);
 
-
-  // Initialize auth state from cookies on mount
   useEffect(() => {
-    const authData = getAuthCookie();
-    if (authData) {
-      setUser(authData.user);
-      setTokens(authData.tokens);
-      console.log(authData)
-
-      
-      // Set default axios headers if tokens exist
-      if (authData.tokens.access_token) {
-        securityAxios.defaults.headers.common["Authorization"] = 
-          `Bearer ${authData.tokens.access_token}`;
+    let active = true;
+    const restore = async () => {
+      const current = ++authGeneration.current;
+      try {
+        const response = await securityAxios.get(endpoints.auth.getProfile);
+        if (active && current === authGeneration.current) {
+          setUser(response.data.data);
+          setStatus("authenticated");
+        }
+      } catch (error: unknown) {
+        if (active && current === authGeneration.current) {
+          const code = (error as { response?: { status?: number } }).response?.status;
+          setUser(null);
+          setStatus(code === 401 ? "unauthenticated" : "error");
+        }
       }
-    }
-  }, []);
+    };
+    const expire = () => {
+      authGeneration.current++;
+      setUser(null);
+      setStatus("unauthenticated");
+      void queryClient.cancelQueries().then(() => queryClient.clear());
+      if (window.location.pathname.startsWith("/dashboard")) router.replace("/admin/login");
+    };
+    const sync = (event: StorageEvent) => {
+      if (event.key === "estore:auth-change") {
+        void queryClient.cancelQueries().then(() => { queryClient.clear(); void restore(); router.refresh(); });
+      }
+    };
+    // Remove the legacy credential cookie; never migrate its untrusted contents.
+    document.cookie = "auth_data=;Max-Age=0;path=/";
+    void restore();
+    window.addEventListener("estore:session-expired", expire);
+    window.addEventListener("storage", sync);
+    return () => {
+      active = false;
+      window.removeEventListener("estore:session-expired", expire);
+      window.removeEventListener("storage", sync);
+    };
+  }, [queryClient, router]);
+
+  const notifyTabs = () => {
+    try { localStorage.setItem("estore:auth-change", String(Date.now())); } catch { /* Storage may be disabled. */ }
+  };
 
   // ==================== AUTH METHODS ====================
 
@@ -222,20 +175,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(apiResponse.error || "Login failed");
       }
 
-      const { user: userData, tokens: tokenData  } = apiResponse.data;
-
-      const authData: AuthData = {
-        user: userData,
-        tokens: tokenData,
-      };
-
-      setAuthCookie(authData);
-      setUser(userData);
-      setTokens(tokenData);
-
-      // Set authorization header for future requests
-      securityAxios.defaults.headers.common["Authorization"] = 
-        `Bearer ${tokenData.access_token}`;
+      authGeneration.current++;
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      setUser(apiResponse.data.user);
+      setStatus("authenticated");
+      notifyTabs();
+      const userData = apiResponse.data.user;
 
       toast.success(apiResponse.message || "Login successful");
 
@@ -247,7 +193,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
     } catch (error: any) {
-      console.error("Login error:", error);
 
       toast.error(getLoginFailureMessage(error));
     }
@@ -274,24 +219,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(apiResponse.error || "Login failed");
       }
 
-      const { user: userData, tokens: tokenData } = apiResponse.data;
-
-      const authData: AuthData = {
-        user: userData,
-        tokens: tokenData,
-      };
-
-      setAuthCookie(authData);
-      setUser(userData);
-      setTokens(tokenData);
-
-      securityAxios.defaults.headers.common["Authorization"] =
-        `Bearer ${tokenData.access_token}`;
+      authGeneration.current++;
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      setUser(apiResponse.data.user);
+      setStatus("authenticated");
+      notifyTabs();
+      const userData = apiResponse.data.user;
 
       toast.success(apiResponse.message || "Login successful");
       router.push("/dashboard");
+      router.refresh();
     } catch (error: any) {
-      console.error("Staff login error:", error);
 
       toast.error(getLoginFailureMessage(error));
     }
@@ -327,7 +266,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.push(`/verification-link-sent/?email=${userData.email}`);
       
     } catch (error: any) {
-      console.error("Signup error:", error);
       
       // CHANGED: Handle validation errors from Django
       if (error?.response?.data?.errors) {
@@ -348,31 +286,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isStaff = user?.role === "staff" || user?.role === "admin";
 
     try {
-      const authData = getAuthCookie();
-      const refreshToken = authData?.tokens.refresh_token;
-
-      if (refreshToken) {
-        // Call logout API to blacklist tokens
-        await securityAxios.post(endpoints.auth.logout, {
-          refresh_token: refreshToken,
-        });
-      }
+      await securityAxios.post(endpoints.auth.logout, {});
+      authGeneration.current++;
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      setUser(null);
+      setStatus("unauthenticated");
+      notifyTabs();
+      router.push(isStaff ? "/admin/login" : "/login");
+      router.refresh();
 
       toast.success("Logged out successfully");
-    } catch (error: any) {
-      console.error("Logout error:", error);
-    } finally {
-      removeAuthCookie();
-      setUser(null);
-      setTokens(null);
-
-      delete securityAxios.defaults.headers.common["Authorization"];
-
-      router.push(isStaff ? "/admin/login" : "/login");
+    } catch {
+      toast.error("Could not complete logout. Please try again.");
     }
   };
 
-  
+
   const forgotPassword = async (email: string): Promise<void> => {
     try {
       const response = await securityAxios.post(
@@ -389,7 +319,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success(apiResponse.message || "Password reset email sent");
       
     } catch (error: any) {
-      console.error("Forgot password error:", error);
       
       const errorMessage = error?.response?.data?.error || 
                           error?.response?.data?.message || 
@@ -425,7 +354,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.push("/login");
       
     } catch (error: any) {
-      console.error("Reset password error:", error);
       
       const errorMessage = error?.response?.data?.error || 
                           error?.response?.data?.message || 
@@ -456,17 +384,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Update local user state if logged in
       if (user) {
         const updatedUser = { ...user, email_verified: true };
-        const authData = getAuthCookie();
-        if (authData) {
-          setAuthCookie({ ...authData, user: updatedUser });
-        }
         setUser(updatedUser);
       }
       
       router.push("/login");
       
     } catch (error: any) {
-      console.error("Email verification error:", error);
       
       const errorMessage = error?.response?.data?.error || 
                           error?.response?.data?.message || 
@@ -495,7 +418,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success(apiResponse.message || "Verification email resent");
       
     } catch (error: any) {
-      console.error("Resend verification error:", error);
       
       const errorMessage = error?.response?.data?.error || 
                           error?.response?.data?.message || 
@@ -504,141 +426,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // /**
-  //  * NEW: Added to match Django request verification endpoint (authenticated)
-  //  * Endpoint: POST /api/users/request-verification/
-  //  */
-  // const requestVerification = async (): Promise<void> => {
-  //   try {
-  //     const response = await securityAxios.post(
-  //       endpoints.auth.requestVerification
-  //       // No body needed - uses JWT token
-  //     );
-
-  //     const apiResponse = response.data;
-      
-  //     if (!apiResponse.success) {
-  //       throw new Error(apiResponse.error || "Failed to request verification");
-  //     }
-
-  //     toast.success(apiResponse.message || "Verification email sent");
-      
-  //   } catch (error: any) {
-  //     console.error("Request verification error:", error);
-      
-  //     const errorMessage = error?.response?.data?.error || 
-  //                         error?.response?.data?.message || 
-  //                         "Failed to request verification";
-  //     toast.error(errorMessage);
-  //   }
-  // };
-
-  // /**
-  //  * NEW: Added to check verification status
-  //  * Endpoint: GET /api/users/check-verification/
-  //  */
-  // const checkVerificationStatus = async (): Promise<void> => {
-  //   try {
-  //     const response = await securityAxios.get(
-  //       endpoints.auth.checkVerificationStatus
-  //     );
-
-  //     const apiResponse = response.data;
-      
-  //     if (!apiResponse.success) {
-  //       throw new Error(apiResponse.error || "Failed to check verification status");
-  //     }
-
-  //     return apiResponse.data; // Returns { email_verified: boolean, email_verified_at: string }
-      
-  //   } catch (error: any) {
-  //     console.error("Check verification status error:", error);
-  //     throw error;
-  //   }
-  // };
-
-  // /**
-  //  * NEW: Added to update user profile
-  //  * Endpoint: PUT /api/users/profile/update/
-  //  */
-  // const updateProfile = async (userData: Partial<User>): Promise<void> => {
-  //   try {
-  //     const response = await securityAxios.put(
-  //       endpoints.auth.updateProfile,
-  //       userData
-  //     );
-
-  //     const apiResponse = response.data;
-      
-  //     if (!apiResponse.success) {
-  //       throw new Error(apiResponse.error || "Failed to update profile");
-  //     }
-
-  //     // Update local user state
-  //     if (user) {
-  //       const updatedUser = { ...user, ...userData };
-  //       const authData = getAuthCookie();
-  //       if (authData) {
-  //         setAuthCookie({ ...authData, user: updatedUser });
-  //       }
-  //       setUser(updatedUser);
-  //     }
-
-  //     toast.success(apiResponse.message || "Profile updated successfully");
-      
-  //   } catch (error: any) {
-  //     console.error("Update profile error:", error);
-      
-  //     const errorMessage = error?.response?.data?.error || 
-  //                         error?.response?.data?.message || 
-  //                         "Failed to update profile";
-  //     toast.error(errorMessage);
-  //   }
-  // };
-
-  // /**
-  //  * NEW: Added to change password
-  //  * Endpoint: POST /api/users/profile/change-password/
-  //  */
-  // const changePassword = async (
-  //   currentPassword: string,
-  //   newPassword: string
-  // ): Promise<void> => {
-  //   try {
-  //     const response = await securityAxios.post(
-  //       endpoints.auth.changePassword,
-  //       {
-  //         current_password: currentPassword,
-  //         new_password: newPassword,
-  //       }
-  //     );
-
-  //     const apiResponse = response.data;
-      
-  //     if (!apiResponse.success) {
-  //       throw new Error(apiResponse.error || "Failed to change password");
-  //     }
-
-  //     toast.success(apiResponse.message || "Password changed successfully");
-      
-  //     // CHANGED: Logout user after password change (Django invalidates tokens)
-  //     await logout();
-      
-  //   } catch (error: any) {
-  //     console.error("Change password error:", error);
-      
-  //     const errorMessage = error?.response?.data?.error || 
-  //                         error?.response?.data?.message || 
-  //                         "Failed to change password";
-  //     toast.error(errorMessage);
-  //   }
-  // };
-
-  // ==================== CONTEXT VALUE ====================
-
   const contextValue: AuthContextType = {
     user,
-    tokens,
+    status,
     login,
     staffLogin,
     signup,

@@ -1,5 +1,5 @@
 
-import { cookies } from 'next/headers';
+import { authenticatedFetch } from '@/lib/server/backend';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,107 +28,14 @@ import axios from 'axios';
 import { formatCurrency } from '@/lib/currency';
 
 async function getOrders(page: number = 1, status: string = '') {
-  const cookieStore = await cookies();
-
-  // Get ALL cookies to debug
-  const allCookies = cookieStore.getAll();
-  console.log('All cookies found:', allCookies.map(c => ({ name: c.name, value: c.value.substring(0, 50) + '...' })));
-
-  const authCookie = cookieStore.get('auth_data')?.value;
-
-  if (!authCookie) {
-    console.log('No auth_cookie found, redirecting to login');
-    redirect('/login');
-  }
-
-  let accessToken;
-  try {
-    console.log('Raw auth cookie length:', authCookie.length);
-
-    // Try to decode and parse
-    const decodedCookie = decodeURIComponent(authCookie);
-    console.log('Decoded cookie (first 200 chars):', decodedCookie.substring(0, 200));
-
-    const authData = JSON.parse(decodedCookie);
-    console.log('Parsed auth data keys:', Object.keys(authData));
-
-    accessToken = authData.tokens?.access_token;
-
-    if (!accessToken) {
-      console.log('No access token found in auth data');
-      console.log('Auth data tokens keys:', authData.tokens ? Object.keys(authData.tokens) : 'No tokens object');
-      redirect('/login');
-    }
-
-    console.log('Access token found (first 30 chars):', accessToken.substring(0, 30) + '...');
-
-  } catch (error) {
-    console.error('Error parsing auth cookie:', error);
-    if (error instanceof SyntaxError) {
-      console.error('Invalid JSON in cookie');
-      // Try to see what's actually in the cookie
-      console.error('Raw cookie value:', authCookie);
-    }
-    redirect('/login');
-  }
-
-  // Using native fetch for Next.js caching benefits
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, '');
-  console.log(`${baseUrl}${endpoints.orders.listUserOrders}`)
-  const url = new URL(`${baseUrl}${endpoints.orders.listUserOrders}`);
-  url.searchParams.append('page', page.toString());
-  url.searchParams.append('limit', '10');
-  if (status) url.searchParams.append('status', status);
-
-  console.log('Fetching from URL:', url.toString());
-
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      // Remove cache for debugging
-      cache: 'no-store',
-    });
-
-    console.log('Response status:', response.status);
-
-    if (response.status === 401) {
-      console.log('401 Unauthorized response from API');
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-      redirect('/login');
-    }
-
-    // Check if response is JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
-      console.error('Response is not JSON:', contentType);
-      const text = await response.text();
-      console.error('Response text:', text.substring(0, 500));
-      throw new Error('Invalid response format from server');
-    }
-
-    const result = await response.json();
-    console.log('API response success:', result.success);
-
-    if (!result.success) {
-      console.error('API returned error:', result.error);
-      throw new Error(result.error || "Failed to load orders");
-    }
-
-    return result.data;
-
-  } catch (error: any) {
-    console.error('Fetch error:', error);
-
-    // Don't redirect for network errors, let the error boundary handle it
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      throw new Error('Unable to connect to the server. Please check your internet connection.');
-    }
-
-    throw error;
-  }
+  const params = new URLSearchParams({ page: String(page), limit: '10' });
+  if (status) params.set('status', status);
+  const response = await authenticatedFetch(`${endpoints.orders.listUserOrders}?${params}`);
+  if (response.status === 401) redirect('/login');
+  if (!response.ok) throw new Error('Unable to load orders. Please retry.');
+  const result = await response.json();
+  if (!result.success) throw new Error('Unable to load orders. Please retry.');
+  return result.data;
 }
 
 // Helper functions

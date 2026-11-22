@@ -1,6 +1,6 @@
 // use-fetch-wishlist.ts — fetches and hydrates wishlist from API
 "use client"
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   useWishlistHydrated,
@@ -13,16 +13,13 @@ import { useAuth } from '@/lib/use-auth'
 export const useFetchWishlist = (enabled = true) => {
   const hasHydrated = useWishlistHydrated()
   const setWishlist = useSetWishlist()
-  const { user, tokens } = useAuth()
-  const [tokenReady, setTokenReady] = useState(false)
+  const { user, status } = useAuth()
+  useEffect(() => { setWishlist([]) }, [user?.id, setWishlist])
 
 
   const query = useQuery({
     queryKey: [endpoints.products.listWishList],
     queryFn: async () => {
-      if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
-        throw new Error('The store API is not configured for this deployment.')
-      }
       const response = await securityAxios.get(endpoints.products.listWishList)
       const payload = response.data
       if (!Array.isArray(payload?.data?.items)) {
@@ -30,19 +27,9 @@ export const useFetchWishlist = (enabled = true) => {
       }
       return payload
     },
-    enabled: enabled && hasHydrated && tokenReady && Boolean(user?.id),
+    enabled: enabled && hasHydrated && status === "authenticated" && Boolean(user?.id),
     staleTime: 1000 * 60 * 5,
   })
-
-
-  // Wait for token to be available
-  useEffect(() => {
-    if (tokens?.access_token) {
-      setTimeout(() => {
-        setTokenReady(true)
-      }, 300)
-    }
-  }, [tokens?.access_token])
 
 
   useEffect(() => {

@@ -51,7 +51,7 @@ import {
 import type { AssistantTheme } from "./theme";
 
 interface ChatAssistantProps {
-  token: string | null;
+  authenticated: boolean;
   theme: AssistantTheme;
   getProductHref?: (
     product: AssistantProduct
@@ -78,7 +78,7 @@ type AssistantChatMessage = ChatMessageData & {
 };
 
 export function ChatAssistant({
-  token,
+  authenticated,
   theme,
   getProductHref,
 }: ChatAssistantProps) {
@@ -100,7 +100,7 @@ export function ChatAssistant({
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const sendingRef = useRef(false);
-  const previousTokenRef = useRef(token);
+  const previousAuthenticationRef = useRef(authenticated);
 
   useEffect(() => {
     try {
@@ -139,7 +139,7 @@ export function ChatAssistant({
   }, []);
 
   useEffect(() => {
-    if (!guestHistoryReady || token || conversationId) return;
+    if (!guestHistoryReady || authenticated || conversationId) return;
     try {
       if (messages.length) {
         const guestMessages = messages.slice(-40).map(({ id, role, content, products, promotions }) => ({
@@ -152,18 +152,18 @@ export function ChatAssistant({
     } catch {
       // Chat remains usable when browser storage is unavailable.
     }
-  }, [messages, token, conversationId, guestHistoryReady]);
+  }, [messages, authenticated, conversationId, guestHistoryReady]);
 
   useEffect(() => {
-    if (previousTokenRef.current && !token) {
+    if (previousAuthenticationRef.current && !authenticated) {
       // Clear authenticated chat state when the account signs out.
       setMessages([]);
       setConversationId(null);
       setInput("");
       clearGuestChatStorage();
     }
-    previousTokenRef.current = token;
-  }, [token]);
+    previousAuthenticationRef.current = authenticated;
+  }, [authenticated]);
 
   const handleSheetOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
@@ -236,7 +236,7 @@ export function ChatAssistant({
     abortRef.current = controller;
 
     try {
-      const result = token
+      const result = authenticated
         ? await sendAssistantMessage(
             {
               message,
@@ -253,7 +253,7 @@ export function ChatAssistant({
       if (controller.signal.aborted) return;
 
       setConversationId(result.conversation_id);
-      if (token && !conversationId) {
+      if (authenticated && !conversationId) {
         clearGuestChatStorage();
       }
 
@@ -553,7 +553,7 @@ export function ChatAssistant({
               </Button>
             </form>
 
-            {!token && <p className={`mt-2 text-center text-xs ${theme.mutedText}`}>
+            {!authenticated && <p className={`mt-2 text-center text-xs ${theme.mutedText}`}>
               Browsing as a guest. <Link href="/login" className="font-semibold underline">Sign in</Link> for wishlist and order features.
             </p>}
 

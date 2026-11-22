@@ -1,32 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sessionCookieName } from "@/lib/auth/cookie";
 
-const STAFF_ROLES = ["staff", "admin"];
-const AUTH_COOKIE_KEY = "auth_data";
-const STAFF_LOGIN_PATH = "/admin/login";
-
+// Optimistic redirect only. The server layout and every API request validate identity.
 export function middleware(request: NextRequest) {
-  const authCookie = request.cookies.get(AUTH_COOKIE_KEY)?.value;
-
-  const redirectToStaffLogin = () =>
-    NextResponse.redirect(new URL(STAFF_LOGIN_PATH, request.url));
-
-  if (!authCookie) {
-    return redirectToStaffLogin();
+  const name = sessionCookieName();
+  if (!request.cookies.get(name)?.value) {
+    return NextResponse.redirect(new URL('/admin/login', request.url));
   }
-
-  try {
-    const authData = JSON.parse(decodeURIComponent(authCookie));
-    const role = authData?.user?.role;
-    if (!STAFF_ROLES.includes(role)) {
-      return redirectToStaffLogin();
-    }
-  } catch {
-    return redirectToStaffLogin();
-  }
-
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: ["/dashboard/:path*"],
-};
+export const config = { matcher: ['/dashboard/:path*'] };

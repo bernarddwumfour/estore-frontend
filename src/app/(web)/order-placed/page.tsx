@@ -11,7 +11,7 @@ import { PageHeader } from '@/templates/page-header';
 import { formatCurrency } from '@/lib/currency';
 import SecurityAxios from '@/axios-instances/SecurityAxios';
 import { endpoints } from '@/constants/endpoints/endpoints';
-import { getAuthCookie } from '@/lib/providers/auth-provider';
+import { useAuth } from '@/lib/use-auth';
 import { getRecentOrder, type RecentOrder, type RecentOrderItem } from '@/lib/orders/recent-order';
 
 const formatDate = (value?: string | null) => {
@@ -24,6 +24,7 @@ const formatDate = (value?: string | null) => {
 };
 
 export default function OrderPlacedPage() {
+  const { user, status: authStatus } = useAuth();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('order_id');
   const [order, setOrder] = useState<RecentOrder | null>(null);
@@ -31,8 +32,8 @@ export default function OrderPlacedPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (authStatus === "loading") return;
     const loadOrder = async () => {
-      const authData = getAuthCookie();
       const storedOrder = getRecentOrder();
 
       if (storedOrder?.order && (!orderId || storedOrder.order.id === orderId)) {
@@ -42,7 +43,7 @@ export default function OrderPlacedPage() {
         return;
       }
 
-      if (authData?.tokens?.access_token && orderId) {
+      if (user?.id && orderId) {
         try {
           const response = await SecurityAxios.get(
             endpoints.orders.orderDetails.replace(':id', orderId)
@@ -61,7 +62,7 @@ export default function OrderPlacedPage() {
     };
 
     loadOrder();
-  }, [orderId]);
+  }, [orderId, user?.id, authStatus]);
 
   if (isLoading) {
     return (

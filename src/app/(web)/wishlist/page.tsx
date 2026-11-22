@@ -15,9 +15,6 @@ import TyrePapaEmptyState from "@/templates/tyrepapa/components/EmptyState";
 type WishlistResponse = { data: { items: ProductType[] } };
 
 export const fetchWishlist = async (): Promise<WishlistResponse> => {
-    if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
-        throw new Error("The store API is not configured for this deployment.");
-    }
     const response = await securityAxios.get(endpoints.products.listWishList);
     const payload = response.data as WishlistResponse | null;
     if (!Array.isArray(payload?.data?.items)) {
@@ -28,7 +25,7 @@ export const fetchWishlist = async (): Promise<WishlistResponse> => {
 
 const WishlistPage = () => {
     const isTyrePapa = process.env.NEXT_PUBLIC_STORE === "tyrepapa";
-    const { user, tokens } = useAuth();
+    const { user, status } = useAuth();
     const {
         data,
         isLoading,
@@ -37,7 +34,7 @@ const WishlistPage = () => {
     } = useQuery({
         queryKey: [endpoints.products.listWishList],
         queryFn: fetchWishlist,
-        enabled: Boolean(user?.id && tokens?.access_token),
+        enabled: Boolean(user?.id && status === "authenticated"),
     });
     const items = data?.data?.items ?? [];
 

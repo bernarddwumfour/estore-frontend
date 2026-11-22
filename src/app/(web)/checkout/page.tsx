@@ -178,7 +178,7 @@ export default function CheckoutPage() {
   const items = useCartStore((state) => state.items) as CartItem[];
   const getTotalPrice = useCartStore((state) => state.getTotalPrice);
   const clearCart = useCartStore((state) => state.clearCart);
-  const { user } = useAuth();
+  const { user, status: authStatus } = useAuth();
   const isAuthenticated = !!user;
 
   // Calculate totals
@@ -588,6 +588,7 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (authStatus === "loading" || authStatus === "error") return;
 
     const validationError = validateForm();
     if (validationError) {
@@ -629,6 +630,13 @@ export default function CheckoutPage() {
     return null;
   };
 
+  if (authStatus === "error") {
+    return <div className="min-h-screen flex flex-col gap-4 items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <p>We couldn’t check your session. Please retry before checking out.</p>
+      <Button onClick={() => window.location.reload()}>Retry</Button>
+    </div>;
+  }
+
   // Empty cart state
   if (isMounted && items.length === 0) {
     return (
@@ -652,7 +660,7 @@ export default function CheckoutPage() {
   }
 
   // Loading state
-  if (!isMounted) {
+  if (!isMounted || authStatus === "loading") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

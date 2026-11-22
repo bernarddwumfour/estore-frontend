@@ -54,12 +54,6 @@ const formatDate = (dateString: string | null) => {
   });
 };
 
-function getCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
 // Star Rating Component
 function StarRating({ rating, onRatingChange, size = "lg" }: { rating: number; onRatingChange: (rating: number) => void; size?: "sm" | "lg" }) {
   const [hoverRating, setHoverRating] = useState(0);
@@ -129,26 +123,7 @@ function ReviewDialog({
 
     setIsSubmitting(true);
 
-    const authCookie = getCookie('auth_data');
-    if (!authCookie) {
-      toast.error('Please login to submit a review');
-      setIsSubmitting(false);
-      return;
-    }
-
-    let accessToken: string;
     try {
-      const authData = JSON.parse(authCookie);
-      accessToken = authData.tokens?.access_token;
-      if (!accessToken) throw new Error('No access token');
-    } catch {
-      toast.error('Authentication failed');
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
       let endpoint: string;
       let body: any;
 
@@ -346,12 +321,6 @@ export default function OrderDetailsPage() {
   const fetchOrderDetails = useCallback(async () => {
     setLoading(true);
     setError(null);
-
-    const authCookie = getCookie('auth_data');
-    if (!authCookie) {
-      router.replace('/login');
-      return;
-    }
 
     try {
       const apiPath = endpoints.orders.orderDetails.replace(':id', orderId);
