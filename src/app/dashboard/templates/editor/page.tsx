@@ -6,7 +6,7 @@ import Link from 'next/link';
 import api from '@/axios-instances/SecurityAxios';
 import { apiMessage } from '@/lib/api-message';
 import { allRecords, base, persistImages, upgradeCanvas, type Template as ApiTemplate, type Category, type Slot } from '../api';
-import { Canvas, Circle as FabricCircle, Control, controlsUtils, FabricImage, Gradient as FabricGradient, Line as FabricLine, Path as FabricPath, PencilBrush, Rect, Textbox, Triangle as FabricTriangle, FabricObject } from 'fabric';
+import { ActiveSelection, Canvas, Circle as FabricCircle, Control, controlsUtils, FabricImage, Gradient as FabricGradient, Group, Line as FabricLine, Path as FabricPath, PencilBrush, Rect, Textbox, Triangle as FabricTriangle, FabricObject } from 'fabric';
 import { ArrowDownToLine, ArrowUpToLine, ChevronDown, Circle, Copy, Download, Eye, EyeOff, ImagePlus, Loader2, Lock, Minus, MoreHorizontal, MousePointer2, PaintBucket, PenTool, Pencil, Plus, Redo2, RotateCcw, RotateCw, Save, Square, Trash2, Triangle, Type, Undo2, Unlock, WandSparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -152,6 +152,7 @@ const canBecomeImageFrame = (object?: FabricObject | null) => !!object && !getOb
   object instanceof Rect || object instanceof FabricCircle || object instanceof FabricTriangle ||
   (object instanceof FabricPath && getObjectName(object) === 'custom-shape')
 );
+const getActionTargets = (object: FabricObject) => object instanceof ActiveSelection ? object.getObjects() : [object];
 const fireModified = (canvas: Canvas, object: FabricObject) => canvas.fire('object:modified', { target: object });
 const makeRotationControl = (x: number, y: number, offsetX: number, offsetY: number) => new Control({
   x, y, offsetX, offsetY, sizeX: 22, sizeY: 22, cursorStyle: 'grab', actionName: 'rotate',
@@ -410,6 +411,8 @@ export default function MarketingTemplatesPage() {
   const [format, setFormat] = useState<keyof typeof DIMENSIONS>('square');
   const [zoom, setZoom] = useState(0.75);
   const [selectedObject, setSelectedObject] = useState(false);
+  const [selectionCount, setSelectionCount] = useState(0);
+  const [selectedGroup, setSelectedGroup] = useState(false);
   const [selectionKind, setSelectionKind] = useState<'text' | 'shape' | 'image' | null>(null);
   const [selectedSlotAction, setSelectedSlotAction] = useState<{ type: 'text' | 'image'; hasSlot: boolean } | null>(null);
   const [selectedImageFrameAction, setSelectedImageFrameAction] = useState<{ eligible: boolean; enabled: boolean } | null>(null);
@@ -679,6 +682,26 @@ export default function MarketingTemplatesPage() {
       setActiveLayerIndex(active ? canvas.getObjects().indexOf(active) : null);
       setLayers(canvas.getObjects().map((object, index) => ({ index, label: getLayerLabel(object), visible: object.visible, locked: object.lockMovementX === true })).reverse());
       setSelectedObject(!!active);
+      setSelectionCount(active instanceof ActiveSelection ? active.getObjects().length : active ? 1 : 0);
+      setSelectedGroup(active instanceof Group && !(active instanceof ActiveSelection));
+      if (active instanceof ActiveSelection) {
+        setLeftPanelTab('layers');
+        setSelectionKind(null);
+        setSelectedCustomShape(false);
+        setSelectedSlotAction(null);
+        setSelectedImageFrameAction(null);
+        setSelectedGeometry({
+          left: Math.round(active.left || 0),
+          top: Math.round(active.top || 0),
+          width: Math.round(active.getScaledWidth()),
+          height: Math.round(active.getScaledHeight()),
+          angle: Math.round(active.angle || 0),
+          locked: active.getObjects().every(object => object.lockMovementX === true),
+          visible: active.visible,
+        });
+        updateFloatingActionsPosition();
+        return;
+      }
       const activeName = getObjectName(active) || '';
       const activeSlotType = getSlotTypeForObject(active);
       const activeSlotKey = String(active?.get('templateSlot') || (activeName.startsWith('image-slot:') ? activeName.slice('image-slot:'.length) : active instanceof Textbox ? activeName : ''));
@@ -927,6 +950,17 @@ export default function MarketingTemplatesPage() {
     const canvas = canvasRef.current;
     const object = source ?? canvas?.getActiveObject();
     if (!canvas || !object) return;
+    if (object instanceof ActiveSelection) {
+      const originals = object.getObjects();
+      canvas.discardActiveObject();
+      const clones = await Promise.all(originals.map(item => item.clone()));
+      clones.forEach(clone => clone.set({ left: (clone.left || 0) + 24, top: (clone.top || 0) + 24, selectable: true, evented: true }));
+      canvas.add(...clones);
+      const selection = new ActiveSelection(clones, { canvas });
+      canvas.setActiveObject(selection);
+      canvas.requestRenderAll();
+      return;
+    }
     const clone = await object.clone();
     clone.set({ left: (object.left || 0) + 24, top: (object.top || 0) + 24, selectable: true, evented: true });
     canvas.add(clone);
@@ -963,22 +997,51 @@ export default function MarketingTemplatesPage() {
 
   type ObjectAction = 'duplicate' | 'delete' | 'forward' | 'backward' | 'front' | 'back' | 'lock' | 'hide' | 'show' | 'replace';
 
-  const performObjectAction = (object: FabricObject, action: ObjectAction) => {
+  const groupSelectedObjects = useCallback(() => {
+    const canvas = canvasRef.current;
+    const selection = canvas?.getActiveObject();
+    if (!canvas || !(selection instanceof ActiveSelection) || selection.getObjects().length < 2) return;
+    const objects = selection.getObjects();
+    canvas.discardActiveObject();
+    canvas.remove(...objects);
+    const group = new Group(objects);
+    canvas.add(group);
+    canvas.setActiveObject(group);
+    canvas.requestRenderAll();
+    toast.success('Elements grouped. Use Ctrl/⌘+Shift+G to ungroup.');
+  }, []);
+
+  const ungroupSelectedObject = useCallback(() => {
+    const canvas = canvasRef.current;
+    const group = canvas?.getActiveObject();
+    if (!canvas || !(group instanceof Group) || group instanceof ActiveSelection) return;
+    const objects = group.removeAll();
+    canvas.discardActiveObject();
+    canvas.remove(group);
+    canvas.add(...objects);
+    const selection = objects.length > 1 ? new ActiveSelection(objects, { canvas }) : objects[0];
+    if (selection) canvas.setActiveObject(selection);
+    canvas.requestRenderAll();
+    toast.success('Group ungrouped.');
+  }, []);
+
+  const performObjectAction = useCallback((object: FabricObject, action: ObjectAction) => {
     const canvas = canvasRef.current;
     if (!canvas || !object) return;
     if (action === 'duplicate') { void duplicateObject(object); return; }
-    if (action === 'delete') { canvas.remove(object); if (canvas.getActiveObject() === object) canvas.discardActiveObject(); canvas.requestRenderAll(); return; }
-    if (action === 'forward') canvas.bringObjectForward(object);
-    if (action === 'backward') canvas.sendObjectBackwards(object);
-    if (action === 'front') canvas.bringObjectToFront(object);
-    if (action === 'back') canvas.sendObjectToBack(object);
-    if (action === 'lock') { const locked = object.lockMovementX !== true; object.set({ lockMovementX: locked, lockMovementY: locked, lockScalingX: locked, lockScalingY: locked, lockRotation: locked }); }
-    if (action === 'hide') { object.set('visible', false); if (canvas.getActiveObject() === object) canvas.discardActiveObject(); }
-    if (action === 'show') { object.set('visible', true); canvas.setActiveObject(object); }
+    const targets = getActionTargets(object);
+    if (action === 'delete') { canvas.discardActiveObject(); canvas.remove(...targets); canvas.requestRenderAll(); return; }
+    if (action === 'forward') targets.forEach(target => canvas.bringObjectForward(target));
+    if (action === 'backward') targets.slice().reverse().forEach(target => canvas.sendObjectBackwards(target));
+    if (action === 'front') targets.forEach(target => canvas.bringObjectToFront(target));
+    if (action === 'back') targets.slice().reverse().forEach(target => canvas.sendObjectToBack(target));
+    if (action === 'lock') { const locked = !targets.every(target => target.lockMovementX === true); targets.forEach(target => target.set({ lockMovementX: locked, lockMovementY: locked, lockScalingX: locked, lockScalingY: locked, lockRotation: locked })); }
+    if (action === 'hide') { canvas.discardActiveObject(); targets.forEach(target => target.set('visible', false)); }
+    if (action === 'show') { targets.forEach(target => target.set('visible', true)); if (targets.length === 1) canvas.setActiveObject(targets[0]); }
     if (action === 'replace' && object instanceof FabricImage) { imageSlotToReplaceRef.current = null; imageToReplaceRef.current = object; imagePickerRef.current?.click(); }
-    fireModified(canvas, object);
+    targets.forEach(target => fireModified(canvas, target));
     canvas.requestRenderAll();
-  };
+  }, [duplicateObject]);
 
   const runContextAction = (action: ObjectAction) => {
     const object = contextMenu?.target;
@@ -1327,13 +1390,14 @@ export default function MarketingTemplatesPage() {
       if (event.key === 'Escape' && activeTool === 'pen') { setActiveTool('select'); return; }
       if (command && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return; }
       if (command && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return; }
+      if (command && event.key.toLowerCase() === 'g') { event.preventDefault(); if (event.shiftKey) ungroupSelectedObject(); else groupSelectedObjects(); return; }
       if (command && event.key.toLowerCase() === 'c') { if (canvas?.getActiveObject()) { event.preventDefault(); void copyObject(); } return; }
       if (command && event.key.toLowerCase() === 'v') { event.preventDefault(); void pasteObject(); return; }
       if (command && event.key.toLowerCase() === 'd') { event.preventDefault(); void duplicateObject(); return; }
       if (!canvas) return;
-      if (command && (event.key === ']' || event.key === '}')) { const active = canvas.getActiveObject(); if (active) { event.preventDefault(); canvas.bringObjectForward(active); canvas.requestRenderAll(); fireModified(canvas, active); } return; }
-      if (command && (event.key === '[' || event.key === '{')) { const active = canvas.getActiveObject(); if (active) { event.preventDefault(); canvas.sendObjectBackwards(active); canvas.requestRenderAll(); fireModified(canvas, active); } return; }
-      if (event.key === 'Delete' || event.key === 'Backspace') { const active = canvas.getActiveObject(); if (active) { event.preventDefault(); canvas.remove(active); canvas.discardActiveObject(); canvas.requestRenderAll(); } return; }
+      if (command && (event.key === ']' || event.key === '}')) { const active = canvas.getActiveObject(); if (active) { event.preventDefault(); performObjectAction(active, 'forward'); } return; }
+      if (command && (event.key === '[' || event.key === '{')) { const active = canvas.getActiveObject(); if (active) { event.preventDefault(); performObjectAction(active, 'backward'); } return; }
+      if (event.key === 'Delete' || event.key === 'Backspace') { const active = canvas.getActiveObject(); if (active) { event.preventDefault(); performObjectAction(active, 'delete'); } return; }
       if (event.key.toLowerCase() === 't') {
         event.preventDefault();
         const text = new Textbox('Your promotion headline', { left: 48, top: 56, width: canvas.getWidth() - 96, fontSize: 42, fontFamily: 'Arial', fontWeight: 'bold', fill: '#171717', originX: 'left', originY: 'top' });
@@ -1361,7 +1425,7 @@ export default function MarketingTemplatesPage() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeTool, bezierAnchors, copyObject, duplicateObject, finishBezierPath, pasteObject, redo, undo]);
+  }, [activeTool, bezierAnchors, copyObject, duplicateObject, finishBezierPath, groupSelectedObjects, pasteObject, performObjectAction, redo, undo, ungroupSelectedObject]);
 
   const handleCanvasDoubleClick = useCallback((target?: FabricObject | null) => {
     const active = target ?? canvasRef.current?.getActiveObject();
@@ -1697,6 +1761,8 @@ export default function MarketingTemplatesPage() {
                 <DropdownMenuItem onSelect={() => { const object = canvasRef.current?.getActiveObject(); if (object) performObjectAction(object, 'backward'); }}><ArrowDownToLine/>Move down one layer</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => { const object = canvasRef.current?.getActiveObject(); if (object) performObjectAction(object, 'front'); }}><ArrowUpToLine/>Move to top</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => { const object = canvasRef.current?.getActiveObject(); if (object) performObjectAction(object, 'back'); }}><ArrowDownToLine/>Move to bottom</DropdownMenuItem>
+                {selectionCount > 1 && <><DropdownMenuSeparator/><DropdownMenuItem onSelect={groupSelectedObjects}>Group selection <span className="ml-auto text-xs text-muted-foreground">Ctrl/⌘ G</span></DropdownMenuItem></>}
+                {selectedGroup && <><DropdownMenuSeparator/><DropdownMenuItem onSelect={ungroupSelectedObject}>Ungroup <span className="ml-auto text-xs text-muted-foreground">Ctrl/⌘ Shift G</span></DropdownMenuItem></>}
                 {selectedImageFrameAction && <><DropdownMenuSeparator/><DropdownMenuItem onSelect={() => { const object = canvasRef.current?.getActiveObject(); if (object) toggleSelectedImageFrame(object); }}>{selectedImageFrameAction.enabled ? 'Remove image frame' : 'Convert to image frame'}</DropdownMenuItem></>}
                 {selectedSlotAction && <><DropdownMenuSeparator/><DropdownMenuItem onSelect={() => { const object = canvasRef.current?.getActiveObject(); if (object) openSlotDialog(object); }}>{selectedSlotAction.hasSlot ? 'Edit' : 'Create'} {selectedSlotAction.type} slot</DropdownMenuItem></>}
               </DropdownMenuContent>
@@ -1708,8 +1774,10 @@ export default function MarketingTemplatesPage() {
       <aside ref={rightPanelRef} className="space-y-5 rounded-lg border bg-card p-4 xl:h-full xl:min-h-0 xl:overflow-y-auto">
         <input ref={imagePickerRef} className="sr-only" type="file" accept="image/*" onChange={event => { void addImage(event.target.files?.[0]); event.currentTarget.value = ''; }} />
         <div>
-          <h2 className="font-semibold">{selectionKind ? 'Selected object' : activeTool === 'bezier' ? 'Bezier pen settings' : activeTool === 'pen' ? 'Freehand pen settings' : 'Selected object'}</h2>
-          {!selectionKind && (activeTool === 'pen' || activeTool === 'bezier') ? <div className="mt-3 space-y-3">
+          <h2 className="font-semibold">{selectionCount > 1 ? `${selectionCount} selected elements` : selectedGroup ? 'Selected group' : selectionKind ? 'Selected object' : activeTool === 'bezier' ? 'Bezier pen settings' : activeTool === 'pen' ? 'Freehand pen settings' : 'Selected object'}</h2>
+          {selectionCount > 1 ? <div className="mt-3 space-y-3"><p className="text-xs text-muted-foreground">Delete, duplicate, lock, hide, and stack actions apply to all selected elements.</p><Button size="sm" variant="outline" className="w-full" onClick={groupSelectedObjects}>Group selection</Button></div>
+            : selectedGroup ? <div className="mt-3 space-y-3"><p className="text-xs text-muted-foreground">Move and transform these elements together, or ungroup them to edit each element.</p><Button size="sm" variant="outline" className="w-full" onClick={ungroupSelectedObject}>Ungroup elements</Button></div>
+              : !selectionKind && (activeTool === 'pen' || activeTool === 'bezier') ? <div className="mt-3 space-y-3">
             <div className="flex items-center justify-between text-xs font-medium"><span>Stroke color</span><SingleColorPicker label="Pen stroke color" value={penColor} onChange={setPenColor}/></div>
             <label className="block text-xs font-medium">Stroke width ({penWidth}px)<input aria-label="Pen stroke width" className="mt-2 w-full" type="range" min={1} max={40} step={1} value={penWidth} onChange={event => setPenWidth(Number(event.target.value))} /></label>
             <p className="text-xs text-muted-foreground">{activeTool === 'bezier' ? 'Click to place points, drag a point to curve it, click near the first point to close, then press Enter to finish or Escape to cancel.' : 'Draw directly on the canvas. Press Escape or select the Select tool when finished.'}</p>
