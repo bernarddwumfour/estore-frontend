@@ -292,18 +292,18 @@
 .categoriesHeading h2 { font-size: clamp(36px, 4vw, 55px); margin-top: 9px; }
 .categoriesHeading > a { display: inline-flex; align-items: center; gap: 14px; padding-bottom: 8px; border-bottom: 1px solid #b69570; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
 .categoryGrid { max-width: 1440px; margin-inline: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #e7e1d9; border: 1px solid #e7e1d9; }
-.categoryTile { position: relative; display: flex; flex-direction: column; min-height: 180px; padding: 24px; background: #fff; transition: background .2s ease; }
+.categoryTile { position: relative; display: flex; flex-direction: column; min-height: 180px; padding: 24px 24px 14px; background: #fff; transition: background .2s ease; }
 .categoryTile:hover { background: #f8dfc8; }
-.categoryTileImage { position: absolute; top: 0; right: 0; width: 35%; aspect-ratio: 1; overflow: hidden; background: #f1ede7; }
+.categoryTileImage { position: absolute; top: 0; right: 0; width: 26%; aspect-ratio: 1; overflow: hidden; background: #f1ede7; }
 .categoryTilePhoto { object-fit: cover; transition: transform .3s ease; }
 .categoryTile:hover .categoryTilePhoto { transform: scale(1.04); }
-.categoryTile h3 { max-width: 62%; font: 400 clamp(23px, 2.4vw, 34px)/1.1 "Bodoni MT", Didot, "Times New Roman", serif; margin: auto 0 18px; }
-.categorySkeletonName { display: block; width: 55%; height: 24px; margin: auto 0 18px; }
+.categoryTile h3 { max-width: 70%; font: 400 clamp(21px, 2.1vw, 30px)/1.1 "Bodoni MT", Didot, "Times New Roman", serif; margin: 12px 0 18px; }
+.categorySkeletonName { display: block; width: 55%; height: 22px; margin: auto 0 18px; }
 .categorySkeletonCount { display: block; width: 44%; height: 10px; }
 .categoryTileBottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 10px; color: #746b61; }
 .bestsellerGrid { max-width: 1440px; margin-inline: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
 @media(max-width:900px) { .categoryGrid, .bestsellerGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media(max-width:700px) { .categories { padding: 42px 5%; } .categoriesHeading { align-items: flex-start; flex-direction: column; } .categoryTile { min-height: 145px; padding: 18px; } .categoryTile h3 { font-size: 25px; } .bestsellerGrid { gap: 10px; } }
+@media(max-width:700px) { .categories { padding: 42px 5%; } .categoriesHeading { align-items: flex-start; flex-direction: column; } .categoryTile { min-height: 145px; padding: 18px 18px 10px; } .categoryTile h3 { font-size: 22px; } .bestsellerGrid { gap: 10px; } }
 
 
 /* A shorter editorial story follows the product grid. */
