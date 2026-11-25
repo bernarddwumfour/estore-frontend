@@ -12,7 +12,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev:tyrepapa": "node scripts/dev-store.mjs tyrepapa"
+    "dev:tyrepapa": "node scripts/dev-store.mjs tyrepapa",
+    "dev:velora": "node scripts/dev-store.mjs velora"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

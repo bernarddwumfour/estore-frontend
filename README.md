@@ -75,6 +75,7 @@ Create the environment profile for the store you want to run. These files are ig
 | iPlug | `.env.iplug` | `default` | 3000 | 8000 | `npm run dev:iplug` |
 | Oak & Loom | `.env.oakandloom` | `furniture` | 3001 | 8001 | `npm run dev:oak` |
 | TyrePapa | `.env.tyrepapa` | `tyrepapa` | 3002 | 8002 | `npm run dev:tyrepapa` |
+| Velora | `.env.velora` | `velora` | 3004 | 8004 | `npm run dev:velora` |
 | Olive & Aura | `.env.oliveandaura` | `oliveandaura` | 3003 | 8003 | `npm run dev:oliveandaura` |
 
 Example `.env.iplug`:
@@ -94,7 +95,7 @@ Use the matching ports and store value for the other profiles. Generate each sha
 node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
 ```
 
-Start the backend and apply its migrations first. Then run the frontend command from the table and open its localhost URL. The profile runner isolates Next.js output in `.next-iplug`, `.next-oakandloom`, `.next-tyrepapa`, or `.next-oliveandaura`. Olive & Aura's development command uses Webpack.
+Start the backend and apply its migrations first. Then run the frontend command from the table and open its localhost URL. The profile runner isolates Next.js output per store. Velora's local profile uses the copied iPlug API settings and credentials except for its independent application/webhook secrets and the local URLs/ports.
 
 `npm run dev` uses Next.js's normal environment loading and default port. It does not select a named profile. The configured demo workspace uses `.env` as the default iPlug environment. Restart development processes after changing environment values.
 
@@ -104,7 +105,7 @@ Start the backend and apply its migrations first. Then run the frontend command 
 
 | Variable | Purpose |
 | --- | --- |
-| `NEXT_PUBLIC_STORE` | Build-time template selection: `default`, `furniture`, `tyrepapa`, or `oliveandaura`. Unknown values fail explicitly. |
+| `NEXT_PUBLIC_STORE` | Build-time template selection: `default`, `furniture`, `tyrepapa`, `oliveandaura`, or `velora`. Unknown values fail explicitly. |
 | `NEXT_PUBLIC_API_BASE_URL` | Public Django API URL, including `/api`; used by catalog and other public fetches. |
 | `DJANGO_API_URL` | Server-side Django API URL, including `/api`; falls back to the public API URL if absent. |
 | `BFF_SHARED_SECRET` | Server-to-server credential matching Django's value. Never prefix it with `NEXT_PUBLIC_`. |
