@@ -532,3 +532,15 @@
 [data-storefront-theme="fashion-surface"][data-slot="select-trigger"] { border-color: #e9e1d7; background: #fffdf9; color: #24211f; border-radius: .5rem; }
 [data-storefront-theme="fashion-surface"][data-slot="select-content"] { border-color: #e9e1d7; background: #fffdf9; color: #24211f; }
 [data-storefront-theme="fashion-surface"][data-slot="select-content"] [data-slot="select-item"]:focus { background: #f2eee8; color: #24211f; }
+
+/* Velora cart and checkout confirmation */
+[data-storefront-theme="fashion-surface"][role="dialog"] { background-color: #fffdf9; border-color: #e9e1d7; color: #24211f; }
+[data-storefront-theme="fashion-surface"][role="dialog"] :is(.bg-gray-50, .bg-gray-100) { background-color: #f6f3ee; }
+[data-storefront-theme="fashion-surface"][role="dialog"] a.bg-gray-700 { background-color: #ad8a60; color: white; border-radius: .375rem; }
+[data-storefront-theme="fashion-surface"][role="dialog"] a.bg-gray-700:hover { background-color: #92704a; }
+[data-storefront-theme="fashion-surface"][role="dialog"] a.border-gray-600 { border-color: #d9cfc2; color: #24211f; border-radius: .375rem; }
+[data-storefront-theme="fashion-surface"][role="dialog"] a.border-gray-600:hover { background-color: #f2eee8; border-color: #ad8a60; }
+[data-storefront-theme="fashion-surface"][role="dialog"] button.border-gray-300 { border-color: #d9cfc2; border-radius: .375rem; }
+
+[data-storefront-theme="beauty-surface"][role="dialog"] a.bg-gray-700 { background-color: #92583e; color: white; }
+[data-storefront-theme="beauty-surface"][role="dialog"] a.bg-gray-700:hover { background-color: #75432f; }

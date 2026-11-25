@@ -64,10 +64,12 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
 
   if (!cartopen) return null
 
+  const fashion = storefrontTheme === 'fashion-surface'
+
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-40" />
-      <div data-storefront-theme={storefrontTheme} ref={cartRef} className="absolute top-12 sm:-right-0 -right-35 w-screen max-w-md border border-gray-200 bg-white px-4 py-6 sm:px-6 lg:px-8 z-50"
+      <div data-storefront-theme={storefrontTheme} ref={cartRef} className={`absolute top-12 sm:-right-0 -right-35 w-screen max-w-md border border-gray-200 bg-white px-4 py-6 sm:px-6 lg:px-8 z-50 ${storefrontTheme === "fashion-surface" ? "rounded-xl shadow-xl" : ""}`}
         aria-modal="true"
         role="dialog">
         {/* Close button */}
@@ -81,17 +83,21 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
           </svg>
         </button>
 
-        <div className="mt-8 max-h-[60vh] overflow-y-scroll">
-          <h2 className="text-lg font-medium text-gray-900 mb-6">
-            Your Cart ({getTotalItems()})
-          </h2>
+        <div className={`mt-8 max-h-[65vh] overflow-y-auto ${fashion ? "pr-1" : ""}`}>
+          {fashion && <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ad8a60]">Your selection</p>}
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <h2 className={`text-lg font-medium text-gray-900 ${fashion ? "!text-2xl !font-semibold tracking-tight" : ""}`}>
+              Your Cart ({getTotalItems()})
+            </h2>
+            {items.length > 0 && <button type="button" onClick={() => { clearCart(); setcartopen(false) }} className="shrink-0 cursor-pointer text-xs font-medium text-gray-500 underline underline-offset-4 transition hover:text-red-600">Clear Cart</button>}
+          </div>
 
           {items.length === 0 ? (
             <div className="py-8 text-center">
               <p className="text-gray-500">Your cart is empty</p>
               <button
                 onClick={() => setcartopen(false)}
-                className="mt-4 text-sm text-gray-600 underline underline-offset-4 transition hover:text-gray-900"
+                className="mt-4 cursor-pointer text-sm text-gray-600 underline underline-offset-4 transition hover:text-gray-900"
               >
                 Continue shopping
               </button>
@@ -100,7 +106,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
             <>
               <ul className="space-y-6">
                 {items.map((item) => (
-                  <li key={item.variantId || item.sku} className="flex items-start gap-4">
+                  <li key={item.variantId || item.sku} className={`flex items-start gap-4 ${fashion ? "rounded-lg border border-[#eee9e2] bg-[#faf8f5] p-3" : ""}`}>
                     <Link href={!item.isBundle ? `/products/${item.slug}` : `/promotions/${item.slug}`} className="relative size-22 flex-shrink-0 overflow-hidden rounded-sm border border-gray-200">
                       <Image
                         width={88}
@@ -111,8 +117,8 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                       />
                     </Link>
 
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
                         <h3 className="text-sm font-medium text-gray-900">
                           {storefrontProductName(item.title, item.attributes)}
                         </h3>
@@ -128,12 +134,10 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                           <dt className="inline font-medium">Price:</dt>
                           <dd className="inline ml-1">{formatCurrency(item.price)}</dd>
                         </div>
-                        <div>
+                        {item.quantity > 1 && <div>
                           <dt className="inline font-medium">Total:</dt>
-                          <dd className="inline ml-1 font-medium text-gray-900">
-                            {formatCurrency(item.price * item.quantity)}
-                          </dd>
-                        </div>
+                          <dd className="inline ml-1 font-medium text-gray-900">{formatCurrency(item.price * item.quantity)}</dd>
+                        </div>}
                       </dl>
 
                       {/* Bundle Items Section */}
@@ -199,15 +203,8 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                         >
                           +
                         </button>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">
-                        {formatCurrency(item.price * item.quantity)}
-                      </p>
                       <button
-                        className="mt-2 text-gray-600 transition hover:text-red-600"
+                        className="ml-auto cursor-pointer text-gray-600 transition hover:text-red-600"
                           onClick={() => removeItem(item.variantId || item.sku)}
                       >
                         <span className="sr-only">Remove item</span>
@@ -215,6 +212,7 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path>
                         </svg>
                       </button>
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -228,9 +226,10 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
                 </div>
 
                 <div className="space-y-3">
+                  <div className="flex gap-3">
                   <Link
                     href="/cart"
-                    className="block text-center rounded-sm border border-gray-600 px-5 py-3 text-sm text-gray-600 transition hover:bg-gray-50"
+                    className={`block shrink-0 text-center rounded-sm border border-gray-600 px-5 py-3 text-sm text-gray-600 transition hover:bg-gray-50 ${fashion ? "!rounded-md !border-[#d9cfc2] !text-[#24211f] hover:!bg-[#f2eee8]" : ""}`}
                     onClick={() => setcartopen(false)}
                   >
                     View my cart ({getTotalItems()})
@@ -238,25 +237,17 @@ export default function Cart({ cartopen, setcartopen }: CartProps) {
 
                   <Link
                     href="/checkout"
-                    className="block text-center rounded-sm bg-gray-700 px-5 py-3 text-sm text-gray-100 transition hover:bg-gray-600"
+                    className={`block min-w-0 flex-1 text-center rounded-sm bg-gray-700 px-5 py-3 text-sm text-gray-100 transition hover:bg-gray-600 ${fashion ? "!rounded-md !bg-[#ad8a60] !font-semibold !text-white hover:!bg-[#92704a]" : ""}`}
                     onClick={() => setcartopen(false)}
                   >
                     Checkout
                   </Link>
 
-                  <button
-                    onClick={() => {
-                      clearCart()
-                      setcartopen(false)
-                    }}
-                    className="w-full text-center rounded-sm border border-red-200 px-5 py-3 text-sm text-red-600 transition hover:bg-red-50"
-                  >
-                    Clear Cart
-                  </button>
+                  </div>
 
                   <button
                     onClick={() => setcartopen(false)}
-                    className="block w-full text-center text-sm text-gray-500 underline underline-offset-4 transition hover:text-gray-600"
+                    className="block w-full cursor-pointer text-center text-sm text-gray-500 underline underline-offset-4 transition hover:text-gray-600"
                   >
                     Continue shopping
                   </button>
