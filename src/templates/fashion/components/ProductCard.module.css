@@ -1,0 +1,10 @@
+.actions :global([data-slot="button"]) { border-radius: 0.375rem; }
+.actions :global([data-slot="button"][data-variant="default"]) { background: #ad8a60; border-color: #ad8a60; color: #fff; }
+.actions :global([data-slot="button"][data-variant="default"]:hover) { background: #92704a; border-color: #92704a; }
+.actions :global([data-slot="button"][data-variant="outline"]) { background: #fffdf9; border-color: #d9cfc2; color: #24211f; }
+.actions :global([data-slot="button"][data-variant="outline"]:hover) { background: #f3eee7; border-color: #ad8a60; }
+.actions :global(.rounded-full) { border-radius: 0.375rem; }
+.actions :global(.rounded-full) { min-width: 0; padding-inline: 0.375rem; }
+.actions :global(.rounded-full) span { white-space: nowrap; font-size: 0.6875rem; }
+.actions :global(.rounded-full) [data-slot="button"] { flex-shrink: 0; }
+.actions :global([data-slot="button"][data-variant="outline"]) { padding-inline: 0.625rem; }

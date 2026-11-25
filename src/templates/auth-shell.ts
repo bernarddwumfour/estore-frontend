@@ -2,6 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 import DefaultAuthShell from "./default/components/AuthShell";
 import FurnitureAuthShell from "./furniture/components/AuthShell";
 import TyrePapaAuthShell from "./tyrepapa/components/AuthShell";
+import FashionAuthShell from "./fashion/components/AuthShell";
 import BeautyAuthShell from "./beauty/components/AuthShell";
 
 /**
@@ -17,6 +18,7 @@ const shells: Record<string, ComponentType<{ children: ReactNode }>> = {
   furniture: FurnitureAuthShell,
   tyrepapa: TyrePapaAuthShell,
   oliveandaura: BeautyAuthShell,
+  velora: FashionAuthShell,
 };
 
 const activeStore = process.env.NEXT_PUBLIC_STORE ?? "default";

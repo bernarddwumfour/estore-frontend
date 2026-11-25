@@ -3,6 +3,7 @@ import { defaultTemplate } from "./default";
 import { furniture } from "./furniture";
 import { tyrepapa } from "./tyrepapa";
 import { beauty } from "./beauty";
+import { fashion } from "./fashion";
 
 /**
  * Active store templates. A store inherits the `default` baseline and spreads
@@ -16,6 +17,7 @@ const registries: Record<string, Template> = {
   furniture: { ...defaultTemplate, ...furniture },
   tyrepapa: { ...defaultTemplate, ...tyrepapa },
   oliveandaura: { ...defaultTemplate, ...beauty },
+  velora: { ...defaultTemplate, ...fashion },
 };
 
 const activeStore = process.env.NEXT_PUBLIC_STORE ?? "default";

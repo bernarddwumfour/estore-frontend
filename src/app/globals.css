@@ -516,3 +516,19 @@
 [data-storefront-theme="beauty-surface"] .product-detail-layout h1,
 [data-storefront-theme="beauty-surface"] .product-detail-layout h2 { font-family: "Bodoni MT", Didot, "Times New Roman", serif; font-weight: 400; }
 [data-storefront-theme="beauty-surface"] :is(h1, h2) { font-family: "Bodoni MT", Didot, "Times New Roman", serif; font-weight: 400; letter-spacing: -.035em; }
+
+/* Velora authentication surfaces */
+[data-storefront-theme="fashion-surface"] :is(.text-gray-900, .text-gray-800, .text-slate-900) { color: #24211f; }
+[data-storefront-theme="fashion-surface"] :is(.text-gray-500, .text-gray-600, .text-gray-700, .text-slate-600) { color: #77716b; }
+[data-storefront-theme="fashion-surface"] :is(.border-gray-100, .border-gray-200, .border-gray-300, .border-slate-200) { border-color: #e9e1d7; }
+[data-storefront-theme="fashion-surface"] :is(.text-blue-600, .text-blue-700) { color: #92704a; }
+[data-storefront-theme="fashion-surface"] [data-slot="button"][data-variant="default"] { background-color: #ad8a60; border-color: #ad8a60; color: white; }
+[data-storefront-theme="fashion-surface"] [data-slot="button"][data-variant="default"]:hover { background-color: #92704a; }
+[data-storefront-theme="fashion-surface"] :is(input, textarea, select):focus-visible { outline-color: #ad8a60; border-color: #ad8a60; }
+
+/* Velora filters and their portalled select menus */
+[data-filter-theme="fashion-surface"] { color: #24211f; }
+[data-filter-theme="fashion-surface"] input:focus-visible { outline-color: #ad8a60; border-color: #ad8a60; }
+[data-storefront-theme="fashion-surface"][data-slot="select-trigger"] { border-color: #e9e1d7; background: #fffdf9; color: #24211f; border-radius: .5rem; }
+[data-storefront-theme="fashion-surface"][data-slot="select-content"] { border-color: #e9e1d7; background: #fffdf9; color: #24211f; }
+[data-storefront-theme="fashion-surface"][data-slot="select-content"] [data-slot="select-item"]:focus { background: #f2eee8; color: #24211f; }
