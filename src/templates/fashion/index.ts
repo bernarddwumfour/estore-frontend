@@ -9,7 +9,7 @@ import ContactPage from "./pages/ContactPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
 
-/** Editorial fashion storefront for the Velora clothing store. */
+/** Editorial fashion storefront for the Amammre Wears clothing store. */
 export const fashion: Partial<Template> = {
   assistantTheme: {
     launcher: "bg-[#ad8a60] text-white hover:bg-[#92704a]",

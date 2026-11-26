@@ -82,7 +82,7 @@ export function filterThemeClasses(...inputs: Parameters<typeof mergeClasses>) {
   const colors = process.env.NEXT_PUBLIC_STORE === 'furniture' ? furnitureColors
     : process.env.NEXT_PUBLIC_STORE === 'tyrepapa' ? tyrepapaColors
       : process.env.NEXT_PUBLIC_STORE === 'oliveandaura' ? beautyColors
-        : process.env.NEXT_PUBLIC_STORE === 'velora' ? fashionColors : null;
+        : process.env.NEXT_PUBLIC_STORE === 'amammre' ? fashionColors : null;
   if (!colors) return classes;
   return classes.replace(/(?:bg|text|border|ring)-(?:slate|emerald)-\d+/g,
     color => colors[color] ?? color);

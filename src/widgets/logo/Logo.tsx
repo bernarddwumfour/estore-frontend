@@ -16,6 +16,9 @@ export default function Logo({
   href?: string;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
 }) {
+  if (process.env.NEXT_PUBLIC_STORE === "amammre") {
+    return <Link href={href} onClick={onClick} aria-label="Amammre Wears home" className={`inline-flex shrink-0 items-center font-semibold tracking-[0.12em] ${light ? "text-white" : "text-[#24211f]"} ${compact ? "text-sm" : "text-lg"}`}>AMAMMRE WEARS<span className="text-[#ad8a60]">.</span></Link>;
+  }
   if (process.env.NEXT_PUBLIC_STORE === "tyrepapa") {
     return <BrandLogo href={href} onClick={onClick} tone={light ? "gold" : "ink"} compact={compact} sidebar={sidebar} />;
   }

@@ -28,13 +28,10 @@ export default function Navbar() {
       </div>
       <header className="relative z-50 border-b border-[#eee9e2] bg-[#fffdf9] text-[#24211f]">
         <nav className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 lg:px-12" aria-label="Main navigation">
-          <button className="rounded-full p-2 lg:hidden" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
           <div className="hidden flex-1 items-center gap-7 lg:flex">
             {links.slice(0, 2).map((link) => <Link key={link.label} href={link.href} className="text-[10px] uppercase tracking-[0.13em] text-[#5f5953] transition-colors hover:text-[#ad8a60]">{link.label}</Link>)}
           </div>
-          <Link href="/" className="text-center text-[22px] font-semibold tracking-[0.18em] text-[#24211f]" aria-label="Velora home">VELORA<span className="text-[#ad8a60]">.</span></Link>
+          <Link href="/" className="whitespace-nowrap text-center text-[13px] font-semibold tracking-[0.1em] sm:text-[20px] sm:tracking-[0.14em] text-[#24211f]" aria-label="Amammre Wears home">AMAMMRE WEARS<span className="text-[#ad8a60]">.</span></Link>
           <div className="flex flex-1 items-center justify-end gap-1">
             <div className="mr-3 hidden items-center gap-7 lg:flex">{links.slice(2).map((link) => <Link key={link.label} href={link.href} className="text-[10px] uppercase tracking-[0.13em] text-[#5f5953] transition-colors hover:text-[#ad8a60]">{link.label}</Link>)}</div>
             <button className="rounded-full p-2.5 hover:bg-[#f3efe9]" aria-label="Search products" onClick={() => setSearchOpen(true)}><Search className="h-[18px] w-[18px]" /></button>
@@ -46,6 +43,9 @@ export default function Navbar() {
               </button>
               <Cart cartopen={cartOpen} setcartopen={setCartOpen} />
             </div>
+            <button className="rounded-full p-2 lg:hidden" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </nav>
         {menuOpen && <div className="absolute left-0 right-0 top-full border-t border-[#eee9e2] bg-[#fffdf9] px-5 py-3 shadow-lg lg:hidden">{links.map((link) => <Link key={link.label} href={link.href} onClick={() => setMenuOpen(false)} className="block border-b border-[#eee9e2] py-3 text-[10px] uppercase tracking-[0.14em] last:border-0">{link.label}</Link>)}</div>}

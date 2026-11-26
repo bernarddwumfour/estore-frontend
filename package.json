@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:tyrepapa": "node scripts/dev-store.mjs tyrepapa",
-    "dev:velora": "node scripts/dev-store.mjs velora"
+    "dev:amammre": "node scripts/dev-store.mjs amammre"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

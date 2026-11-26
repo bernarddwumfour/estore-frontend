@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { parseEnv } from "node:util";
 
-const profiles = { iplug: ".env.iplug", oak: ".env.oakandloom", tyrepapa: ".env.tyrepapa", oliveandaura: ".env.oliveandaura", velora: ".env.velora" };
-const defaultPorts = { iplug: 3000, oak: 3001, tyrepapa: 3002, oliveandaura: 3003, velora: 3004 };
-const defaultDistDirs = { iplug: ".next-iplug", oak: ".next-oakandloom", tyrepapa: ".next-tyrepapa", oliveandaura: ".next-oliveandaura", velora: ".next-velora" };
+const profiles = { iplug: ".env.iplug", oak: ".env.oakandloom", tyrepapa: ".env.tyrepapa", oliveandaura: ".env.oliveandaura", amammre: ".env.amammre" };
+const defaultPorts = { iplug: 3000, oak: 3001, tyrepapa: 3002, oliveandaura: 3003, amammre: 3004 };
+const defaultDistDirs = { iplug: ".next-iplug", oak: ".next-oakandloom", tyrepapa: ".next-tyrepapa", oliveandaura: ".next-oliveandaura", amammre: ".next-amammre" };
 const profile = process.argv[2];
 if (!Object.hasOwn(profiles, profile)) {
-  console.error("Usage: node scripts/dev-store.mjs <iplug|oak|tyrepapa|oliveandaura|velora> [Next.js arguments]");
+  console.error("Usage: node scripts/dev-store.mjs <iplug|oak|tyrepapa|oliveandaura|amammre> [Next.js arguments]");
   process.exit(1);
 }
 
@@ -21,7 +21,7 @@ try {
 
 const childEnv = { ...process.env, ...values };
 childEnv.NEXT_DEV_DIST_DIR ||= defaultDistDirs[profile];
-childEnv.NEXT_PUBLIC_STORE = profile === "oak" ? "furniture" : profile === "velora" ? "velora" : childEnv.NEXT_PUBLIC_STORE;
+childEnv.NEXT_PUBLIC_STORE = profile === "oak" ? "furniture" : profile === "amammre" ? "amammre" : childEnv.NEXT_PUBLIC_STORE;
 if (profile === "oliveandaura") childEnv.NEXT_PUBLIC_STORE = "oliveandaura";
 
 const nextArgs = process.argv.slice(3);

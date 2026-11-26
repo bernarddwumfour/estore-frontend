@@ -19,7 +19,7 @@ const headers: Record<string, ComponentType<PageHeaderProps>> = {
   default: DefaultPageHeader,
   furniture: FurniturePageHeader,
   tyrepapa: TyrePapaPageHeader,
-  velora: FashionPageHeader,
+  amammre: FashionPageHeader,
 };
 
 const activeStore = process.env.NEXT_PUBLIC_STORE ?? "default";

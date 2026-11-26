@@ -15,15 +15,16 @@ const lato = Lato({
 
 const isTyrePapa = process.env.NEXT_PUBLIC_STORE === "tyrepapa";
 const isBeauty = process.env.NEXT_PUBLIC_STORE === "oliveandaura";
+const isAmammre = process.env.NEXT_PUBLIC_STORE === "amammre";
 
-const brandIcon = isTyrePapa ? "/tyrepapa/favicon.svg" : isBeauty ? "/beauty/favicon.svg" : process.env.NEXT_PUBLIC_STORE === "furniture"
+const brandIcon = isAmammre ? "/amammre/favicon.svg" : isTyrePapa ? "/tyrepapa/favicon.svg" : isBeauty ? "/beauty/favicon.svg" : process.env.NEXT_PUBLIC_STORE === "furniture"
   ? "/brand/oakandloom-mark.png"
   : "/brand/iplug-mark.png";
 
 export const metadata: Metadata = {
   icons: { icon: brandIcon, shortcut: brandIcon, apple: brandIcon },
-  title: isTyrePapa ? "TyrePapa — Find the right set" : isBeauty ? "Olive & Aura — Beauty & wellness" : process.env.NEXT_PUBLIC_STORE === "furniture" ? "oak&loom" : "iPlug",
-  description: isTyrePapa ? "Explore tyres for your car and the journeys ahead with TyrePapa." : isBeauty ? "Thoughtful spa treatments, beauty rituals and skincare from Olive & Aura." : process.env.NEXT_PUBLIC_STORE === "furniture"
+  title: isAmammre ? "Amammre Wears — Heritage, styled for today" : isTyrePapa ? "TyrePapa — Find the right set" : isBeauty ? "Olive & Aura — Beauty & wellness" : process.env.NEXT_PUBLIC_STORE === "furniture" ? "oak&loom" : "iPlug",
+  description: isAmammre ? "Discover traditional and contemporary fashion at Amammre Wears." : isTyrePapa ? "Explore tyres for your car and the journeys ahead with TyrePapa." : isBeauty ? "Thoughtful spa treatments, beauty rituals and skincare from Olive & Aura." : process.env.NEXT_PUBLIC_STORE === "furniture"
     ? "Thoughtfully crafted furniture and home essentials from oak&loom."
     : "Premium tech gadgets and accessories for modern living.",
 };

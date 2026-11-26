@@ -43,8 +43,8 @@
     ".next-oakandloom/dev/types/**/*.ts",
     ".next-oliveandaura/types/**/*.ts",
     ".next-oliveandaura/dev/types/**/*.ts",
-    ".next-velora/types/**/*.ts",
-    ".next-velora/dev/types/**/*.ts"
+    ".next-amammre/types/**/*.ts",
+    ".next-amammre/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

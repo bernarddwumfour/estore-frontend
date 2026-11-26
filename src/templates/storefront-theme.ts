@@ -3,4 +3,4 @@ export const storefrontTheme = process.env.NEXT_PUBLIC_STORE === "furniture"
   ? "furniture-surface"
   : process.env.NEXT_PUBLIC_STORE === "tyrepapa" ? "tyrepapa-surface"
     : process.env.NEXT_PUBLIC_STORE === "oliveandaura" ? "beauty-surface"
-      : process.env.NEXT_PUBLIC_STORE === "velora" ? "fashion-surface" : undefined;
+      : process.env.NEXT_PUBLIC_STORE === "amammre" ? "fashion-surface" : undefined;

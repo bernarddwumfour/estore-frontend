@@ -15,7 +15,7 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
     <li className="group min-w-0 list-none">
       <div className="relative aspect-square overflow-hidden bg-[#f3f0ec]">
         <Link href={href} aria-label={`View ${product.title}`} className="absolute inset-0">
-          {image?.url ? <Image src={image.url} alt={image.alt_text || product.title} fill sizes="(max-width: 640px) 70vw, (max-width: 1024px) 34vw, 24vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.04]" /> : <div className="flex h-full items-center justify-center text-sm text-[#92877b]">VELORA</div>}
+          {image?.url ? <Image src={image.url} alt={image.alt_text || product.title} fill sizes="(max-width: 640px) 70vw, (max-width: 1024px) 34vw, 24vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.04]" /> : <div className="flex h-full items-center justify-center text-sm text-[#92877b]">AMAMMRE WEARS</div>}
         </Link>
           {variant && variant.discounted_price < variant.price && <span className="absolute left-3 top-3 bg-white px-2.5 py-1 text-[9px] uppercase tracking-wide">Sale</span>}
           {!isMinimal && variant && <AddToWishList variantId={variant.id} productTitle={product.title} />}

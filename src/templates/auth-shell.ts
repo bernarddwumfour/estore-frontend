@@ -18,7 +18,7 @@ const shells: Record<string, ComponentType<{ children: ReactNode }>> = {
   furniture: FurnitureAuthShell,
   tyrepapa: TyrePapaAuthShell,
   oliveandaura: BeautyAuthShell,
-  velora: FashionAuthShell,
+  amammre: FashionAuthShell,
 };
 
 const activeStore = process.env.NEXT_PUBLIC_STORE ?? "default";
