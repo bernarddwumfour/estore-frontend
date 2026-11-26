@@ -1,13 +1,15 @@
+import { policyContentClass } from "@/templates/policy-layout";
+
 export default function ReturnsPolicy() {
     return (
       <div className="min-h-screen bg-gray-50 py-32">
-        <div className="container mx-auto px-4">
+        <div className={policyContentClass}>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 ">Returns & Refunds Policy</h1>
           <div className="bg-white border border-gray-100 rounded-lg p-8 md:p-12 prose prose-lg max-w-none">
             <p className="text-gray-600 mb-6">Last updated: December 25, 2025</p>
   
             <p className="mb-6">
-              We want you to love your purchase! If you're not completely satisfied, we're here to help.
+              We want you to love your purchase! If you&apos;re not completely satisfied, we&apos;re here to help.
             </p>
   
             <h2 className="text-xl font-bold text-gray-900 mt-10 mb-4">30-Day Return Window</h2>

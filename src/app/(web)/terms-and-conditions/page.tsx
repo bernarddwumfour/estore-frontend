@@ -1,7 +1,9 @@
+import { policyContentClass } from "@/templates/policy-layout";
+
 export default function TermsOfService() {
     return (
       <div className="min-h-screen bg-gray-50 py-32">
-        <div className="container mx-auto px-4">
+        <div className={policyContentClass}>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 ">Terms & Conditions</h1>
           <div className="bg-white border border-gray-100 rounded-lg p-4 md:p-8 prose prose-lg max-w-none">
             <p className="text-gray-600 mb-6">Last updated: December 25, 2025</p>
