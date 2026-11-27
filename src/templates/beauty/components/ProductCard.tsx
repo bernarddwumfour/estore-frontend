@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Check, Eye, Images, ShoppingCart, Star } from "lucide-react";
+import { Check, Eye, ImageIcon, Images, ShoppingCart, Star } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { useCartStore } from "@/app/lib/store/cart-store";
 import AddToWishList from "@/app/(web)/products/(components)/AddToWishList";
@@ -59,7 +59,7 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
             />
           </Link>
         ) : (
-          <Link href={productHref} aria-label={`View ${product.title}`} className="absolute inset-0 flex items-center justify-center font-serif text-4xl text-[#c7b8ac]">✳</Link>
+          <Link href={productHref} aria-label={`View ${product.title}`} className="absolute inset-0 flex items-center justify-center text-[#c7b8ac]"><ImageIcon aria-hidden="true" className="h-10 w-10" strokeWidth={1.5} /></Link>
         )}
 
         {hasDiscount && !isMinimal && variant && (

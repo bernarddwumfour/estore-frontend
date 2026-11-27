@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Bookmark, ShoppingCart, Minus, Plus, Trash, AlertCircle, Package } from 'lucide-react';
+import { Bookmark, ShoppingCart, Minus, Plus, Trash, AlertCircle, Package, ImageIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/app/lib/store/cart-store';
 import AddToWishList from '../(components)/AddToWishList';
@@ -43,7 +43,7 @@ export function ProductImageGallery({
         ) : (
           <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-200">
             <div className="text-center">
-              <div className="text-4xl mb-2">📱</div>
+              <ImageIcon aria-hidden="true" className="mx-auto mb-2 h-10 w-10 text-gray-400" strokeWidth={1.5} />
               <p className="text-sm text-gray-500">Product Image</p>
             </div>
           </div>

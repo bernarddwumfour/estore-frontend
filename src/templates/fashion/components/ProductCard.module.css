@@ -8,3 +8,4 @@
 .actions :global(.rounded-full) span { white-space: nowrap; font-size: 0.6875rem; }
 .actions :global(.rounded-full) [data-slot="button"] { flex-shrink: 0; }
 .actions :global([data-slot="button"][data-variant="outline"]) { padding-inline: 0.625rem; }
+.actions > div { border-top: 0; padding-top: 0.75rem; }

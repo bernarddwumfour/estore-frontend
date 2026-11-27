@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingBag } from "lucide-react";
+import { ImageIcon, Minus, Plus, ShoppingBag } from "lucide-react";
 import { useCartStore } from "@/app/lib/store/cart-store";
 import AddToWishList from "@/app/(web)/products/(components)/AddToWishList";
 import { formatCurrency } from "@/lib/currency";
@@ -63,7 +63,7 @@ export default function ProductCard({ product, isMinimal = false }: ProductCardP
     <div className={styles.productMedia}>
       <Link href={href} className={`${styles.productImage} ${isMinimal ? styles.minimalImage : ""}`}>
         {product.is_new && <span className={styles.productBadge}>NEW ARRIVAL</span>}
-        {image ? <Image src={image.url} alt={image.alt_text || displayTitle} fill sizes="(max-width: 600px) 85vw, (max-width: 1000px) 45vw, 25vw" className={styles.containImage} /> : <ShoppingBag size={45} strokeWidth={0.7} aria-label="Product image coming soon" />}
+        {image ? <Image src={image.url} alt={image.alt_text || displayTitle} fill sizes="(max-width: 600px) 85vw, (max-width: 1000px) 45vw, 25vw" className={styles.containImage} /> : <ImageIcon size={45} strokeWidth={0.7} aria-label="Product image coming soon" />}
       </Link>
       {variant?.id && <AddToWishList variantId={variant.id} productTitle={displayTitle} className={styles.wishlistButton} />}
     </div>

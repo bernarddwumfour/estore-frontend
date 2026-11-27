@@ -9,7 +9,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Images, ShoppingBag, Check } from "lucide-react";
+import { ImageIcon, Images, ShoppingBag, Check } from "lucide-react";
 import { useCartStore } from "@/app/lib/store/cart-store";
 import AddToWishList from "@/app/(web)/products/(components)/AddToWishList";
 import type { ProductType } from "@/types/productTypes";
@@ -88,7 +88,7 @@ export default function ProductMedia({
             sizes="(max-width: 768px) 50vw, 25vw"
           />
         ) : (
-          <span className="text-xs font-medium text-[#a6a08f]">No image</span>
+          <ImageIcon className="h-10 w-10 text-[#a6a08f]" strokeWidth={1.5} aria-label="No product image" />
         )}
       </Link>
 
