@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, MoveRight, UsersRound, Star, ShoppingBag, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, MoveRight, Star } from "lucide-react";
 import ProductsGrid from "@/app/(web)/products/ProductsGrid";
 import ProductsGridSkeleton from "@/app/(web)/products/(components)/ProductsGridSkeleton";
 import { endpoints } from "@/constants/endpoints/endpoints";
@@ -29,7 +29,6 @@ export default function HomePage() {
   return (
     <main className="overflow-hidden bg-[#fffdf9] text-[#24211f]">
       <Hero />
-      <Metrics />
       <Collections />
       <FeaturedProducts />
       <Story />
@@ -60,16 +59,6 @@ function Hero() {
       </div>
     </section>
   );
-}
-
-function Metrics() {
-  const metrics = [
-    { Icon: UsersRound, value: "50K+", label: "Happy customers" },
-    { Icon: Star, value: "4.9", label: "Customer rating" },
-    { Icon: ShoppingBag, value: "120+", label: "Fashion collections" },
-    { Icon: Sparkles, value: "10Y", label: "Of style inspiration" },
-  ];
-  return <section aria-label="Store highlights" className="bg-white px-6 py-10 sm:py-12"><div className="mx-auto grid max-w-[1440px] grid-cols-2 gap-8 md:grid-cols-4">{metrics.map(({ Icon, value, label }) => <div key={label} className="flex items-center justify-center gap-3"><Icon aria-hidden="true" strokeWidth={1.4} className="h-7 w-7 shrink-0 text-[#ad8a60]" /><div><p className="text-xl font-semibold leading-tight text-[#24211f] sm:text-2xl">{value}</p><p className="mt-1 text-[11px] text-[#89827a]">{label}</p></div></div>)}</div></section>;
 }
 
 async function Collections() {
