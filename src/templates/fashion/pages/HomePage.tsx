@@ -1,3 +1,4 @@
+import { blogImage } from "../blog-images";
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,20 +10,16 @@ import type { BlogPostType } from "@/types/blogTypes";
 import type { TestimonialReview } from "@/templates/furniture/components/TestimonialsCarousel";
 
 const photos = {
-  hero: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=2200&q=88",
-  new: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1100&q=85",
-  essentials: "https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?auto=format&fit=crop&w=1100&q=85",
-  accessories: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1100&q=85",
-  story: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1400&q=85",
-  journal1: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=85",
-  journal2: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?auto=format&fit=crop&w=900&q=85",
-  journal3: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=85",
+  story: "/images/amammre/story.png",
+  journal1: "/images/amammre/journal-heritage.png",
+  journal2: "/images/amammre/journal-everyday.png",
+  journal3: "/images/amammre/journal-celebration.png",
 };
 
 const journal = [
-  { title: "A wardrobe, more considered", category: "The Amammre Wears edit", image: photos.journal1 },
-  { title: "Getting dressed, made simple", category: "How to wear it", image: photos.journal2 },
-  { title: "Pieces to keep close", category: "In good company", image: photos.journal3 },
+  { title: "A guide to Ghanaian traditional wear", category: "The Amammre Wears edit", image: photos.journal1 },
+  { title: "How to style African print for everyday wear", category: "How to wear it", image: photos.journal2 },
+  { title: "Choosing an outfit for a Ghanaian celebration", category: "In good company", image: photos.journal3 },
 ];
 
 export default function HomePage() {
@@ -50,16 +47,19 @@ function Hero() {
         <div className="relative z-10 flex w-full max-w-[850px] flex-col items-center">
           <Eyebrow>The Amammre Wears collection</Eyebrow>
           <h1 className="mt-5 max-w-[850px] text-[38px] font-bold uppercase leading-[1.05] tracking-[-0.04em] sm:text-6xl lg:text-[68px]">Elevate your everyday style</h1>
-          <p className="mt-5 max-w-[500px] text-sm leading-7 text-[#77716b]">Discover thoughtfully chosen fashion for your everyday moments and special occasions.</p>
+          <p className="mt-5 max-w-[500px] text-sm leading-7 text-[#77716b]">Discover Ghanaian-inspired fashion for everyday moments and special occasions.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[10px] text-[#77716b]"><span>◇ Thoughtful style</span><span>◇ For every occasion</span><span>◇ Made to be worn</span></div>
           <div className="mt-8 flex flex-wrap justify-center gap-3"><Link href="/products" className="rounded-md bg-white px-5 py-3.5 text-xs font-semibold text-[#24211f] shadow-sm hover:bg-[#e9e4dd]">Shop new arrivals <ArrowRight className="ml-2 inline h-4 w-4" /></Link><Link href="/#collections" className="rounded-md bg-[#ad8a60] px-5 py-3.5 text-xs font-semibold text-white hover:bg-[#92704a]">Explore collection <ArrowRight className="ml-2 inline h-4 w-4" /></Link></div>
         </div>
-        <div className="absolute bottom-0 left-0 h-[190px] w-[42%] overflow-hidden sm:h-[280px] sm:w-[30%] lg:h-[380px] lg:w-[27%]"><Image src={photos.essentials} alt="A relaxed fashion look" fill priority sizes="(max-width: 640px) 42vw, 30vw" className="object-cover object-center" /></div>
-        <div className="absolute bottom-0 right-0 h-[190px] w-[42%] overflow-hidden sm:h-[280px] sm:w-[30%] lg:h-[420px] lg:w-[27%]"><Image src={photos.hero} alt="A contemporary fashion look" fill priority sizes="(max-width: 640px) 42vw, 30vw" className="object-cover object-center" /></div>
+        <Image src="/images/amammre/traditional-hero.png" alt="A man and woman wearing Ghanaian traditional attire" width={1784} height={896} priority sizes="100vw" className="pointer-events-none absolute bottom-0 left-1/2 h-auto max-h-[420px] w-full -translate-x-1/2 object-contain object-bottom lg:max-h-[520px]" />
       </div>
     </section>
   );
 }
+
+const categoryImages: Record<string, string> = Object.fromEntries(
+  ["men", "ladies", "unisex", "children", "accessories"].map(slug => [slug, `/images/amammre/${slug}.png`])
+);
 
 async function Collections() {
   let categories: { id: string; name: string; slug: string; image?: string | null }[] = [];
@@ -73,7 +73,7 @@ async function Collections() {
   } catch (error) {
     console.error("Error fetching Amammre Wears categories:", error);
   }
-  return <section id="collections" className="scroll-mt-20 bg-[#faf9f7] px-5 py-16 sm:px-8 sm:py-20 lg:px-12"><div className="mx-auto grid max-w-[1440px] gap-8 lg:grid-cols-[0.85fr_2.15fr] lg:items-start"><div><div><Eyebrow>Discover the collection</Eyebrow><h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Find your own kind of elegance.</h2><p className="mt-3 text-sm leading-7 text-[#817a72]">Explore our categories and find something for every occasion.</p></div><Link href="/products" className="mt-6 inline-flex items-center gap-2 text-xs font-semibold text-[#92704a]">Shop all <ArrowRight className="h-4 w-4" /></Link></div>{categories.length ? <div className="flex h-[230px] items-stretch gap-3 sm:h-[270px] sm:gap-4">{categories.map((category) => <Link key={category.id} href={`/products?category=${encodeURIComponent(category.slug)}`} className="group relative h-full min-w-0 flex-[1_1_0%] overflow-hidden rounded-xl bg-[#e9e4de] transition-[flex-grow] duration-300 ease-out hover:flex-[1.3_1_0%] focus-visible:flex-[1.3_1_0%]">{category.image && <Image src={category.image} alt="" fill sizes="(max-width: 640px) 50vw, 33vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.04]" />}<span className="absolute bottom-4 left-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#24211f]">{category.name} <ArrowUpRight className="ml-1 inline h-3 w-3" /></span></Link>)}</div> : <p className="mt-8 rounded-xl bg-[#f0ece6] px-6 py-10 text-center text-sm text-[#817a72]">Categories will appear here when they’re available.</p>}</div></section>;
+  return <section id="collections" className="scroll-mt-20 bg-[#faf9f7] px-5 py-16 sm:px-8 sm:py-20 lg:px-12"><div className="mx-auto grid max-w-[1440px] gap-8 lg:grid-cols-[0.85fr_2.15fr] lg:items-start"><div><div><Eyebrow>Discover the collection</Eyebrow><h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Find your own kind of elegance.</h2><p className="mt-3 text-sm leading-7 text-[#817a72]">Explore our categories and find something for every occasion.</p></div><Link href="/products" className="mt-6 inline-flex items-center gap-2 text-xs font-semibold text-[#92704a]">Shop all <ArrowRight className="h-4 w-4" /></Link></div>{categories.length ? <div className="flex h-[230px] items-stretch gap-3 sm:h-[270px] sm:gap-4">{categories.map((category) => <Link key={category.id} href={`/products?category=${encodeURIComponent(category.slug)}`} className="group relative h-full min-w-0 flex-[1_1_0%] overflow-hidden rounded-xl bg-[#e9e4de] transition-[flex-grow] duration-300 ease-out hover:flex-[1.3_1_0%] focus-visible:flex-[1.3_1_0%]">{(categoryImages[category.slug] || category.image) && <Image src={categoryImages[category.slug] || category.image!} alt="" fill sizes="(max-width: 640px) 50vw, 33vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.04]" />}<span className="absolute bottom-4 left-4 rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#24211f]">{category.name} <ArrowUpRight className="ml-1 inline h-3 w-3" /></span></Link>)}</div> : <p className="mt-8 rounded-xl bg-[#f0ece6] px-6 py-10 text-center text-sm text-[#817a72]">Categories will appear here when they’re available.</p>}</div></section>;
 }
 
 function FeaturedProducts() {
@@ -81,7 +81,7 @@ function FeaturedProducts() {
 }
 
 function Story() {
-  return <section className="px-5 py-16 sm:px-8 lg:px-12"><div className="mx-auto grid max-w-[1440px] overflow-hidden rounded-2xl bg-[#171717] text-white md:grid-cols-2"><div className="flex flex-col justify-center px-8 py-12 sm:px-14 sm:py-16"><Eyebrow>The Amammre Wears point of view</Eyebrow><h2 className="mt-4 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Style every journey.</h2><p className="mt-5 max-w-md text-sm leading-7 text-white/65">From the pieces you wear every day to the outfits you save for special occasions, find a look that feels like you.</p><Link href="/about" className="mt-7 inline-flex w-fit items-center gap-3 rounded-md bg-[#ad8a60] px-5 py-3 text-xs font-semibold hover:bg-[#92704a]">Our story <ArrowRight className="h-4 w-4" /></Link></div><div className="relative min-h-[320px] md:min-h-[420px]"><Image src={photos.story} alt="A contemporary fashion look" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" /></div></div></section>;
+  return <section className="px-5 py-16 sm:px-8 lg:px-12"><div className="mx-auto grid max-w-[1440px] overflow-hidden rounded-2xl bg-[#171717] text-white md:grid-cols-2"><div className="flex flex-col justify-center px-8 py-12 sm:px-14 sm:py-16"><Eyebrow>The Amammre Wears point of view</Eyebrow><h2 className="mt-4 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Style every journey.</h2><p className="mt-5 max-w-md text-sm leading-7 text-white/65">From everyday African prints to traditional looks for special occasions, find pieces that feel like you.</p><Link href="/about" className="mt-7 inline-flex w-fit items-center gap-3 rounded-md bg-[#ad8a60] px-5 py-3 text-xs font-semibold hover:bg-[#92704a]">Our story <ArrowRight className="h-4 w-4" /></Link></div><div className="relative min-h-[320px] md:min-h-[420px]"><Image src={photos.story} alt="A woman wearing a Ghanaian-inspired print dress" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" /></div></div></section>;
 }
 
 async function Reviews() {
@@ -119,7 +119,7 @@ async function getJournalPosts(): Promise<BlogPostType[]> {
 async function Journal() {
   const posts = await getJournalPosts();
   return <section className="px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24"><div className="mx-auto max-w-[1440px]"><div className="flex items-end justify-between gap-4"><div><Eyebrow>Notes on getting dressed</Eyebrow><h2 className="mt-3 text-3xl font-medium tracking-[-0.04em] sm:text-4xl">The fashion journal.</h2></div><Link href="/blog" className="hidden items-center gap-2 text-[9px] uppercase tracking-[0.14em] text-[#71685e] hover:text-[#ad8a60] sm:inline-flex">Read the journal <ArrowUpRight className="h-4 w-4" /></Link></div>
-    {posts.length > 0 ? <div className="mt-8 grid gap-6 md:grid-cols-3">{posts.map((post) => <Link key={post.id} href={`/blog/${post.slug}`} className="group"><div className="relative aspect-[1.34] overflow-hidden bg-[#f2eee8]">{post.cover_image_url && <Image src={post.cover_image_url} alt={post.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.04]" />}</div><p className="mt-4 text-[9px] uppercase tracking-[0.15em] text-[#9b7953]">Style notes</p><h3 className="mt-2 text-lg font-medium leading-snug group-hover:text-[#ad8a60]">{post.title}</h3><span className="mt-3 inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.13em] text-[#766e66]">Read story <ArrowRight className="h-3.5 w-3.5" /></span></Link>)}</div> : <div className="mt-8 grid gap-6 md:grid-cols-3">{journal.map((post) => <Link key={post.title} href="/blog" className="group"><div className="relative aspect-[1.34] overflow-hidden bg-[#f2eee8]"><Image src={post.image} alt={post.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.04]" /></div><p className="mt-4 text-[9px] uppercase tracking-[0.15em] text-[#9b7953]">{post.category}</p><h3 className="mt-2 text-lg font-medium leading-snug group-hover:text-[#ad8a60]">{post.title}</h3><span className="mt-3 inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.13em] text-[#766e66]">Read story <ArrowRight className="h-3.5 w-3.5" /></span></Link>)}</div>}
+    {posts.length > 0 ? <div className="mt-8 grid gap-6 md:grid-cols-3">{posts.map((post) => <Link key={post.id} href={`/blog/${post.slug}`} className="group"><div className="relative aspect-[1.34] overflow-hidden bg-[#f2eee8]">{blogImage(post.slug, post.cover_image_url) && <Image src={blogImage(post.slug, post.cover_image_url)!} alt={post.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.04]" />}</div><p className="mt-4 text-[9px] uppercase tracking-[0.15em] text-[#9b7953]">Style notes</p><h3 className="mt-2 text-lg font-medium leading-snug group-hover:text-[#ad8a60]">{post.title}</h3><span className="mt-3 inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.13em] text-[#766e66]">Read story <ArrowRight className="h-3.5 w-3.5" /></span></Link>)}</div> : <div className="mt-8 grid gap-6 md:grid-cols-3">{journal.map((post) => <Link key={post.title} href="/blog" className="group"><div className="relative aspect-[1.34] overflow-hidden bg-[#f2eee8]"><Image src={post.image} alt={post.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.04]" /></div><p className="mt-4 text-[9px] uppercase tracking-[0.15em] text-[#9b7953]">{post.category}</p><h3 className="mt-2 text-lg font-medium leading-snug group-hover:text-[#ad8a60]">{post.title}</h3><span className="mt-3 inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.13em] text-[#766e66]">Read story <ArrowRight className="h-3.5 w-3.5" /></span></Link>)}</div>}
   </div></section>;
 }
 

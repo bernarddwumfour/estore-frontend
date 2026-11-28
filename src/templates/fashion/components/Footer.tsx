@@ -14,7 +14,7 @@ export default function Footer() {
       <div className="mx-auto grid max-w-[1440px] gap-10 px-6 py-14 sm:px-10 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr] md:py-16">
         <div>
           <Link href="/" className="text-2xl font-semibold tracking-[0.18em]">AMAMMRE WEARS<span className="text-[#c5a47c]">.</span></Link>
-          <p className="mt-4 max-w-sm text-sm leading-7 text-white/65">Considered pieces for the way you move through every day. Designed to wear, made to keep.</p>
+          <p className="mt-4 max-w-sm text-sm leading-7 text-white/65">Ghanaian-inspired style for everyday moments and special occasions.</p>
           <a href="https://instagram.com" className="mt-5 inline-flex items-center gap-2 text-xs text-[#d8c3a7] hover:text-white"><Instagram className="h-4 w-4" /> Follow along <ArrowUpRight className="h-3 w-3" /></a>
         </div>
         <div><h2 className="text-[9px] uppercase tracking-[0.2em] text-[#c5a47c]">Explore</h2><div className="mt-4 grid gap-3 text-sm text-white/65">{explore.map((item) => <Link key={item.label} href={item.href} className="hover:text-white">{item.label}</Link>)}</div></div>
